@@ -1,0 +1,106 @@
+import { useTaskStore } from '../store';
+import { TaskItem } from './TaskItem';
+import type { Task } from '../lib/types';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { motion, AnimatePresence } from 'framer-motion';
+
+interface TaskListProps {
+    onEditTask: (task: Task) => void;
+}
+
+export function TaskList({ onEditTask }: TaskListProps) {
+    const tasks = useTaskStore(state => state.tasks);
+    const reorderTasks = useTaskStore(state => state.reorderTasks);
+    const searchQuery = useTaskStore(state => state.searchQuery);
+    const filter = useTaskStore(state => state.filter);
+
+    // Filter tasks based on current criteria
+    const filteredTasks = tasks.filter(task => {
+        // Search filter
+        if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            !(task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))) {
+            return false;
+        }
+
+        // Status filter
+        if (filter === 'Aktif' && task.completed) return false;
+        if (filter === 'Tamamlandı' && !task.completed) return false;
+
+        return true;
+    });
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 5, // 5px movement before dragging starts
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id) {
+            const oldIndex = tasks.findIndex(t => t.id === active.id);
+            const newIndex = tasks.findIndex(t => t.id === over.id);
+            reorderTasks(arrayMove(tasks, oldIndex, newIndex));
+        }
+    };
+
+    if (filteredTasks.length === 0) {
+        return (
+            <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground flex flex-col items-center">
+                <span className="text-4xl mb-4">📭</span>
+                <p className="font-medium text-lg text-foreground">Görev bulunamadı</p>
+                <p>Arama kriterlerinize uygun görev yok.</p>
+            </div>
+        );
+    }
+
+    return (
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+        >
+            <SortableContext
+                items={filteredTasks.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+            >
+                <div className="space-y-1">
+                    <AnimatePresence mode="popLayout">
+                        {filteredTasks.map((task) => (
+                            <motion.div
+                                key={task.id}
+                                layout
+                                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                <TaskItem task={task} onEdit={onEditTask} />
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </div>
+            </SortableContext>
+        </DndContext>
+    );
+}
