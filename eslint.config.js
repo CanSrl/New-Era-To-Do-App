@@ -6,7 +6,9 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // dev-dist ve supabase/.temp araçlar tarafından üretilir (minify edilmiş
+  // paketler içerir); kaynak kodumuz değildir.
+  globalIgnores(['dist', 'dev-dist', 'supabase/.temp']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

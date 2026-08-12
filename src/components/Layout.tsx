@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PlusCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTaskStore } from '../store';
+import { AccountMenu } from './AccountMenu';
+import { AuthDialog } from './AuthDialog';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -13,6 +15,7 @@ export function Layout({ children, onAddClick }: LayoutProps) {
     const { theme, setTheme } = useTheme();
     const tasks = useTaskStore((state) => state.tasks);
     const activeCount = tasks.filter(t => !t.completed).length;
+    const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row font-sans selection:bg-primary selection:text-primary-foreground transition-colors duration-300">
@@ -40,7 +43,9 @@ export function Layout({ children, onAddClick }: LayoutProps) {
                     </button>
                 </nav>
 
-                <div className="pt-4 border-t border-border mt-auto">
+                <div className="pt-4 border-t border-border mt-auto space-y-3">
+                    <AccountMenu variant="sidebar" onSignInClick={() => setIsAuthDialogOpen(true)} />
+
                     <div className="flex items-center justify-between px-2 bg-secondary/50 p-1 rounded-lg">
                         <button
                             onClick={() => setTheme('light')}
@@ -73,12 +78,16 @@ export function Layout({ children, onAddClick }: LayoutProps) {
                     <CheckCircle2 className="text-primary" size={24} />
                     <h1 className="font-bold text-lg">Yapılacaklar</h1>
                 </div>
-                <button
-                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                    className="p-2 rounded-full bg-secondary text-secondary-foreground"
-                >
-                    {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
+                <div className="flex items-center gap-2">
+                    <AccountMenu variant="compact" onSignInClick={() => setIsAuthDialogOpen(true)} />
+                    <button
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className="p-2 rounded-full bg-secondary text-secondary-foreground"
+                        aria-label={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
+                    >
+                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                    </button>
+                </div>
             </header>
 
             {/* Main Content Area */}
@@ -115,6 +124,8 @@ export function Layout({ children, onAddClick }: LayoutProps) {
                     <PlusCircle size={28} className="group-hover:rotate-90 transition-transform duration-300" />
                 </button>
             </div>
+
+            <AuthDialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen} />
 
         </div>
     );
