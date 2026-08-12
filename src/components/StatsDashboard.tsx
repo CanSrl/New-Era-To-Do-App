@@ -1,6 +1,6 @@
 import { useTaskStore } from '../store';
 import { CheckCircle, AlertCircle, ListTodo } from 'lucide-react';
-import { isSameDay } from 'date-fns';
+import { isDueToday } from '../lib/tasks';
 
 export function StatsDashboard() {
     const tasks = useTaskStore((state) => state.tasks);
@@ -9,8 +9,7 @@ export function StatsDashboard() {
     const completed = tasks.filter(t => t.completed).length;
     const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-    const today = new Date();
-    const dueToday = tasks.filter(t => !t.completed && t.dueDate && isSameDay(t.dueDate, today)).length;
+    const dueToday = tasks.filter(t => isDueToday(t)).length;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

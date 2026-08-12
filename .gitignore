@@ -13,6 +13,11 @@ dist-ssr
 dev-dist
 *.local
 
+# Test çıktıları
+playwright-report
+test-results
+coverage
+
 # Environment variables (Supabase/Stripe secrets)
 .env
 .env.local

@@ -93,17 +93,32 @@ npx supabase db reset
 | `npm run build` | Üretim derlemesi |
 | `npm run preview` | Derlenmiş sürümü yerelde önizleme |
 | `npm run lint` | ESLint denetimi |
+| `npm test` | Birim testleri (Vitest) |
+| `npm run test:e2e` | Uçtan uca testler (Playwright) |
 | `npm run test:rls` | Şema güvenlik testleri (yerel Supabase gerekir) |
 | `npm run db:types` | Veritabanı tiplerini yeniden üret |
 
-### Şema güvenlik testleri
+## Testler
 
-`npm run test:rls`, yerel veritabanına karşı iki ayrı kullanıcı oluşturur ve
-Row Level Security politikalarının gerçekten uygulandığını doğrular: bir
-kullanıcının diğerinin görevlerini okuyamadığını, güncelleyemediğini ve
-silemediğini; oturumsuz erişimin hiç veri döndürmediğini; tetikleyicilerin ve
-kısıtların beklendiği gibi davrandığını kontrol eder. Şemaya dokunduğunuzda
-bu testi çalıştırın.
+Üç katman var; her biri farklı bir soruyu yanıtlar.
+
+**Birim testleri — `npm test`**
+Store mantığı ve saf yardımcı fonksiyonlar (`src/**/*.test.ts`). Görev
+ekleme/silme/sıralama, içe aktarmada bozuk veri savunması, tarih
+dönüşümleri ve LocalStorage şema göçü burada doğrulanır. Saniyeler sürer;
+geliştirirken `npm run test:watch` ile açık tutulabilir.
+
+**Uçtan uca testler — `npm run test:e2e`**
+Gerçek tarayıcıda gerçek kullanıcı akışları (`e2e/`). Dev sunucusunu
+Playwright kendi başlatır. Giriş akışı testleri yalnızca Supabase
+yapılandırılmışsa çalışır, aksi halde kendilerini atlar.
+
+**Şema güvenlik testleri — `npm run test:rls`**
+Yerel veritabanına karşı iki ayrı kullanıcı oluşturur ve Row Level Security
+politikalarının gerçekten uygulandığını doğrular: bir kullanıcının diğerinin
+görevlerini okuyamadığını, güncelleyemediğini ve silemediğini; oturumsuz
+erişimin hiç veri döndürmediğini; tetikleyicilerin ve kısıtların beklendiği
+gibi davrandığını kontrol eder. Şemaya dokunduğunuzda bu testi çalıştırın.
 
 ## Yayına Alma (Deployment)
 

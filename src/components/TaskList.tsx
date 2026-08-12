@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { useTaskStore } from '../store';
 import { TaskItem } from './TaskItem';
+import { byPosition } from '../lib/tasks';
 import type { Task } from '../lib/types';
 import {
     DndContext,
@@ -28,8 +30,12 @@ export function TaskList({ onEditTask }: TaskListProps) {
     const searchQuery = useTaskStore(state => state.searchQuery);
     const filter = useTaskStore(state => state.filter);
 
+    // Sıra dizinin sırasına değil position alanına dayanır; içe aktarma veya
+    // ileride gelecek senkronizasyon diziyi karışık bırakabilir.
+    const ordered = useMemo(() => [...tasks].sort(byPosition), [tasks]);
+
     // Filter tasks based on current criteria
-    const filteredTasks = tasks.filter(task => {
+    const filteredTasks = ordered.filter(task => {
         // Search filter
         if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
             !(task.description && task.description.toLowerCase().includes(searchQuery.toLowerCase()))) {
@@ -58,9 +64,10 @@ export function TaskList({ onEditTask }: TaskListProps) {
         const { active, over } = event;
 
         if (over && active.id !== over.id) {
-            const oldIndex = tasks.findIndex(t => t.id === active.id);
-            const newIndex = tasks.findIndex(t => t.id === over.id);
-            reorderTasks(arrayMove(tasks, oldIndex, newIndex));
+            const oldIndex = ordered.findIndex(t => t.id === active.id);
+            const newIndex = ordered.findIndex(t => t.id === over.id);
+            if (oldIndex === -1 || newIndex === -1) return;
+            reorderTasks(arrayMove(ordered, oldIndex, newIndex));
         }
     };
 

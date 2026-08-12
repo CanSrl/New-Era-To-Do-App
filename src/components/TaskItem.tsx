@@ -4,8 +4,9 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '../lib/types';
 import { useTaskStore } from '../store';
 import { GripVertical, Edit2, Trash2, Calendar, Tag, Check } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { isOverdue } from '../lib/tasks';
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -71,6 +72,12 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
 
             <button
                 onClick={() => toggleComplete(task.id)}
+                aria-pressed={task.completed}
+                aria-label={
+                    task.completed
+                        ? `"${task.title}" görevini tamamlanmadı olarak işaretle`
+                        : `"${task.title}" görevini tamamlandı olarak işaretle`
+                }
                 className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all ${task.completed
                     ? 'bg-green-500 border-green-500 text-white shadow-sm'
                     : 'border-muted-foreground/30 hover:border-primary hover:bg-primary/5'
@@ -97,6 +104,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                             onClick={() => onEdit(task)}
                             className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
                             title="Düzenle"
+                            aria-label={`"${task.title}" görevini düzenle`}
                         >
                             <Edit2 size={16} />
                         </button>
@@ -105,6 +113,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                                 <button
                                     className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
                                     title="Sil"
+                                    aria-label={`"${task.title}" görevini sil`}
                                 >
                                     <Trash2 size={16} />
                                 </button>
@@ -136,12 +145,12 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                     </span>
 
                     {task.dueDate && (
-                        <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-md ${!task.completed && new Date(task.dueDate) < new Date()
+                        <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-md ${isOverdue(task)
                             ? 'text-red-600 bg-red-500/10'
                             : 'text-muted-foreground bg-muted'
                             }`}>
                             <Calendar size={12} />
-                            {format(new Date(task.dueDate), 'd MMM yyyy', { locale: tr })}
+                            {format(parseISO(task.dueDate), 'd MMM yyyy', { locale: tr })}
                         </span>
                     )}
                 </div>

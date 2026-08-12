@@ -154,7 +154,13 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                         </button>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
+                    <form onSubmit={handleSubmit} noValidate className="p-5 flex flex-col gap-4">
+                        {/*
+                          * noValidate: required/minLength nitelikleri erişilebilirlik
+                          * için duruyor, ancak doğrulamayı tarayıcının yerelleştirilmiş
+                          * balonu değil kendi Türkçe mesajlarımız yapsın diye native
+                          * doğrulama kapatılıyor.
+                          */}
                         <div className="flex flex-col gap-1.5">
                             <label htmlFor={`${fieldId}-email`} className="text-sm font-medium">
                                 E-posta

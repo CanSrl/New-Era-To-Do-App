@@ -94,11 +94,15 @@ function App() {
     reader.onload = (event) => {
       try {
         const imported = JSON.parse(event.target?.result as string);
-        if (Array.isArray(imported)) {
-          importTasks(imported);
-          toast.success('Görevler başarıyla içe aktarıldı');
-        } else {
+        if (!Array.isArray(imported)) {
           toast.error('Geçersiz dosya formatı');
+          return;
+        }
+        const added = importTasks(imported);
+        if (added === 0) {
+          toast.info('İçe aktarılacak yeni görev bulunamadı');
+        } else {
+          toast.success(`${added} görev içe aktarıldı`);
         }
       } catch {
         toast.error('Dosya okunamadı');
