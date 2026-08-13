@@ -46,6 +46,41 @@ test('giriş diyaloğu açılır ve kayıt moduna geçer', async ({ page }) => {
     await expect(dialog.getByRole('heading', { name: 'Hesap Oluştur' })).toBeVisible()
 })
 
+/**
+ * GitHub butonu derleme zamanı bayrağına bağlıdır (`VITE_AUTH_GITHUB`), yani
+ * çalışırken değiştirilemez. İki durumu da koruyabilmek için testler bayrağın
+ * dev sunucusuna verilen değerine göre ayrılıyor; varsayılan (kapalı) kurulumda
+ * ikincisi koşar.
+ */
+const githubEnabled = process.env.VITE_AUTH_GITHUB?.trim().toLowerCase() === 'true'
+const githubButton = 'GitHub ile devam et'
+
+test('GitHub butonu yapılandırılmadan gösterilmez', async ({ page }) => {
+    test.skip(githubEnabled, 'GitHub sağlayıcısı bu kurulumda açık.')
+
+    // Kapalı bir sağlayıcıya yönlendirmek kullanıcıyı Supabase'in
+    // "Unsupported provider" hata sayfasına düşürür; bayrak kapalıyken buton
+    // hiç render edilmemeli.
+    await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click()
+    await expect(page.getByRole('dialog').getByRole('button', { name: githubButton })).toHaveCount(0)
+})
+
+test('GitHub butonu giriş ve kayıtta var, parola sıfırlamada yok', async ({ page }) => {
+    test.skip(!githubEnabled, 'GitHub sağlayıcısı bu kurulumda kapalı.')
+
+    await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByRole('button', { name: githubButton })).toBeVisible()
+
+    await dialog.getByRole('button', { name: 'Hesap oluştur' }).click()
+    await expect(dialog.getByRole('button', { name: githubButton })).toBeVisible()
+
+    // Sıfırlama modunda anlamsız: GitHub hesabının parolası burada sıfırlanmaz.
+    await dialog.getByRole('button', { name: 'Giriş yap' }).click()
+    await dialog.getByRole('button', { name: 'Parolamı unuttum' }).click()
+    await expect(dialog.getByRole('button', { name: githubButton })).toHaveCount(0)
+})
+
 test('kısa parola istemci tarafında reddedilir', async ({ page }) => {
     await page.getByRole('button', { name: 'Giriş Yap', exact: true }).click()
     const dialog = page.getByRole('dialog')

@@ -15,7 +15,7 @@ ve verileri cihazlar arasında eşitlemeyi mümkün kılar.
 - 🌙 **Karanlık Mod:** Sistem tercihine uygun otomatik veya manuel Light/Dark mod.
 - 📱 **PWA ve Mobil Uyumlu:** Masaüstünde kenar çubuğu, mobilde alt gezinme menüsü.
 - 💾 **Çevrimdışı Çalışma:** Zustand persist ile LocalStorage'a kaydetme.
-- 🔐 **İsteğe Bağlı Hesap:** E-posta ve parola ile giriş (Supabase Auth).
+- 🔐 **İsteğe Bağlı Hesap:** E-posta/parola veya GitHub ile giriş (Supabase Auth).
 - ☁️ **Cihazlar Arası Eşitleme:** Giriş yapınca görevler buluta eşitlenir;
   çevrimdışıyken yapılan değişiklikler bağlantı gelince gönderilir.
 - ↕️ **Sürükle & Bırak:** dnd-kit ile görevlerinizi kolayca sıralayın.
@@ -88,6 +88,50 @@ npx supabase db reset
 > Bulut projelerinde e-posta doğrulaması varsayılan olarak açıktır: kayıt olan
 > kullanıcı, gelen kutusundaki bağlantıya tıklayana kadar oturum açmaz.
 > Uygulama bu durumu algılayıp "E-postanı kontrol et" ekranını gösterir.
+
+## GitHub ile Giriş
+
+Varsayılan olarak **kapalıdır**. Açmak için hem sunucu hem istemci tarafını
+yapılandırmak gerekir; yalnızca birini açmak işe yaramaz:
+
+| Taraf | Ayar | Kapalıyken ne olur |
+| --- | --- | --- |
+| Sunucu | Supabase'de GitHub sağlayıcısı | Buton kullanıcıyı ham bir JSON hata sayfasına düşürür |
+| İstemci | `VITE_AUTH_GITHUB=true` | Buton hiç görünmez (güvenli varsayılan) |
+
+**1. GitHub OAuth App oluşturun** —
+[Settings → Developer settings → OAuth Apps](https://github.com/settings/developers)
+→ *New OAuth App*. Authorization callback URL:
+
+- Yerel: `http://127.0.0.1:54321/auth/v1/callback`
+- Bulut: `https://<proje-ref>.supabase.co/auth/v1/callback`
+
+**2. Supabase tarafını açın.**
+
+Yerelde `supabase/config.toml` içinde `[auth.external.github]` altındaki
+`enabled = true` yapın ve kimlik bilgilerini **ortam değişkeni olarak** verin
+(git'e yazmayın), sonra yığını yeniden başlatın:
+
+```bash
+export SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID=...
+export SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=...
+npx supabase stop && npx supabase start
+```
+
+Bulut projesinde bunun karşılığı **Authentication → Sign In / Providers →
+GitHub** ekranıdır.
+
+**3. İstemci tarafını açın** — `.env.local` içine `VITE_AUTH_GITHUB=true`.
+
+**4. Yönlendirme adresini izin listesine ekleyin.** Supabase, listede *tam
+eşleşme* bulamadığı adresi hata vermeden `site_url`'e düşürür. Yerelde
+`config.toml` içindeki `additional_redirect_urls` bunu kapsar; bulut
+projesinde **Authentication → URL Configuration** altına
+`https://<alan-adiniz>/auth/callback` eklenmelidir.
+
+> Aynı e-posta hem parolayla hem GitHub'la kullanılıyorsa Supabase varsayılan
+> olarak kimlikleri tek hesapta birleştirir. İki ayrı hesap istiyorsanız
+> Supabase tarafındaki hesap birleştirme ayarını değiştirin.
 
 ## Komutlar
 

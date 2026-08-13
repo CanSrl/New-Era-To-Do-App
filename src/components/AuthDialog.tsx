@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from 'react';
-import { Loader2, MailCheck } from 'lucide-react';
+import { Github, Loader2, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { features } from '../config/features';
+import { cn } from '../lib/utils';
 import { useAuth } from './AuthProvider';
 import {
     Dialog,
@@ -39,7 +41,7 @@ interface AuthDialogProps {
 }
 
 export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
-    const { signIn, signUp, resetPassword } = useAuth();
+    const { signIn, signUp, resetPassword, signInWithGitHub } = useAuth();
     const fieldId = useId();
 
     const [mode, setMode] = useState<Mode>('signin');
@@ -47,6 +49,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isRedirecting, setIsRedirecting] = useState(false);
     const [emailSent, setEmailSent] = useState<'confirm' | 'reset' | null>(null);
 
     // Diyalog her kapandığında formu sıfırla ki bir sonraki açılışta
@@ -60,6 +63,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
             setError(null);
             setEmailSent(null);
             setIsSubmitting(false);
+            setIsRedirecting(false);
         }, 200);
         return () => clearTimeout(timer);
     }, [open]);
@@ -70,9 +74,27 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
         setEmailSent(null);
     };
 
+    /**
+     * Başarılı olduğunda sayfa GitHub'a gider ve bu bileşen sökülür; bu yüzden
+     * `isRedirecting` yalnızca hata durumunda geri alınır. Erken sıfırlansaydı
+     * yönlendirme başlarken buton bir an tekrar tıklanabilir hale gelirdi.
+     */
+    const handleGitHub = async () => {
+        if (isSubmitting || isRedirecting) return;
+
+        setIsRedirecting(true);
+        setError(null);
+
+        const { error } = await signInWithGitHub();
+        if (error) {
+            setIsRedirecting(false);
+            setError(error);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (isSubmitting) return;
+        if (isSubmitting || isRedirecting) return;
 
         const trimmedEmail = email.trim();
         if (!trimmedEmail) {
@@ -125,6 +147,10 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     };
 
     const copy = COPY[mode];
+    const isBusy = isSubmitting || isRedirecting;
+    // Sıfırlama modunda sağlayıcı butonu anlamsız: GitHub hesabının parolası
+    // burada sıfırlanmaz.
+    const showProviders = features.githubAuth && mode !== 'reset';
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,7 +180,36 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                         </button>
                     </div>
                 ) : (
-                    <form onSubmit={handleSubmit} noValidate className="p-5 flex flex-col gap-4">
+                    <>
+                    {showProviders && (
+                        <div className="px-5 pt-5 flex flex-col gap-4">
+                            <button
+                                type="button"
+                                onClick={handleGitHub}
+                                disabled={isBusy}
+                                className="h-11 border border-input rounded-xl font-medium hover:bg-secondary transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isRedirecting ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                    <Github size={18} aria-hidden="true" />
+                                )}
+                                GitHub ile devam et
+                            </button>
+
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                                veya e-posta ile
+                                <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                            </div>
+                        </div>
+                    )}
+
+                    <form
+                        onSubmit={handleSubmit}
+                        noValidate
+                        className={cn('p-5 flex flex-col gap-4', showProviders && 'pt-4')}
+                    >
                         {/*
                           * noValidate: required/minLength nitelikleri erişilebilirlik
                           * için duruyor, ancak doğrulamayı tarayıcının yerelleştirilmiş
@@ -172,7 +227,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                                 autoComplete="email"
                                 required
                                 autoFocus
-                                disabled={isSubmitting}
+                                disabled={isBusy}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="ornek@eposta.com"
@@ -191,7 +246,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                                     autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                                     required
                                     minLength={6}
-                                    disabled={isSubmitting}
+                                    disabled={isBusy}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="En az 6 karakter"
@@ -211,7 +266,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
                         <button
                             type="submit"
-                            disabled={isSubmitting}
+                            disabled={isBusy}
                             className="h-11 bg-primary text-primary-foreground rounded-xl font-medium shadow-lg shadow-primary/25 hover:bg-primary/90 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {isSubmitting && <Loader2 size={18} className="animate-spin" />}
@@ -263,6 +318,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                             )}
                         </div>
                     </form>
+                    </>
                 )}
             </DialogContent>
         </Dialog>

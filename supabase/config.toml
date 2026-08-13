@@ -343,6 +343,30 @@ skip_nonce_check = false
 # If enabled, it will allow the user to successfully authenticate when the provider does not return an email address.
 email_optional = false
 
+# GitHub ile giriş.
+#
+# Varsayılan kapalıdır: açmak için hem burada hem istemcide
+# (`VITE_AUTH_GITHUB=true`) etkinleştirmek gerekir. Yalnızca birini açmak
+# tutarsız davranır — sunucu açık/istemci kapalıysa buton görünmez, tersi
+# durumda buton "Unsupported provider" hatasına yollar.
+#
+# Yerel kurulum:
+#   1. https://github.com/settings/developers -> New OAuth App
+#      Authorization callback URL: http://127.0.0.1:54321/auth/v1/callback
+#   2. Client ID ve secret'ı kabuk ortamına ver (git'e ASLA yazma):
+#      SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID / ..._SECRET
+#   3. enabled = true yapıp `npx supabase stop && npx supabase start`
+#
+# Bulut projesinde bunun karşılığı Authentication -> Sign In / Providers
+# altındadır; callback adresi <proje-ref>.supabase.co/auth/v1/callback olur.
+[auth.external.github]
+enabled = false
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
+# DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+secret = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
+# Overrides the default auth callback URL derived from auth.external_url.
+redirect_uri = ""
+
 # Allow Solana wallet holders to sign in to your project via the Sign in with Solana (SIWS, EIP-4361) standard.
 # You can configure "web3" rate limit in the [auth.rate_limit] section and set up [auth.captcha] if self-hosting.
 [auth.web3.solana]

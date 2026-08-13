@@ -38,7 +38,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 132 otomatik test — 76 birim (Vitest), 38 uçtan uca (Playwright, 6'sı
+**Test:** 150 otomatik test — 88 birim (Vitest), 44 uçtan uca (Playwright, 6'sı
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 18 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -85,8 +85,16 @@ cihazda silinen görev diriliyordu. Değiştirmeyin.
 `src/lib/task-mapping.ts`'te. **i18n'e geçildiğinde istemci tarafı yine de
 dile bağımsız hale getirilmeli** — bu iş ertelendi, yok olmadı.
 
-**`@tanstack/react-query` kurulu ama hiç kullanılmıyor.** Ya bir kullanım
-bulunmalı ya bağımlılıktan kaldırılmalı.
+**Özellik bayrakları `src/config/features.ts`'te.** Ortam değişkeninden okunan,
+derleme zamanı sabitleri. `isEnabled` yalnızca `"true"` metnini kabul eder —
+`Boolean("false")` tuzağı testle korunuyor. Starter kit alıcısı bir özelliği
+tek satırda kapatabilsin diye bayraklar koda dağıtılmaz.
+
+**GitHub girişi iki taraflı bir anahtardır.** Supabase'de sağlayıcı kapalıyken
+`signInWithOAuth` **hata döndürmez**: tarayıcıyı yönlendirir ve kullanıcı
+Supabase'in ham JSON hatasına düşer. Yani yanlış yapılandırma istemcide
+yakalanamaz — buton bu yüzden `features.githubAuth` bayrağıyla korunur ve
+varsayılan kapalıdır.
 
 **Erişilebilirlik:** Tüm modaller Radix (`role="dialog"`, odak tuzağı, Escape).
 İkon-only butonlarda görev başlığını içeren `aria-label`. `confirm()`/`alert()`
@@ -113,9 +121,13 @@ meta/OG, `@/*` alias, Radix dialog/alert-dialog, `confirm()` kaldırıldı.
 
 ### ⚠️ Faz 1 — Supabase + Auth *(kısmen)*
 **Yapıldı:** `profiles`+`tasks` şeması, tam RLS, e-posta/parola auth,
-`AuthProvider`, giriş/kayıt/parola sıfırlama diyaloğu, hesap menüsü.
-**Yapılmadı:** router, Google/GitHub OAuth, `categories` tablosu,
+`AuthProvider`, giriş/kayıt/parola sıfırlama diyaloğu, hesap menüsü,
+**GitHub OAuth** (bayrakla kapalı gelir), `/auth/callback` hata karşılama.
+**Yapılmadı:** `categories` tablosu,
 `subscriptions`/`clients`/`projects`/`time_logs` tabloları.
+**Kapsam dışı bırakıldı:** Google OAuth — Google Cloud Console hesabı
+gerektiriyor, kullanıcının hesabı yok. Kod tarafında engel yok: `features.ts`'e
+ikinci bayrak, `AuthProvider`'a ikinci `signInWithOAuth` çağrısı yeterli.
 
 ### ✅ Faz 1.5 — Test altyapısı ve mimari düzeltmeler *(planda yoktu, araya eklendi)*
 Vitest + Playwright kuruldu. Ölü `deserialize` kodu düzeltildi (zustand v5'te
@@ -152,8 +164,8 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 
 ### ⏳ Kalan işler
 
-**Faz 1 artıkları:** OAuth (Google/GitHub), `categories` tablosu (sabit enum
-yerine kullanıcı tanımlı kategoriler).
+**Faz 1 artıkları:** `categories` tablosu (sabit enum yerine kullanıcı tanımlı
+kategoriler). Google OAuth kapsam dışı (yukarıya bakın).
 
 **Ürün sağlamlaştırma:** i18n (`react-i18next`, tr+en) — önkoşulu istemci
 tiplerinin dile bağımsız hale getirilmesi; Sentry + `ErrorBoundary` (env ile
@@ -220,7 +232,8 @@ Plandan neden ayrıldığımızın kaydı — gelecekte "burada ne olmuş?" soru
 | Veri katmanı | react-query, kademeli düşüş, tek cihaz | Zustand birincil + kendi senkron motoru, çoklu cihaz | Kullanıcı local-first'ü seçti. Ancak seçim yapılırken planın aksini söylediği kendisine iletilmedi |
 | Router | Faz 1'de React Router v7 | Yok | Plan metni elde değildi, kapsam koddan türetildi |
 | `categories` tablosu | Var | Yok, sabit enum | Şema plandan değil mevcut koddan türetildi |
-| OAuth | Google + GitHub | Yalnızca e-posta/parola | Aynı sebep |
+| OAuth | Google + GitHub | Yalnızca GitHub | Google, Cloud Console hesabı istiyor; kullanıcının hesabı yok |
+| react-query | Veri katmanı olacaktı | Bağımlılıktan kaldırıldı | Zustand birincil kaldı, hiç kullanılmadı |
 | İstemci tipleri | Faz 2'de dile bağımsız | Türkçe kaldı, DB sınırında eşleme | Tasarım kararı, plan görülmeden alındı |
 | Test + CI | Faz 4 | Faz 1.5 ve hemen sonrası | Kullanıcı istedi; doğru karar çıktı |
 | Ödeme | Stripe | Belirsiz (iyzico / LemonSqueezy) | Türkiye'den Stripe açılamıyor |

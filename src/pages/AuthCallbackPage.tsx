@@ -1,33 +1,43 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../components/AuthProvider';
+import { parseAuthCallbackError } from '../lib/auth-callback';
 
 /**
  * E-posta doğrulama ve OAuth yönlendirmelerinin indiği sayfa.
  *
- * Supabase istemcisi adresteki kodu arka planda oturuma çevirir; burada
- * yapılan tek şey bunun tamamlanmasını bekleyip uygulamaya yönlendirmek.
+ * Başarılı durumda Supabase istemcisi adresteki kodu arka planda oturuma
+ * çevirir; burada yapılan tek şey bunun tamamlanmasını bekleyip uygulamaya
+ * yönlendirmek. Başarısız durumda ise sağlayıcı hatayı yine bu adrese
+ * ekleyerek döner — o yüzden adres bir kez, ilk render'da okunur (Supabase
+ * istemcisi URL'i temizleyebildiği için sonrası güvenilmez).
  */
 export function AuthCallbackPage() {
     const { user, isLoading, isConfigured } = useAuth();
     const navigate = useNavigate();
 
+    const [callbackError] = useState(() =>
+        parseAuthCallbackError(window.location.search, window.location.hash)
+    );
+
     useEffect(() => {
-        if (isLoading) return;
+        if (isLoading || callbackError) return;
         if (!isConfigured || user) {
             void navigate('/app', { replace: true });
         }
-    }, [isLoading, isConfigured, user, navigate]);
+    }, [isLoading, isConfigured, user, navigate, callbackError]);
 
-    if (!isLoading && isConfigured && !user) {
+    if (callbackError || (!isLoading && isConfigured && !user)) {
         return (
             <main className="min-h-screen bg-background text-foreground flex items-center justify-center p-4">
                 <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-xl p-6 text-center space-y-4">
-                    <h1 className="text-xl font-bold tracking-tight">Bağlantı doğrulanamadı</h1>
+                    <h1 className="text-xl font-bold tracking-tight">
+                        {callbackError ? 'Giriş tamamlanamadı' : 'Bağlantı doğrulanamadı'}
+                    </h1>
                     <p className="text-sm text-muted-foreground">
-                        Bağlantı geçersiz ya da süresi dolmuş olabilir. Görevlerinize bu cihazdan
-                        erişmeye devam edebilirsiniz.
+                        {callbackError?.message ??
+                            'Bağlantı geçersiz ya da süresi dolmuş olabilir. Görevlerinize bu cihazdan erişmeye devam edebilirsiniz.'}
                     </p>
                     <Link
                         to="/app"

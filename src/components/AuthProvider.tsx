@@ -15,6 +15,18 @@ type AuthProviderState = {
     isConfigured: boolean
     signUp: (email: string, password: string) => Promise<SignUpResult>
     signIn: (email: string, password: string) => Promise<AuthResult>
+    /**
+     * GitHub'a yönlendirir. Dönen `error: null` "yönlendirme başladı" demektir,
+     * "giriş yapıldı" değil — başarılı durumda bu sayfadan ayrılınır ve sonucu
+     * `/auth/callback` karşılar.
+     *
+     * Hata neredeyse hiç dönmez: sağlayıcı Supabase'de kapalıysa bile istemci
+     * yönlendirmeyi yapar ve kullanıcı Supabase'in ham JSON hatasına düşer
+     * (ölçüldü: `{"msg":"Unsupported provider: provider is not enabled"}`).
+     * Bu yüzden buton `features.githubAuth` bayrağıyla korunuyor; bayrağı
+     * sunucu tarafı yapılandırılmadan açmayın.
+     */
+    signInWithGitHub: () => Promise<AuthResult>
     signOut: () => Promise<AuthResult>
     resetPassword: (email: string) => Promise<AuthResult>
     /** Sıfırlama bağlantısıyla açılan oturumda yeni parola belirler. */
@@ -123,6 +135,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (!supabase) return NOT_CONFIGURED
 
             const { error } = await supabase.auth.signInWithPassword({ email, password })
+            return { error: error ? translateAuthError(error) : null }
+        },
+
+        signInWithGitHub: async () => {
+            if (!supabase) return NOT_CONFIGURED
+
+            // E-posta bağlantılarıyla aynı adrese dönülür; adres Supabase'in
+            // izin listesinde *tam eşleşme* olarak bulunmalı, yoksa istek
+            // sessizce site_url'e düşer.
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'github',
+                options: { redirectTo: `${window.location.origin}/auth/callback` },
+            })
             return { error: error ? translateAuthError(error) : null }
         },
 
