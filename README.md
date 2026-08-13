@@ -1,5 +1,7 @@
 # Yapılacaklar Listesi
 
+[![CI](https://github.com/CanSrl/New-Era-To-Do-App/actions/workflows/ci.yml/badge.svg)](https://github.com/CanSrl/New-Era-To-Do-App/actions/workflows/ci.yml)
+
 Modern, hızlı ve PWA destekli bir görev yöneticisi. React, TypeScript, Vite,
 Tailwind CSS v4, Zustand ve Supabase ile geliştirilmiştir.
 
@@ -148,6 +150,23 @@ politikalarının gerçekten uygulandığını doğrular: bir kullanıcının di
 görevlerini okuyamadığını, güncelleyemediğini ve silemediğini; oturumsuz
 erişimin hiç veri döndürmediğini; tetikleyicilerin ve kısıtların beklendiği
 gibi davrandığını kontrol eder. Şemaya dokunduğunuzda bu testi çalıştırın.
+
+## Sürekli entegrasyon (CI)
+
+Her push ve pull request'te `.github/workflows/ci.yml` çalışır. İki iş paralel
+ilerler:
+
+| İş | İçerik | Süre |
+| --- | --- | --- |
+| Lint, tip ve birim testleri | ESLint, `tsc`, Vitest, üretim derlemesi | ~1 dk |
+| Şema ve uçtan uca testler | Supabase yığını, RLS testleri, Playwright | ~4 dk |
+
+İkinci iş, koşucuda gerçek bir Supabase yığını başlatır. Yalnızca testlerin
+ihtiyaç duyduğu servisler açılır (veritabanı, ağ geçidi, auth, REST); studio,
+storage, realtime gibi servisler dışarıda bırakılarak açılış süresi kısaltılır.
+
+E2E testleri başarısız olursa Playwright raporu çalıştırma sayfasında artefakt
+olarak 7 gün saklanır — hatayı yerelde tekrar üretmeye çalışmadan inceleyebilirsiniz.
 
 ## Yayına Alma (Deployment)
 
