@@ -1,5 +1,26 @@
 import type { Page } from '@playwright/test'
 
+/**
+ * Uygulamayı açar ve kabuk render olana kadar bekler.
+ *
+ * `/` istemci tarafında `/app`'e yönlendirdiği için doğrudan `/app` açılır;
+ * ayrıca `goto` yalnızca belgenin yüklenmesini bekler, React'in kabuğu
+ * basmasını beklemez — bu yüzden sabit bir öğe beklenir.
+ */
+export async function gotoApp(page: Page, path = '/app') {
+    await page.goto(path)
+    await page.getByTitle('Görev Ekle').waitFor()
+}
+
+/** Supabase yapılandırılmış mı? Giriş arayüzünün varlığından anlaşılır. */
+export async function isAuthEnabled(page: Page): Promise<boolean> {
+    return page
+        .getByRole('button', { name: 'Giriş Yap', exact: true })
+        .waitFor({ state: 'visible', timeout: 3000 })
+        .then(() => true)
+        .catch(() => false)
+}
+
 /** Görev formu bir Radix Dialog'dur; seçiciler onun içine daraltılır. */
 export const taskDialog = (page: Page) => page.getByRole('dialog')
 

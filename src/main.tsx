@@ -1,10 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './components/AuthProvider'
 import { SyncProvider } from './components/SyncProvider'
-import App from './App.tsx'
+import { router } from './router'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -12,7 +13,7 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider defaultTheme="system" storageKey="yapilacaklar-theme">
       <AuthProvider>
         <SyncProvider>
-          <App />
+          <RouterProvider router={router} />
           <Toaster position="top-right" richColors closeButton />
         </SyncProvider>
       </AuthProvider>

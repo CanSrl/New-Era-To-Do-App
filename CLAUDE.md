@@ -38,7 +38,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 122 otomatik test — 76 birim (Vitest), 28 uçtan uca (Playwright, 6'sı
+**Test:** 132 otomatik test — 76 birim (Vitest), 38 uçtan uca (Playwright, 6'sı
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 18 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -92,6 +92,12 @@ bulunmalı ya bağımlılıktan kaldırılmalı.
 İkon-only butonlarda görev başlığını içeren `aria-label`. `confirm()`/`alert()`
 kullanılmaz. Öncelik rozetlerinde renk + metin birlikte.
 
+**Auth yönlendirme adresleri:** Supabase, izin listesinde **tam eşleşme**
+bulamadığı yönlendirme adresini sessizce `site_url`'e düşürür — hata vermez,
+sadece yanlış yere gider. Yerelde `supabase/config.toml` içindeki
+`additional_redirect_urls` bunu kapsar; bulut projesinde aynı adresler
+**Authentication → URL Configuration** altında tanımlanmalıdır.
+
 **Derleme:** `dist/` Vite tarafından temizlenmiyor (OneDrive yolunda
 `emptyOutDir` sessizce başarısız oluyor). `scripts/clean-dist.mjs` bunu yapar ve
 başarısız olursa derlemeyi durdurur — eski bundle'lar service worker tarafından
@@ -126,11 +132,23 @@ motoru, `SyncProvider` + durum göstergesi. Zustand birincil kaldı.
 İki iş: kalite (lint/tsc/birim/build) ve entegrasyon (Supabase yığını + RLS +
 E2E). Hata durumunda Playwright raporu artefakt olarak yüklenir.
 
-### 🔜 Sıradaki — Router
-React Router v7. Faz 1'den atlandı ve borç büyüyor: Faz 5'in müşteri/proje
-liste+detay sayfaları, ayarlar ve pazarlama sayfası router olmadan yapılamaz.
-Hedef iskelet: `/`, `/giris`, `/kayit`, `/sifirlama`, `/auth/callback`,
-`/app` (korumalı layout), `/app/gorevler`, `/app/ayarlar`.
+### ✅ Router ve ayarlar sayfası
+React Router v7. Rotalar: `/` (→ `/app`), `/app` (kabuk), `/app` index
+(görevler), `/app/settings`, `/reset-password`, `/auth/callback`, `*`
+(bulunamadı). Yollar İngilizce: uygulama Türkçe olsa da starter kit
+uluslararası satılacak ve i18n planlanıyor.
+
+`/app` altında **oturum koruması yoktur** — uygulama local-first, giriş
+isteğe bağlı. Koruma ancak hesaba özel sayfalar (faturalama) geldiğinde
+gerekecek.
+
+Görev formu ve `n`/`Escape` kısayolları **kabukta** yaşar: yüzen ekleme
+butonu ve mobil alt gezinmenin merkez butonu her sayfada görünür, dolayısıyla
+form da her sayfada açılabilmeli.
+
+Ayrıca tamamlananlar: parola sıfırlama akışı (eskiden çıkmaz sokaktı — bağlantı
+oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırması
+(`public/_redirects`, `vercel.json`).
 
 ### ⏳ Kalan işler
 

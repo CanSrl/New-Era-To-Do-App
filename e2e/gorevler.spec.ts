@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
-import { addTask, deleteButton, editButton, openTaskForm, taskDialog, taskHeading, toggleButton } from './helpers'
+import { addTask, deleteButton, editButton, gotoApp, openTaskForm, taskDialog, taskHeading, toggleButton } from './helpers'
 
 // Playwright her teste izole bir tarayıcı bağlamı verir; LocalStorage
 // testler arasında paylaşılmaz, ayrıca temizlik gerekmez.
 test.beforeEach(async ({ page }) => {
-    await page.goto('/')
+    await gotoApp(page)
 })
 
 test('boş durum karşılama ekranını gösterir', async ({ page }) => {
@@ -137,6 +137,7 @@ test('görevler sayfa yenilendikten sonra korunur', async ({ page }) => {
     await expect(taskHeading(page, 'Kalıcı görev')).toBeVisible()
 
     await page.reload()
+    await page.getByTitle('Görev Ekle').waitFor()
 
     await expect(taskHeading(page, 'Kalıcı görev')).toBeVisible()
     // Tarih yenilemeden sonra da doğru biçimde görünmeli: eskiden tarihler

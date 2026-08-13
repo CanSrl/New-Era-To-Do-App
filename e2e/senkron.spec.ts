@@ -1,5 +1,5 @@
 import { test, expect, type Browser, type Page } from '@playwright/test'
-import { addTask, deleteButton, taskHeading, toggleButton } from './helpers'
+import { addTask, deleteButton, gotoApp, isAuthEnabled, taskHeading, toggleButton } from './helpers'
 
 /**
  * Gerçek çift cihaz senaryoları.
@@ -15,11 +15,8 @@ let supabaseReady = false
 test.beforeAll(async ({ browser }) => {
     const context = await browser.newContext()
     const page = await context.newPage()
-    await page.goto('/')
-    supabaseReady = await page
-        .getByRole('button', { name: 'Giriş Yap', exact: true })
-        .isVisible()
-        .catch(() => false)
+    await gotoApp(page)
+    supabaseReady = await isAuthEnabled(page)
     await context.close()
 })
 
@@ -31,7 +28,7 @@ test.beforeEach(() => {
 async function openDevice(browser: Browser): Promise<Page> {
     const context = await browser.newContext()
     const page = await context.newPage()
-    await page.goto('/')
+    await gotoApp(page)
     return page
 }
 
@@ -106,6 +103,7 @@ test('bir cihazda eklenen görev diğerinde görünür', async ({ browser }) => 
 
     // B yeniden yüklendiğinde uzaktaki değişikliği çeker.
     await deviceB.reload()
+    await deviceB.getByTitle('Görev Ekle').waitFor()
     await expect(taskHeading(deviceB, 'A cihazından')).toBeVisible({ timeout: 15_000 })
 })
 
@@ -128,6 +126,7 @@ test('bir cihazdaki silme diğerine yayılır', async ({ browser }) => {
     await waitForSynced(deviceA)
 
     await deviceB.reload()
+    await deviceB.getByTitle('Görev Ekle').waitFor()
     await expect(taskHeading(deviceB, 'Silinecek görev')).toBeHidden({ timeout: 15_000 })
 })
 
@@ -147,6 +146,7 @@ test('tamamlama durumu cihazlar arasında taşınır', async ({ browser }) => {
     await waitForSynced(deviceA)
 
     await deviceB.reload()
+    await deviceB.getByTitle('Görev Ekle').waitFor()
     await expect(toggleButton(deviceB, 'Ortak görev')).toHaveAttribute('aria-pressed', 'true', {
         timeout: 15_000,
     })

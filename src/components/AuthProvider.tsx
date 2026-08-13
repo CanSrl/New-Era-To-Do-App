@@ -17,6 +17,8 @@ type AuthProviderState = {
     signIn: (email: string, password: string) => Promise<AuthResult>
     signOut: () => Promise<AuthResult>
     resetPassword: (email: string) => Promise<AuthResult>
+    /** Sıfırlama bağlantısıyla açılan oturumda yeni parola belirler. */
+    updatePassword: (password: string) => Promise<AuthResult>
 }
 
 const NOT_CONFIGURED: AuthResult = {
@@ -101,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
-                options: { emailRedirectTo: window.location.origin },
+                options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
             })
             if (error) {
                 return { error: translateAuthError(error), needsEmailConfirmation: false }
@@ -134,9 +136,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword: async (email) => {
             if (!supabase) return NOT_CONFIGURED
 
+            // Bağlantı doğrudan yeni parola ekranına düşer; Supabase oradaki
+            // koddan oturumu kurar ve kullanıcı parolasını belirleyebilir.
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin,
+                redirectTo: `${window.location.origin}/reset-password`,
             })
+            return { error: error ? translateAuthError(error) : null }
+        },
+
+        updatePassword: async (password) => {
+            if (!supabase) return NOT_CONFIGURED
+
+            const { error } = await supabase.auth.updateUser({ password })
             return { error: error ? translateAuthError(error) : null }
         },
     }), [session, isLoading])

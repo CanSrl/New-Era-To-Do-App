@@ -1,0 +1,4 @@
+# Tek sayfa uygulaması geri dönüşü (Netlify ve uyumlu servisler).
+# İstemci tarafı yönlendirme kullanıldığı için /app/settings gibi adresler
+# sunucuda dosya olarak bulunmaz; hepsi index.html'e düşmelidir.
+/*    /index.html   200
