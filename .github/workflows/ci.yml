@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Aynı dala arka arkaya push yapılırsa eski çalıştırma iptal edilir.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kalite:
+    name: Lint, tip ve birim testleri
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Bağımlılıkları kur
+        run: npm ci --legacy-peer-deps
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tip kontrolü
+        run: npx tsc -b --noEmit
+
+      - name: Birim testleri
+        run: npm test
+
+      - name: Üretim derlemesi
+        run: npm run build
+
+  entegrasyon:
+    name: Şema ve uçtan uca testler
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Bağımlılıkları kur
+        run: npm ci --legacy-peer-deps
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Yalnızca testlerin ihtiyaç duyduğu servisler başlatılır: veritabanı,
+      # ağ geçidi, auth ve REST. Studio, storage, realtime gibi servisleri
+      # dışarıda bırakmak imaj indirmesini ve açılış süresini belirgin şekilde
+      # kısaltır.
+      - name: Supabase yığınını başlat
+        run: |
+          supabase start \
+            -x realtime,storage-api,imgproxy,studio,edge-runtime,logflare,vector,supavisor,postgres-meta
+
+      - name: Ortam değişkenlerini yaz
+        run: |
+          API_URL=$(supabase status -o json | jq -r '.API_URL')
+          ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$API_URL" "$ANON_KEY" > .env.local
+
+      # Şema güvenlik testleri: RLS politikalarının gerçekten uygulandığını
+      # iki ayrı kullanıcı oluşturarak doğrular.
+      - name: Şema güvenlik testleri
+        run: npm run test:rls
+
+      - name: Playwright tarayıcısını kur
+        run: npx playwright install --with-deps chromium
+
+      - name: Uçtan uca testler
+        run: npm run test:e2e
+
+      - name: Hata raporunu yükle
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-raporu
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
