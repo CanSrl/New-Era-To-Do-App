@@ -25,21 +25,23 @@ Depo: [CanSrl/New-Era-To-Do-App](https://github.com/CanSrl/New-Era-To-Do-App) (p
 **Yığın:** React 19 + TypeScript + Vite 8 + Tailwind v4 + Zustand + Supabase +
 Radix + dnd-kit + framer-motion + PWA (vite-plugin-pwa).
 
-**Veritabanı** (`supabase/migrations/`): yalnızca iki tablo var.
+**Veritabanı** (`supabase/migrations/`): üç tablo var.
 ```
-profiles  id(=auth.users.id), email, display_name, created_at, updated_at
-          -- auth.users tetikleyicisiyle otomatik oluşur
-tasks     id, user_id, title, description, due_date(date), priority, category,
-          completed, completed_at, position(float), created_at, updated_at
+profiles    id(=auth.users.id), email, display_name, created_at, updated_at
+            -- auth.users tetikleyicisiyle otomatik oluşur
+categories  id, user_id, name, color('#rrggbb'), position(float),
+            created_at, updated_at
+tasks       id, user_id, title, description, due_date(date), priority,
+            category_id(null), completed, completed_at, position(float),
+            created_at, updated_at
 ```
-Enum'lar dile bağımsız: `task_priority`(low|medium|high),
-`task_category`(work|personal|shopping|school).
+`task_priority`(low|medium|high) dile bağımsız enum olarak kaldı.
 RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `anon`'a
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 150 otomatik test — 88 birim (Vitest), 44 uçtan uca (Playwright, 6'sı
-gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 18 şema güvenlik testi.
+**Test:** 225 otomatik test — 142 birim (Vitest), 53 uçtan uca (Playwright, 9'u
+gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 30 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
 ## Komutlar
@@ -80,10 +82,31 @@ cihazlar aynı sonuca varsın diye). Bulut her turda **tam anlık görüntü** o
 Bu olmadan her girişte tüm görevler "gönderilmeyi bekliyor" sayılıyor ve başka
 cihazda silinen görev diriliyordu. Değiştirmeyin.
 
-**Arayüz etiketleri hâlâ Türkçe union.** `Priority`/`Category` istemcide
+**Arayüz etiketleri hâlâ Türkçe union.** `Priority` istemcide
 `'Düşük'|'Orta'|'Yüksek'`, veritabanında `low|medium|high`. Dönüşüm
 `src/lib/task-mapping.ts`'te. **i18n'e geçildiğinde istemci tarafı yine de
-dile bağımsız hale getirilmeli** — bu iş ertelendi, yok olmadı.
+dile bağımsız hale getirilmeli** — bu iş ertelendi, yok olmadı. Kategoriler
+artık kullanıcı verisi olduğu için bu sorundan çıktı; yalnızca tohumlanan dört
+varsayılanın adı Türkçe.
+
+**Kategorilerde benzersizlik kısıtı bilinçli olarak YOKTUR.** İki cihaz
+çevrimdışıyken aynı adla kategori oluşturabilir. `unique (user_id, name)`
+olsaydı ikinci cihazın push'u 23505 ile düşer ve **aynı turdaki bütün görev
+senkronizasyonunu** da beraberinde götürürdü. Bunun yerine `mergeCategories`
+aynı adlı kategorileri buluttakine katlar (`idRemap`) ve `remapTaskCategories`
+görevlerin bağını yeniden yazar. Tekrarı yalnızca arayüz engeller.
+
+**`tasks.category_id` bileşik yabancı anahtardır: `(category_id, user_id)`.**
+Tek sütunlu referans yetmez — FK kontrolü RLS'i atlar, yani kullanıcı
+başkasının kategori id'sini bilirse görevini ona bağlayabilirdi. `on delete
+set null (category_id)` (Postgres 15+ sütun listesi) kategori silinince görevi
+silmez, yalnızca bağı koparır.
+
+**Senkron sırası serbest değil:** önce kategoriler yazılır (yoksa görev push'u
+23503 alır), sonra görevler yazılır/silinir, en sonda kategoriler silinir.
+`SyncProvider`'daki `pendingCount` kategori sayaçlarını da içermek zorunda;
+içermezse yalnızca kategori değiştiğinde senkron hiç tetiklenmez (bu bir kez
+gerçekten oldu, `senkron.spec.ts` bunu korur).
 
 **Özellik bayrakları `src/config/features.ts`'te.** Ortam değişkeninden okunan,
 derleme zamanı sabitleri. `isEnabled` yalnızca `"true"` metnini kabul eder —
@@ -119,12 +142,14 @@ precache ediliyordu (2602 KiB → 774 KiB).
 Ölü dosyalar silindi, marka ikonu ve PWA ikon seti üretildi, `index.html`
 meta/OG, `@/*` alias, Radix dialog/alert-dialog, `confirm()` kaldırıldı.
 
-### ⚠️ Faz 1 — Supabase + Auth *(kısmen)*
-**Yapıldı:** `profiles`+`tasks` şeması, tam RLS, e-posta/parola auth,
-`AuthProvider`, giriş/kayıt/parola sıfırlama diyaloğu, hesap menüsü,
-**GitHub OAuth** (bayrakla kapalı gelir), `/auth/callback` hata karşılama.
-**Yapılmadı:** `categories` tablosu,
-`subscriptions`/`clients`/`projects`/`time_logs` tabloları.
+### ✅ Faz 1 — Supabase + Auth
+**Yapıldı:** `profiles`+`categories`+`tasks` şeması, tam RLS, e-posta/parola
+auth, `AuthProvider`, giriş/kayıt/parola sıfırlama diyaloğu, hesap menüsü,
+**GitHub OAuth** (bayrakla kapalı gelir), `/auth/callback` hata karşılama,
+**kullanıcı tanımlı kategoriler** (ad + renk, ayarlar sayfasında yönetim,
+cihazlar arası senkron).
+**Sonraki fazlara bırakıldı:** `subscriptions` (ödeme),
+`clients`/`projects`/`time_logs` (niş modül).
 **Kapsam dışı bırakıldı:** Google OAuth — Google Cloud Console hesabı
 gerektiriyor, kullanıcının hesabı yok. Kod tarafında engel yok: `features.ts`'e
 ikinci bayrak, `AuthProvider`'a ikinci `signInWithOAuth` çağrısı yeterli.
@@ -163,9 +188,6 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 (`public/_redirects`, `vercel.json`).
 
 ### ⏳ Kalan işler
-
-**Faz 1 artıkları:** `categories` tablosu (sabit enum yerine kullanıcı tanımlı
-kategoriler). Google OAuth kapsam dışı (yukarıya bakın).
 
 **Ürün sağlamlaştırma:** i18n (`react-i18next`, tr+en) — önkoşulu istemci
 tiplerinin dile bağımsız hale getirilmesi; Sentry + `ErrorBoundary` (env ile
@@ -231,7 +253,7 @@ Plandan neden ayrıldığımızın kaydı — gelecekte "burada ne olmuş?" soru
 | --- | --- | --- | --- |
 | Veri katmanı | react-query, kademeli düşüş, tek cihaz | Zustand birincil + kendi senkron motoru, çoklu cihaz | Kullanıcı local-first'ü seçti. Ancak seçim yapılırken planın aksini söylediği kendisine iletilmedi |
 | Router | Faz 1'de React Router v7 | Yok | Plan metni elde değildi, kapsam koddan türetildi |
-| `categories` tablosu | Var | Yok, sabit enum | Şema plandan değil mevcut koddan türetildi |
+| `categories` tablosu | Faz 1'de var | Faz 1'in en sonunda geldi | Şema önce mevcut koddan türetilmişti; enum'dan tabloya geçiş sonradan yapıldı |
 | OAuth | Google + GitHub | Yalnızca GitHub | Google, Cloud Console hesabı istiyor; kullanıcının hesabı yok |
 | react-query | Veri katmanı olacaktı | Bağımlılıktan kaldırıldı | Zustand birincil kaldı, hiç kullanılmadı |
 | İstemci tipleri | Faz 2'de dile bağımsız | Türkçe kaldı, DB sınırında eşleme | Tasarım kararı, plan görülmeden alındı |

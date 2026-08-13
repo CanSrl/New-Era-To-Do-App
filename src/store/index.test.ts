@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useTaskStore } from './index';
 import type { Task } from '../lib/types';
+import { seedCategories } from '../lib/categories';
 
 const STORAGE_KEY = 'yapilacaklar-storage';
 
@@ -9,10 +10,13 @@ function resetStore() {
     localStorage.clear();
     useTaskStore.setState({
         tasks: [],
+        categories: seedCategories(),
         searchQuery: '',
         filter: 'Tüm Görevler',
         dirtyIds: [],
         tombstones: [],
+        dirtyCategoryIds: [],
+        categoryTombstones: [],
         lastSyncedAt: null,
         ownerId: null,
     });
@@ -24,7 +28,7 @@ function addTask(title: string, overrides: Partial<Task> = {}) {
     store().addTask({
         title,
         priority: 'Orta',
-        category: 'Kişisel',
+        categoryId: null,
         completed: false,
         ...overrides,
     });
@@ -239,7 +243,9 @@ describe('senkron meta verisi', () => {
         const before = store().tasks[0].updatedAt;
 
         store().applySyncResult({
-            tasks: store().tasks, syncedIds: [id], clearedTombstoneIds: [], syncedAt: 'x',
+            tasks: store().tasks, categories: store().categories, syncedIds: [id],
+            clearedTombstoneIds: [], syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedAt: 'x',
         });
         expect(store().dirtyIds).toEqual([]);
 
@@ -278,8 +284,11 @@ describe('senkron meta verisi', () => {
         const [a, b, c] = store().tasks;
         store().applySyncResult({
             tasks: store().tasks,
+            categories: store().categories,
             syncedIds: [a.id, b.id, c.id],
             clearedTombstoneIds: [],
+            syncedCategoryIds: [],
+            clearedCategoryTombstoneIds: [],
             syncedAt: 'x',
         });
 
@@ -297,8 +306,11 @@ describe('senkron meta verisi', () => {
         // Yalnızca ilk görev gönderildi; ikincisi hâlâ beklemeli.
         store().applySyncResult({
             tasks: store().tasks,
+            categories: store().categories,
             syncedIds: [first.id],
             clearedTombstoneIds: [],
+            syncedCategoryIds: [],
+            clearedCategoryTombstoneIds: [],
             syncedAt: '2026-01-01T00:00:00.000Z',
         });
 
@@ -312,7 +324,9 @@ describe('prepareForSync', () => {
         addTask('Misafir görevi');
         const id = store().tasks[0].id;
         store().applySyncResult({
-            tasks: store().tasks, syncedIds: [id], clearedTombstoneIds: [], syncedAt: 'x',
+            tasks: store().tasks, categories: store().categories, syncedIds: [id],
+            clearedTombstoneIds: [], syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedAt: 'x',
         });
 
         store().prepareForSync('kullanici-1');
@@ -327,7 +341,9 @@ describe('prepareForSync', () => {
         const id = store().tasks[0].id;
         store().prepareForSync('kullanici-1');
         store().applySyncResult({
-            tasks: store().tasks, syncedIds: [id], clearedTombstoneIds: [], syncedAt: 'x',
+            tasks: store().tasks, categories: store().categories, syncedIds: [id],
+            clearedTombstoneIds: [], syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedAt: 'x',
         });
         expect(store().dirtyIds).toEqual([]);
 
@@ -341,8 +357,11 @@ describe('prepareForSync', () => {
         store().prepareForSync('kullanici-1');
         store().applySyncResult({
             tasks: store().tasks,
+            categories: store().categories,
             syncedIds: store().tasks.map(t => t.id),
             clearedTombstoneIds: [],
+            syncedCategoryIds: [],
+            clearedCategoryTombstoneIds: [],
             syncedAt: 'x',
         });
 
@@ -366,7 +385,7 @@ describe('kalıcılık (persist)', () => {
         expect(raw).toBeTruthy();
         const parsed = JSON.parse(raw as string);
         expect(parsed.state.tasks[0].title).toBe('Kalıcı görev');
-        expect(parsed.version).toBe(2);
+        expect(parsed.version).toBe(3);
     });
 
     it('yazılan tarihler string olarak saklanır', async () => {
@@ -411,7 +430,7 @@ describe('v0 -> v1 göçü', () => {
         expect(task.dueDate).toBe('2026-08-15');
         expect(task.position).toBe(0);
         expect(task.priority).toBe('Yüksek');
-        expect(task.category).toBe('İş');
+        expect(task.categoryId).toBe(store().categories.find(c => c.name === 'İş')?.id);
     });
 
     it('eski kayıttaki bozuk görevleri eler', async () => {
@@ -430,5 +449,186 @@ describe('v0 -> v1 göçü', () => {
         await useTaskStore.persist.rehydrate();
 
         expect(store().tasks.map(t => t.title)).toEqual(['Sağlam']);
+    });
+});
+
+describe('kategoriler', () => {
+    const nameOf = (id: string | null) =>
+        store().categories.find(c => c.id === id)?.name;
+
+    it('yeni cihaz varsayılan kategorilerle açılır', () => {
+        expect(store().categories.map(c => c.name)).toEqual([
+            'İş', 'Kişisel', 'Alışveriş', 'Okul',
+        ]);
+    });
+
+    it('kategori ekler ve gönderilmeyi bekleyenlere alır', () => {
+        const created = store().addCategory('Tatil', '#ef4444');
+
+        expect(created).not.toBeNull();
+        expect(nameOf(created!.id)).toBe('Tatil');
+        expect(store().dirtyCategoryIds).toContain(created!.id);
+    });
+
+    it('aynı adı ikinci kez eklemez', () => {
+        // Veritabanında benzersizlik kısıtı bilinçli olarak yok; tekrarı
+        // arayüz katmanı engelliyor.
+        expect(store().addCategory('iş', '#ef4444')).toBeNull();
+        expect(store().categories.filter(c => c.name === 'İş')).toHaveLength(1);
+    });
+
+    it('boş adı reddeder', () => {
+        expect(store().addCategory('   ', '#ef4444')).toBeNull();
+    });
+
+    it('kategoriyi yeniden adlandırır', () => {
+        const id = store().categories[0].id;
+
+        store().updateCategory(id, { name: 'Mesai' });
+
+        expect(nameOf(id)).toBe('Mesai');
+        expect(store().dirtyCategoryIds).toContain(id);
+    });
+
+    it('başka bir kategoriyle çakışan ada izin vermez', () => {
+        const [is, kisisel] = store().categories;
+
+        store().updateCategory(is.id, { name: kisisel.name });
+
+        expect(nameOf(is.id)).toBe('İş');
+    });
+
+    it('kategorinin kendi adını korumak çakışma sayılmaz', () => {
+        const id = store().categories[0].id;
+
+        store().updateCategory(id, { name: 'İş', color: '#10b981' });
+
+        expect(store().categories.find(c => c.id === id)?.color).toBe('#10b981');
+    });
+
+    it('kategori silinince bağlı görevler silinmez, kategorisiz olur', () => {
+        const id = store().categories[0].id;
+        addTask('Rapor', { categoryId: id });
+        addTask('Alışveriş', { categoryId: store().categories[2].id });
+
+        store().deleteCategory(id);
+
+        expect(store().tasks.map(t => t.title)).toEqual(['Rapor', 'Alışveriş']);
+        expect(store().tasks[0].categoryId).toBeNull();
+        // Diğer görevin bağı etkilenmemeli.
+        expect(store().tasks[1].categoryId).not.toBeNull();
+    });
+
+    it('silinen kategori için mezar taşı bırakır', () => {
+        const id = store().categories[0].id;
+
+        store().deleteCategory(id);
+
+        expect(store().categoryTombstones.map(t => t.id)).toEqual([id]);
+        expect(store().dirtyCategoryIds).not.toContain(id);
+    });
+
+    it('kategori silmek görevleri dirty yapmaz', () => {
+        // Sunucuda bağı `on delete set null` zaten koparıyor. Görevleri
+        // dirty işaretlemek, başka cihazda aynı görevde yapılmış gerçek bir
+        // düzenlemeyi haksız yere yenmesine yol açardı.
+        const id = store().categories[0].id;
+        addTask('Rapor', { categoryId: id });
+        const taskId = store().tasks[0].id;
+
+        store().applySyncResult({
+            tasks: store().tasks,
+            categories: store().categories,
+            syncedIds: [taskId],
+            clearedTombstoneIds: [],
+            syncedCategoryIds: [],
+            clearedCategoryTombstoneIds: [],
+            syncedAt: 'x',
+        });
+        store().deleteCategory(id);
+
+        expect(store().dirtyIds).toEqual([]);
+    });
+
+    it('misafir verisi hesaba aktarılırken kategoriler de bekleyenlere alınır', () => {
+        addTask('Misafir görevi');
+
+        store().prepareForSync('kullanici-1');
+
+        expect(store().dirtyCategoryIds).toHaveLength(4);
+    });
+
+    it('başka hesap giriş yaparsa kategorileri yeniden tohumlamaz', () => {
+        // Tohumlamak, kullanıcının o hesapta sildiği varsayılan kategorileri
+        // geri diriltir ve buluta yeniden yazardı.
+        store().prepareForSync('kullanici-1');
+        store().prepareForSync('kullanici-2');
+
+        expect(store().categories).toEqual([]);
+        expect(store().dirtyCategoryIds).toEqual([]);
+    });
+});
+
+describe('v2 -> v3 göçü (kategoriler)', () => {
+    it('metin kategoriyi tohumlanan kategoriye bağlar', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 2,
+            state: {
+                filter: 'Tüm Görevler',
+                dirtyIds: [],
+                tombstones: [],
+                ownerId: null,
+                tasks: [{
+                    id: 't1',
+                    title: 'Rapor',
+                    priority: 'Yüksek',
+                    category: 'İş',
+                    completed: false,
+                    createdAt: '2026-01-05T08:00:00.000Z',
+                    updatedAt: '2026-01-05T08:00:00.000Z',
+                    position: 0,
+                }],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        const is = store().categories.find(c => c.name === 'İş');
+        expect(is).toBeDefined();
+        expect(store().tasks[0].categoryId).toBe(is!.id);
+        // Eski alan kayıtta kalmamalı.
+        expect('category' in store().tasks[0]).toBe(false);
+    });
+
+    it('tanınmayan kategori metnini kategorisiz yapar', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 2,
+            state: {
+                filter: 'Tüm Görevler', dirtyIds: [], tombstones: [], ownerId: null,
+                tasks: [{
+                    id: 't1', title: 'X', priority: 'Orta', category: 'Bahçe',
+                    completed: false, createdAt: '2026-01-05T08:00:00.000Z',
+                    updatedAt: '2026-01-05T08:00:00.000Z', position: 0,
+                }],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().tasks[0].categoryId).toBeNull();
+    });
+
+    it('tohumlanan kategorileri gönderilmeyi bekler olarak işaretler', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 2,
+            state: {
+                filter: 'Tüm Görevler', dirtyIds: [], tombstones: [], ownerId: null, tasks: [],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().dirtyCategoryIds).toHaveLength(4);
+        expect(store().categoryTombstones).toEqual([]);
     });
 });

@@ -15,6 +15,8 @@ ve verileri cihazlar arasında eşitlemeyi mümkün kılar.
 - 🌙 **Karanlık Mod:** Sistem tercihine uygun otomatik veya manuel Light/Dark mod.
 - 📱 **PWA ve Mobil Uyumlu:** Masaüstünde kenar çubuğu, mobilde alt gezinme menüsü.
 - 💾 **Çevrimdışı Çalışma:** Zustand persist ile LocalStorage'a kaydetme.
+- 🏷️ **Kendi Kategorileriniz:** Ad ve renk verip istediğiniz kadar kategori
+  tanımlayın. Bir kategoriyi silmek görevlerini silmez.
 - 🔐 **İsteğe Bağlı Hesap:** E-posta/parola veya GitHub ile giriş (Supabase Auth).
 - ☁️ **Cihazlar Arası Eşitleme:** Giriş yapınca görevler buluta eşitlenir;
   çevrimdışıyken yapılan değişiklikler bağlantı gelince gönderilir.

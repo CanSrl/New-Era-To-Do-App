@@ -1,17 +1,19 @@
 import type { Database } from './database.types';
-import type { Category, Priority, Task } from './types';
+import type { Priority, Task } from './types';
 import { normalizeTask } from './tasks';
 
 type TaskRow = Database['public']['Tables']['tasks']['Row'];
 export type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
 
 type DbPriority = Database['public']['Enums']['task_priority'];
-type DbCategory = Database['public']['Enums']['task_category'];
 
 /**
  * Arayüzdeki Türkçe etiketler ile veritabanındaki sabit anahtarlar arasındaki
  * eşleme. Etiket metni değişirse yalnızca bu tablo güncellenir; veri taşımak
  * gerekmez.
+ *
+ * Kategoriler artık burada değil: sabit enum yerine kullanıcıya ait satırlar
+ * oldular, `category_id` iki tarafta da aynı uuid.
  */
 const PRIORITY_TO_DB: Record<Priority, DbPriority> = {
     'Düşük': 'low',
@@ -25,20 +27,6 @@ const PRIORITY_FROM_DB: Record<DbPriority, Priority> = {
     high: 'Yüksek',
 };
 
-const CATEGORY_TO_DB: Record<Category, DbCategory> = {
-    'İş': 'work',
-    'Kişisel': 'personal',
-    'Alışveriş': 'shopping',
-    'Okul': 'school',
-};
-
-const CATEGORY_FROM_DB: Record<DbCategory, Category> = {
-    work: 'İş',
-    personal: 'Kişisel',
-    shopping: 'Alışveriş',
-    school: 'Okul',
-};
-
 /** Yerel görevi veritabanına yazılacak satıra çevirir. */
 export function taskToRow(task: Task, userId: string): TaskInsert {
     return {
@@ -48,7 +36,7 @@ export function taskToRow(task: Task, userId: string): TaskInsert {
         description: task.description ?? null,
         due_date: task.dueDate ?? null,
         priority: PRIORITY_TO_DB[task.priority],
-        category: CATEGORY_TO_DB[task.category],
+        category_id: task.categoryId,
         completed: task.completed,
         position: task.position,
         created_at: task.createdAt,
@@ -70,7 +58,7 @@ export function rowToTask(row: TaskRow): Task {
             description: row.description ?? undefined,
             dueDate: row.due_date ?? undefined,
             priority: PRIORITY_FROM_DB[row.priority],
-            category: CATEGORY_FROM_DB[row.category],
+            categoryId: row.category_id,
             completed: row.completed,
             createdAt: row.created_at,
             position: row.position,
@@ -86,7 +74,7 @@ export function rowToTask(row: TaskRow): Task {
             title: row.title || 'Adsız görev',
             priority: 'Orta',
             completed: row.completed,
-            category: 'Kişisel',
+            categoryId: row.category_id,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
             position: row.position,

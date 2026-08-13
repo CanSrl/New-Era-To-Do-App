@@ -33,6 +33,11 @@ const priorityColors = {
 export function TaskItem({ task, onEdit }: TaskItemProps) {
     const toggleComplete = useTaskStore(state => state.toggleComplete);
     const deleteTask = useTaskStore(state => state.deleteTask);
+    const category = useTaskStore(state =>
+        task.categoryId === null
+            ? undefined
+            : state.categories.find(c => c.id === task.categoryId)
+    );
     const [isDeleting, setIsDeleting] = useState(false);
 
     const {
@@ -139,10 +144,25 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         {task.priority}
                     </span>
 
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-md">
-                        <Tag size={12} />
-                        {task.category}
-                    </span>
+                    {/*
+                      * Kategorisiz görevlerde rozet hiç basılmaz: "Kategorisiz"
+                      * yazmak listeyi gereksiz doldururdu.
+                      *
+                      * Renk bilginin tek taşıyıcısı değil — kategori adı her
+                      * zaman yanında yazar; renk yalnızca tarama kolaylığı için.
+                      */}
+                    {category && (
+                        <span
+                            className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md"
+                            style={{
+                                color: category.color,
+                                backgroundColor: `${category.color}1a`,
+                            }}
+                        >
+                            <Tag size={12} />
+                            {category.name}
+                        </span>
+                    )}
 
                     {task.dueDate && (
                         <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-md ${isOverdue(task)

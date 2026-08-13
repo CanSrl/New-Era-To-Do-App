@@ -1,4 +1,4 @@
-import { CATEGORIES, PRIORITIES, type Category, type Priority, type Task } from './types';
+import { PRIORITIES, type Priority, type Task } from './types';
 
 /** 'YYYY-MM-DD' biçimini tanır. */
 const CALENDAR_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -48,13 +48,42 @@ function createId(): string {
 }
 
 /**
+ * Ham kaydın kategori bağını çözer.
+ *
+ * İki biçim desteklenir: yeni `categoryId` alanı ve kategoriler kayıt hâline
+ * gelmeden önceki `category` metni. Hiçbiri çözülemezse görev kategorisiz
+ * kalır — bu, veriyi reddetmekten iyidir.
+ */
+function resolveCategoryId(
+    source: Record<string, unknown>,
+    resolveCategoryName?: (name: string) => string | null
+): string | null {
+    if (typeof source.categoryId === 'string' && source.categoryId) {
+        return source.categoryId;
+    }
+    if (typeof source.category === 'string' && source.category.trim() && resolveCategoryName) {
+        return resolveCategoryName(source.category.trim());
+    }
+    return null;
+}
+
+/**
  * Dışarıdan gelen (içe aktarma dosyası, eski LocalStorage kaydı) ham veriyi
  * geçerli bir Task'e çevirir. Başlığı olmayan kayıtlar reddedilir; tanınmayan
- * öncelik/kategori değerleri varsayılana düşer.
+ * öncelik varsayılana düşer.
  *
  * Dış veriye asla güvenilmez: bozuk bir dosya uygulamayı çökertmemeli.
+ *
+ * @param resolveCategoryName Kategoriler kayıt hâline gelmeden önce dışa
+ *   aktarılmış dosyalarda kategori bir metindi (`category: 'İş'`). Bu geri
+ *   çağrı o adı mevcut bir kategori id'sine çevirir; verilmezse ya da
+ *   eşleşme bulunamazsa görev "Kategorisiz" olur.
  */
-export function normalizeTask(raw: unknown, fallbackPosition: number): Task | null {
+export function normalizeTask(
+    raw: unknown,
+    fallbackPosition: number,
+    resolveCategoryName?: (name: string) => string | null
+): Task | null {
     if (!raw || typeof raw !== 'object') return null;
 
     const source = raw as Record<string, unknown>;
@@ -65,9 +94,7 @@ export function normalizeTask(raw: unknown, fallbackPosition: number): Task | nu
         ? (source.priority as Priority)
         : 'Orta';
 
-    const category = CATEGORIES.includes(source.category as Category)
-        ? (source.category as Category)
-        : 'Kişisel';
+    const categoryId = resolveCategoryId(source, resolveCategoryName);
 
     const description = typeof source.description === 'string' && source.description.trim()
         ? source.description
@@ -86,7 +113,7 @@ export function normalizeTask(raw: unknown, fallbackPosition: number): Task | nu
         dueDate: toCalendarDate(source.dueDate),
         priority,
         completed: source.completed === true,
-        category,
+        categoryId,
         createdAt,
         // Eski kayıtlarda updatedAt yok; oluşturma zamanına düşülür.
         updatedAt: source.updatedAt == null ? createdAt : toIsoTimestamp(source.updatedAt),

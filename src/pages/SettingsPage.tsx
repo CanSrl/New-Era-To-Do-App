@@ -5,6 +5,7 @@ import { useTheme, type Theme } from '../components/ThemeProvider';
 import { useAuth } from '../components/AuthProvider';
 import { SyncIndicator } from '../components/SyncIndicator';
 import { AuthDialog } from '../components/AuthDialog';
+import { CategoryManager } from '../components/CategoryManager';
 import { useTaskStore } from '../store';
 import { cn } from '../lib/utils';
 
@@ -147,6 +148,13 @@ export function SettingsPage() {
                         )}
                     </Section>
                 )}
+
+                <Section
+                    title="Kategoriler"
+                    description="Görevlerinizi gruplamak için kendi kategorilerinizi tanımlayın. Bir kategoriyi silmek görevlerini silmez."
+                >
+                    <CategoryManager />
+                </Section>
 
                 <Section
                     title="Veri"

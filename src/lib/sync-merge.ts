@@ -1,5 +1,6 @@
-import type { Task } from './types';
+import type { Category, Task } from './types';
 import type { Tombstone } from '../store';
+import { categoryKey } from './categories';
 
 export interface MergeInput {
     /** Cihazdaki görevler. */
@@ -102,4 +103,155 @@ export function mergeTasks({ local, remote, dirtyIds, tombstones }: MergeInput):
         .map((t) => t.id);
 
     return { tasks, toPush, toDelete, discardedIds, obsoleteTombstoneIds };
+}
+
+export interface CategoryMergeInput {
+    local: readonly Category[];
+    remote: readonly Category[];
+    dirtyIds: readonly string[];
+    tombstones: readonly Tombstone[];
+}
+
+export interface CategoryMergePlan {
+    categories: Category[];
+    toPush: Category[];
+    toDelete: string[];
+    discardedIds: string[];
+    obsoleteTombstoneIds: string[];
+    /**
+     * Ada göre tekilleştirilen kategorilerin yerel id'sinden bulut id'sine
+     * eşleme. Bu kategorilere bağlı görevlerin `categoryId` alanı gönderilmeden
+     * önce yeniden yazılmalıdır.
+     */
+    idRemap: Record<string, string>;
+}
+
+/**
+ * Kategorileri birleştirir. Kurallar `mergeTasks` ile aynıdır, üstüne bir
+ * tanesi eklenir: **ada göre tekilleştirme**.
+ *
+ * Neden gerekli: her cihaz ilk açılışta kendi başlangıç kategorilerini
+ * kendi id'leriyle oluşturur. Misafirken görev eklemiş bir kullanıcı, başka
+ * cihazdan zaten kurulmuş bir hesaba giriş yaptığında yerel "İş" ile buluttaki
+ * "İş" farklı id'ler taşır ve ikisi de korunursa listede aynı kategori iki
+ * kez görünür. Bu yüzden buluta karşılığı olmayan yerel bir kategori, aynı
+ * adı taşıyan bir bulut kategorisi varsa ona katlanır ve id'si `idRemap`
+ * üzerinden görevlere yansıtılır.
+ *
+ * Tekilleştirme yalnızca id'si bulutta BULUNMAYAN yerel kategorilere
+ * uygulanır. Bulutta karşılığı olan bir kategori yeniden adlandırılıp başka
+ * bir kategoriyle aynı ada gelirse birleştirilmez — bu bir çakışma değil,
+ * kullanıcının bilinçli düzenlemesidir.
+ *
+ * Fonksiyon saftır; ağ çağrısı yapmaz.
+ */
+export function mergeCategories({
+    local,
+    remote,
+    dirtyIds,
+    tombstones,
+}: CategoryMergeInput): CategoryMergePlan {
+    const dirty = new Set(dirtyIds);
+    const deleted = new Set(tombstones.map((t) => t.id));
+    const remoteById = new Map(remote.map((c) => [c.id, c]));
+    const localIds = new Set(local.map((c) => c.id));
+
+    // Bulutta aynı ad birden fazla kez varsa (kısıt yok, mümkün) ilk görülen
+    // kazanır; böylece bütün cihazlar aynı hedefte buluşur.
+    const remoteByName = new Map<string, Category>();
+    for (const remoteCategory of remote) {
+        const key = categoryKey(remoteCategory.name);
+        if (!remoteByName.has(key)) remoteByName.set(key, remoteCategory);
+    }
+
+    const categories: Category[] = [];
+    const toPush: Category[] = [];
+    const toDelete: string[] = [];
+    const discardedIds: string[] = [];
+    const idRemap: Record<string, string> = {};
+
+    for (const localCategory of local) {
+        if (deleted.has(localCategory.id)) continue;
+
+        const remoteCategory = remoteById.get(localCategory.id);
+
+        if (!remoteCategory) {
+            const twin = remoteByName.get(categoryKey(localCategory.name));
+            if (twin) {
+                // Aynı kategori, ayrı id. Bulut sürümü kazanır; yerel kayıt
+                // düşer ve kendisine bağlı görevler bulut id'sine taşınır.
+                idRemap[localCategory.id] = twin.id;
+                // Dirty bayrağı temizlenmezse her turda yeniden gönderilmeye
+                // çalışılır ve her seferinde aynı şekilde katlanırdı.
+                discardedIds.push(localCategory.id);
+                continue;
+            }
+
+            if (dirty.has(localCategory.id)) {
+                categories.push(localCategory);
+                toPush.push(localCategory);
+            }
+            // Aksi halde başka cihazda silinmiş: cihazdan da düşer.
+            continue;
+        }
+
+        if (dirty.has(localCategory.id)) {
+            if (localCategory.updatedAt > remoteCategory.updatedAt) {
+                categories.push(localCategory);
+                toPush.push(localCategory);
+            } else {
+                categories.push(remoteCategory);
+                discardedIds.push(localCategory.id);
+            }
+        } else {
+            categories.push(remoteCategory);
+        }
+    }
+
+    for (const remoteCategory of remote) {
+        if (localIds.has(remoteCategory.id)) continue;
+
+        if (deleted.has(remoteCategory.id)) {
+            toDelete.push(remoteCategory.id);
+            continue;
+        }
+
+        categories.push(remoteCategory);
+    }
+
+    const obsoleteTombstoneIds = tombstones
+        .filter((t) => !remoteById.has(t.id))
+        .map((t) => t.id);
+
+    return { categories, toPush, toDelete, discardedIds, obsoleteTombstoneIds, idRemap };
+}
+
+/**
+ * Görevlerin kategori bağlarını birleştirme sonrasına uyarlar.
+ *
+ * İki iş yapar:
+ * 1. Tekilleştirilen kategorilere bağlı görevleri bulut id'sine taşır.
+ * 2. Artık var olmayan bir kategoriye bağlı görevi "Kategorisiz" yapar.
+ *
+ * İkincisi yabancı anahtar güvenliği içindir: olmayan bir kategoriye bağlı
+ * görevi göndermek 23503 ile reddedilir ve o turdaki bütün görev
+ * senkronizasyonunu düşürürdü.
+ *
+ * `updatedAt` bilinçli olarak tazelenmez — bu bir kullanıcı düzenlemesi değil,
+ * bağ onarımıdır. Damgayı ilerletmek, aynı görevi başka bir cihazda gerçekten
+ * düzenleyen kullanıcının değişikliğini haksız yere yenerdi.
+ */
+export function remapTaskCategories(
+    tasks: readonly Task[],
+    idRemap: Record<string, string>,
+    validCategoryIds: ReadonlySet<string>
+): Task[] {
+    return tasks.map((task) => {
+        if (task.categoryId === null) return task;
+
+        const mapped = idRemap[task.categoryId] ?? task.categoryId;
+        const next = validCategoryIds.has(mapped) ? mapped : null;
+
+        return next === task.categoryId ? task : { ...task, categoryId: next };
+    });
 }

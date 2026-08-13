@@ -67,9 +67,20 @@ async function waitForSynced(page: Page) {
         return (
             state.lastSyncedAt !== null &&
             (state.dirtyIds?.length ?? 0) === 0 &&
-            (state.tombstones?.length ?? 0) === 0
+            (state.tombstones?.length ?? 0) === 0 &&
+            (state.dirtyCategoryIds?.length ?? 0) === 0 &&
+            (state.categoryTombstones?.length ?? 0) === 0
         )
     }, undefined, { timeout: 20_000 })
+}
+
+/** Cihazdaki kategori adlarını sıralı olarak okur. */
+async function categoryNames(page: Page): Promise<string[]> {
+    return page.evaluate(() => {
+        const raw = localStorage.getItem('yapilacaklar-storage')
+        const categories = JSON.parse(raw as string).state.categories as { name: string }[]
+        return categories.map((c) => c.name).sort()
+    })
 }
 
 test('misafirken eklenen görev giriş yapınca hesaba aktarılır', async ({ browser }) => {
@@ -185,4 +196,93 @@ test('çıkış yapınca görevler cihazda kalır', async ({ browser }) => {
 
     await expect(taskHeading(device, 'Kalıcı görev')).toBeVisible()
     await expect(device.getByRole('button', { name: 'Giriş Yap', exact: true })).toBeVisible()
+})
+
+/**
+ * Kategoriler görevlerden farklı bir sorun taşır: her cihaz ilk açılışta
+ * kendi varsayılanlarını kendi id'leriyle oluşturur. İki cihaz aynı hesaba
+ * bağlandığında bunlar tekilleştirilmezse kullanıcı listede "İş"i iki kez
+ * görür. Aşağıdaki test bu senaryonun tam olarak kendisidir.
+ */
+test('iki cihazın varsayılan kategorileri tekilleştirilir', async ({ browser }) => {
+    const email = `kategori-tekil-${Date.now()}@example.com`
+
+    const deviceA = await openDevice(browser)
+    await signUp(deviceA, email)
+    await waitForSynced(deviceA)
+
+    // B kendi varsayılanlarını farklı id'lerle oluşturmuş durumda.
+    const deviceB = await openDevice(browser)
+    await signIn(deviceB, email)
+    await waitForSynced(deviceB)
+
+    expect(await categoryNames(deviceB)).toEqual(['Alışveriş', 'Kişisel', 'Okul', 'İş'])
+
+    // A yeniden yüklendiğinde de çoğalma olmamalı: yakınsama iki yönlü.
+    await deviceA.reload()
+    await deviceA.getByTitle('Görev Ekle').waitFor()
+    await waitForSynced(deviceA)
+
+    expect(await categoryNames(deviceA)).toEqual(['Alışveriş', 'Kişisel', 'Okul', 'İş'])
+})
+
+test('bir cihazda eklenen kategori diğerine yayılır ve görev bağı korunur', async ({ browser }) => {
+    const email = `kategori-yayilim-${Date.now()}@example.com`
+
+    const deviceA = await openDevice(browser)
+    await signUp(deviceA, email)
+    await waitForSynced(deviceA)
+
+    const deviceB = await openDevice(browser)
+    await signIn(deviceB, email)
+    await waitForSynced(deviceB)
+
+    await deviceA.goto('/app/settings')
+    await deviceA.getByPlaceholder('Yeni kategori').fill('Tatil')
+    await deviceA.getByRole('button', { name: 'Ekle', exact: true }).click()
+
+    await deviceA.goto('/app')
+    await addTask(deviceA, 'Bilet al')
+    await deviceA.getByRole('button', { name: '"Bilet al" görevini düzenle' }).click()
+    await deviceA.getByRole('dialog').getByLabel('Kategori').selectOption({ label: 'Tatil' })
+    await deviceA.getByRole('dialog').getByRole('button', { name: 'Güncelle', exact: true }).click()
+    await waitForSynced(deviceA)
+
+    await deviceB.reload()
+    await deviceB.getByTitle('Görev Ekle').waitFor()
+    await expect(taskHeading(deviceB, 'Bilet al')).toBeVisible({ timeout: 15_000 })
+
+    // Rozetin görünmesi, category_id bağının yabancı anahtarı ihlal etmeden
+    // karşı cihaza ulaştığı anlamına gelir.
+    await expect(deviceB.getByText('Tatil', { exact: true })).toBeVisible({ timeout: 15_000 })
+})
+
+test('bir cihazdaki kategori silme diğerine yayılır, görevler kalır', async ({ browser }) => {
+    const email = `kategori-silme-${Date.now()}@example.com`
+
+    const deviceA = await openDevice(browser)
+    await signUp(deviceA, email)
+    await addTask(deviceA, 'Ödev bitir')
+    await deviceA.getByRole('button', { name: '"Ödev bitir" görevini düzenle' }).click()
+    await deviceA.getByRole('dialog').getByLabel('Kategori').selectOption({ label: 'Okul' })
+    await deviceA.getByRole('dialog').getByRole('button', { name: 'Güncelle', exact: true }).click()
+    await waitForSynced(deviceA)
+
+    const deviceB = await openDevice(browser)
+    await signIn(deviceB, email)
+    await waitForSynced(deviceB)
+    await expect(taskHeading(deviceB, 'Ödev bitir')).toBeVisible({ timeout: 15_000 })
+
+    await deviceA.goto('/app/settings')
+    await deviceA.getByRole('button', { name: '"Okul" kategorisini sil' }).click()
+    await deviceA.getByRole('alertdialog').getByRole('button', { name: 'Sil' }).click()
+    await waitForSynced(deviceA)
+
+    await deviceB.reload()
+    await deviceB.getByTitle('Görev Ekle').waitFor()
+    await waitForSynced(deviceB)
+
+    // Görev silinmemeli, yalnızca kategorisiz kalmalı.
+    await expect(taskHeading(deviceB, 'Ödev bitir')).toBeVisible()
+    expect(await categoryNames(deviceB)).toEqual(['Alışveriş', 'Kişisel', 'İş'])
 })

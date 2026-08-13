@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTaskStore } from '../store';
-import { CATEGORIES, PRIORITIES, type Task, type Category, type Priority } from '../lib/types';
+import { PRIORITIES, UNCATEGORIZED_LABEL, type Task, type Priority } from '../lib/types';
+import { byCategoryPosition } from '../lib/categories';
 import { Calendar as CalendarIcon, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -25,11 +26,15 @@ const PRIORITY_STYLES: Record<Priority, string> = {
 export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
     const addTask = useTaskStore(state => state.addTask);
     const updateTask = useTaskStore(state => state.updateTask);
+    const categories = useTaskStore(state => state.categories);
+
+    const sortedCategories = [...categories].sort(byCategoryPosition);
 
     const [title, setTitle] = useState(taskToEdit?.title || '');
     const [description, setDescription] = useState(taskToEdit?.description || '');
     const [priority, setPriority] = useState<Priority>(taskToEdit?.priority || 'Orta');
-    const [category, setCategory] = useState<Category>(taskToEdit?.category || 'Kişisel');
+    // Boş metin "Kategorisiz" demek: select değeri null taşıyamaz.
+    const [categoryId, setCategoryId] = useState<string>(taskToEdit?.categoryId ?? '');
     // dueDate zaten 'YYYY-MM-DD' — date input'unun beklediği biçimle aynı.
     const [dueDate, setDueDate] = useState<string>(taskToEdit?.dueDate ?? '');
 
@@ -46,7 +51,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                 title,
                 description,
                 priority,
-                category,
+                categoryId: categoryId || null,
                 dueDate: dueDate || undefined
             });
             toast.success('Görev başarıyla güncellendi!');
@@ -55,7 +60,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                 title,
                 description,
                 priority,
-                category,
+                categoryId: categoryId || null,
                 completed: false,
                 dueDate: dueDate || undefined
             });
@@ -126,12 +131,13 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                                 </label>
                                 <select
                                     id="category"
-                                    value={category}
-                                    onChange={e => setCategory(e.target.value as Category)}
+                                    value={categoryId}
+                                    onChange={e => setCategoryId(e.target.value)}
                                     className="flex h-11 w-full rounded-xl border border-input bg-card px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                 >
-                                    {CATEGORIES.map(c => (
-                                        <option key={c} value={c}>{c}</option>
+                                    <option value="">{UNCATEGORIZED_LABEL}</option>
+                                    {sortedCategories.map(c => (
+                                        <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
                                 </select>
                             </div>

@@ -61,7 +61,7 @@ const b = await signUp('kullanici-b-');
 let taskId = null;
 {
     const { data, error } = await a.client.from('tasks')
-        .insert({ user_id: a.userId, title: 'A görevi', priority: 'high', category: 'work', position: 1 })
+        .insert({ user_id: a.userId, title: 'A görevi', priority: 'high', position: 1 })
         .select().single();
     taskId = data?.id ?? null;
     check('Kullanıcı kendi görevini ekleyebiliyor', !error && !!data, error?.message ?? '');
@@ -146,6 +146,85 @@ let taskId = null;
     const { error } = await a.client.from('tasks')
         .insert({ user_id: a.userId, title: 'X', priority: 'urgent', position: 0 });
     check('Geçersiz öncelik reddediliyor', !!error, error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+
+// --- categories -----------------------------------------------------------
+let categoryA = null;
+{
+    const { data, error } = await a.client.from('categories')
+        .insert({ user_id: a.userId, name: 'A-Kategori', color: '#3b82f6', position: 0 })
+        .select().single();
+    categoryA = data?.id ?? null;
+    check('Kullanıcı kendi kategorisini ekleyebiliyor', !error && !!data, error?.message ?? '');
+}
+{
+    const { data, error } = await b.client.from('categories').select('id');
+    check('Başka kullanıcı kategorileri GÖREMİYOR', !error && data?.length === 0,
+        error?.message ?? `adet=${data?.length}`);
+}
+{
+    const { data, error } = await b.client.from('categories')
+        .update({ name: 'ELE GECIRILDI' }).eq('id', categoryA).select();
+    check('Başka kullanıcı kategoriyi güncelleyemiyor', !error && data?.length === 0,
+        error?.message ?? `etkilenen=${data?.length}`);
+}
+{
+    const { data, error } = await b.client.from('categories').delete().eq('id', categoryA).select();
+    check('Başka kullanıcı kategoriyi silemiyor', !error && data?.length === 0,
+        error?.message ?? `etkilenen=${data?.length}`);
+}
+{
+    const { data, error } = await mk().from('categories').select('id');
+    check('Oturumsuz kategori erişimi veri döndürmüyor', !!error || data?.length === 0,
+        error ? `reddedildi: ${error.code}` : `adet=${data?.length}`);
+}
+{
+    const { error } = await a.client.from('categories')
+        .insert({ user_id: a.userId, name: 'Bozuk', color: 'kirmizi' });
+    check('Geçersiz renk biçimi reddediliyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    const { error } = await a.client.from('categories').insert({ user_id: a.userId, name: '   ' });
+    check('Boş kategori adı reddediliyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    // Aynı ad bilinçli olarak serbest: benzersizlik kısıtı olsaydı iki cihazın
+    // çevrimdışıyken oluşturduğu aynı adlı kategori senkronu kilitlerdi.
+    const { error } = await a.client.from('categories')
+        .insert({ user_id: a.userId, name: 'A-Kategori', color: '#10b981', position: 9 });
+    check('Aynı adlı ikinci kategori kabul ediliyor (local-first gereği)', !error,
+        error?.message ?? '');
+    await a.client.from('categories').delete().eq('name', 'A-Kategori').eq('position', 9);
+}
+
+// --- tasks <-> categories bağı --------------------------------------------
+//
+// Bileşik yabancı anahtarın (category_id, user_id) asıl işi budur: FK kontrolü
+// RLS'i atladığı için, tek sütunlu bir referansla kullanıcı başkasının kategori
+// id'sini bilirse görevini ona bağlayabilirdi.
+{
+    const { error } = await a.client.from('tasks')
+        .update({ category_id: categoryA }).eq('id', taskId);
+    check('Görev kendi kategorisine bağlanabiliyor', !error, error?.message ?? '');
+}
+{
+    const { data: bTask } = await b.client.from('tasks')
+        .insert({ user_id: b.userId, title: 'B görevi', position: 0 }).select().single();
+    const { error } = await b.client.from('tasks')
+        .update({ category_id: categoryA }).eq('id', bTask.id);
+    check('Görev BAŞKASININ kategorisine bağlanamıyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+    await b.client.from('tasks').delete().eq('id', bTask.id);
+}
+{
+    // Kategori silmek görevi silmemeli; görev "Kategorisiz" olarak kalır.
+    await a.client.from('categories').delete().eq('id', categoryA);
+    const { data } = await a.client.from('tasks').select('id, category_id').eq('id', taskId).single();
+    check('Kategori silinince görev duruyor', !!data, `görev=${data?.id}`);
+    check('Kategori silinince görevin category_id alanı boşalıyor', data?.category_id === null,
+        `category_id=${data?.category_id}`);
 }
 
 const failed = results.filter((r) => !r.passed);

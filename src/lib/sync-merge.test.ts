@@ -8,7 +8,7 @@ function makeTask(id: string, overrides: Partial<Task> = {}): Task {
         title: `Görev ${id}`,
         priority: 'Orta',
         completed: false,
-        category: 'Kişisel',
+        categoryId: null,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
         position: 0,

@@ -12,7 +12,7 @@ const task: Task = {
     dueDate: '2026-08-15',
     priority: 'Yüksek',
     completed: false,
-    category: 'İş',
+    categoryId: '33333333-3333-4333-8333-333333333333',
     createdAt: '2026-01-05T08:00:00.000Z',
     updatedAt: '2026-01-06T09:00:00.000Z',
     position: 3,
@@ -25,7 +25,7 @@ const row: TaskRow = {
     description: 'Yıllık özet',
     due_date: '2026-08-15',
     priority: 'high',
-    category: 'work',
+    category_id: '33333333-3333-4333-8333-333333333333',
     completed: false,
     completed_at: null,
     position: 3,
@@ -38,7 +38,7 @@ describe('taskToRow', () => {
         const result = taskToRow(task, '22222222-2222-4222-8222-222222222222');
 
         expect(result.priority).toBe('high');
-        expect(result.category).toBe('work');
+        expect(result.category_id).toBe('33333333-3333-4333-8333-333333333333');
         expect(result.due_date).toBe('2026-08-15');
         expect(result.user_id).toBe('22222222-2222-4222-8222-222222222222');
         expect(result.updated_at).toBe('2026-01-06T09:00:00.000Z');
@@ -51,16 +51,15 @@ describe('taskToRow', () => {
         expect(result.due_date).toBeNull();
     });
 
-    it('tüm öncelik ve kategori değerlerini eşler', () => {
+    it('tüm öncelik değerlerini eşler', () => {
         const priorities = (['Düşük', 'Orta', 'Yüksek'] as const).map(
             p => taskToRow({ ...task, priority: p }, 'u1').priority
         );
         expect(priorities).toEqual(['low', 'medium', 'high']);
+    });
 
-        const categories = (['İş', 'Kişisel', 'Alışveriş', 'Okul'] as const).map(
-            c => taskToRow({ ...task, category: c }, 'u1').category
-        );
-        expect(categories).toEqual(['work', 'personal', 'shopping', 'school']);
+    it('kategorisiz görevi null olarak yazar', () => {
+        expect(taskToRow({ ...task, categoryId: null }, 'u1').category_id).toBeNull();
     });
 });
 
@@ -81,11 +80,10 @@ describe('rowToTask', () => {
             p => rowToTask({ ...row, priority: p }).priority
         );
         expect(priorities).toEqual(['Düşük', 'Orta', 'Yüksek']);
+    });
 
-        const categories = (['work', 'personal', 'shopping', 'school'] as const).map(
-            c => rowToTask({ ...row, category: c }).category
-        );
-        expect(categories).toEqual(['İş', 'Kişisel', 'Alışveriş', 'Okul']);
+    it('boş category_id alanını null olarak taşır', () => {
+        expect(rowToTask({ ...row, category_id: null }).categoryId).toBeNull();
     });
 });
 
@@ -107,7 +105,7 @@ describe('gidiş-dönüş', () => {
             dueDate: undefined,
             description: undefined,
             priority: 'Düşük',
-            category: 'Okul',
+            categoryId: null,
         };
 
         const roundTripped = rowToTask({

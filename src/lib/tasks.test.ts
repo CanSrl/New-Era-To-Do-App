@@ -17,7 +17,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
         title: 'Görev',
         priority: 'Orta',
         completed: false,
-        category: 'Kişisel',
+        categoryId: null,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
         position: 0,
@@ -70,6 +70,7 @@ describe('normalizeTask', () => {
                 priority: 'Yüksek',
                 category: 'İş',
                 completed: true,
+
                 createdAt: '2026-01-05T08:00:00.000Z',
                 dueDate: '2026-08-15T00:00:00.000Z',
             },
@@ -83,7 +84,9 @@ describe('normalizeTask', () => {
             dueDate: '2026-08-15',
             priority: 'Yüksek',
             completed: true,
-            category: 'İş',
+            // Kategori adını çözecek bir geri çağrı verilmediği için
+            // görev kategorisiz gelir.
+            categoryId: null,
             createdAt: '2026-01-05T08:00:00.000Z',
             // Eski kayıtta updatedAt yok; oluşturma zamanına düşer.
             updatedAt: '2026-01-05T08:00:00.000Z',
@@ -106,10 +109,28 @@ describe('normalizeTask', () => {
         expect(normalizeTask('lorem', 0)).toBeNull();
     });
 
-    it('tanınmayan öncelik ve kategoriyi varsayılana düşürür', () => {
-        const task = normalizeTask({ title: 'X', priority: 'Acil', category: 'Tümü' }, 0);
+    it('tanınmayan önceliği varsayılana düşürür', () => {
+        const task = normalizeTask({ title: 'X', priority: 'Acil' }, 0);
         expect(task?.priority).toBe('Orta');
-        expect(task?.category).toBe('Kişisel');
+    });
+
+    it('eski metin kategoriyi verilen çözücüyle bir kategori id-sine bağlar', () => {
+        const task = normalizeTask(
+            { title: 'X', category: 'İş' },
+            0,
+            (name) => (name === 'İş' ? 'kategori-is' : null)
+        );
+        expect(task?.categoryId).toBe('kategori-is');
+    });
+
+    it('çözücü eşleşme bulamazsa görev kategorisiz kalır', () => {
+        const task = normalizeTask({ title: 'X', category: 'Bilinmeyen' }, 0, () => null);
+        expect(task?.categoryId).toBeNull();
+    });
+
+    it('yeni biçimdeki categoryId doğrudan korunur', () => {
+        const task = normalizeTask({ title: 'X', categoryId: 'kategori-9' }, 0);
+        expect(task?.categoryId).toBe('kategori-9');
     });
 
     it('id yoksa üretir', () => {

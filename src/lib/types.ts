@@ -1,6 +1,23 @@
 export type Priority = 'Düşük' | 'Orta' | 'Yüksek';
 
-export type Category = 'İş' | 'Kişisel' | 'Alışveriş' | 'Okul';
+/**
+ * Kullanıcı tanımlı görev kategorisi.
+ *
+ * Eskiden dört değerli sabit bir union'dı. Artık kullanıcıya ait bir kayıt:
+ * adı ve rengi düzenlenebilir, silinebilir, yenisi eklenebilir.
+ */
+export interface Category {
+    id: string;
+    name: string;
+    /** '#rrggbb' — veritabanı kısıtı da bu biçimi zorunlu tutar. */
+    color: string;
+    /** Kullanıcı tanımlı sıralama anahtarı; küçük değer listede önde. */
+    position: number;
+    /** ISO 8601 zaman damgası. */
+    createdAt: string;
+    /** ISO 8601 zaman damgası; çakışma bu alana göre çözülür. */
+    updatedAt: string;
+}
 
 export interface Task {
     id: string;
@@ -14,7 +31,11 @@ export interface Task {
     dueDate?: string;
     priority: Priority;
     completed: boolean;
-    category: Category;
+    /**
+     * Bağlı kategori. `null` "Kategorisiz" demektir — kategori silindiğinde
+     * görev silinmez, bu alan boşalır (veritabanında `on delete set null`).
+     */
+    categoryId: string | null;
     /** ISO 8601 zaman damgası. */
     createdAt: string;
     /**
@@ -30,4 +51,5 @@ export type FilterStatus = 'Tüm Görevler' | 'Aktif' | 'Tamamlandı';
 
 export const PRIORITIES: readonly Priority[] = ['Düşük', 'Orta', 'Yüksek'];
 
-export const CATEGORIES: readonly Category[] = ['İş', 'Kişisel', 'Alışveriş', 'Okul'];
+/** Kategorisi olmayan görevlerin arayüzde göründüğü etiket. */
+export const UNCATEGORIZED_LABEL = 'Kategorisiz';

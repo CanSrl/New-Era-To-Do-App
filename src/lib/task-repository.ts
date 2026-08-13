@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { rowToTask, taskToRow } from './task-mapping';
-import type { Task } from './types';
+import { categoryToRow, rowToCategory } from './category-mapping';
+import type { Category, Task } from './types';
 
 /** Supabase yapılandırılmamışken senkron çağrıldığında atılır. */
 export class SyncUnavailableError extends Error {
@@ -54,5 +55,47 @@ export async function deleteRemoteTasks(ids: readonly string[]): Promise<void> {
     if (ids.length === 0) return;
 
     const { error } = await client().from('tasks').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+}
+
+/** Kullanıcının bulut üzerindeki tüm kategorilerini çeker. */
+export async function fetchRemoteCategories(): Promise<Category[]> {
+    const { data, error } = await client().from('categories').select('*');
+    if (error) throw new Error(error.message);
+    return data.map(rowToCategory);
+}
+
+/**
+ * Kategorileri buluta yazar ve sunucunun kaydettiği hâllerini döner.
+ *
+ * Görevlerden ÖNCE çağrılmalıdır: görev satırındaki category_id bir yabancı
+ * anahtardır, kategori henüz yokken görev yazmak 23503 ile reddedilir.
+ */
+export async function pushRemoteCategories(
+    categories: readonly Category[],
+    userId: string
+): Promise<Category[]> {
+    if (categories.length === 0) return [];
+
+    const { data, error } = await client()
+        .from('categories')
+        .upsert(categories.map((c) => categoryToRow(c, userId)), { onConflict: 'id' })
+        .select();
+
+    if (error) throw new Error(error.message);
+    return data.map(rowToCategory);
+}
+
+/**
+ * Kategorileri buluttan siler.
+ *
+ * Görevler yazıldıktan SONRA çağrılmalıdır. Sıra tersine dönerse, silinen
+ * kategoriye bağlı bir görevi aynı turda göndermek yabancı anahtar hatası
+ * verirdi. Bağlı görevler silinmez; `on delete set null` yalnızca bağı koparır.
+ */
+export async function deleteRemoteCategories(ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const { error } = await client().from('categories').delete().in('id', ids);
     if (error) throw new Error(error.message);
 }
