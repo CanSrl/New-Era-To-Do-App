@@ -7,7 +7,15 @@ const STORAGE_KEY = 'yapilacaklar-storage';
 /** Testler arasında store'u ve kalıcı depoyu temizler. */
 function resetStore() {
     localStorage.clear();
-    useTaskStore.setState({ tasks: [], searchQuery: '', filter: 'Tüm Görevler' });
+    useTaskStore.setState({
+        tasks: [],
+        searchQuery: '',
+        filter: 'Tüm Görevler',
+        dirtyIds: [],
+        tombstones: [],
+        lastSyncedAt: null,
+        ownerId: null,
+    });
 }
 
 const store = () => useTaskStore.getState();
@@ -219,6 +227,134 @@ describe('filtre durumu', () => {
     });
 });
 
+describe('senkron meta verisi', () => {
+    it('yeni görev gönderilmeyi bekler', () => {
+        addTask('Bir');
+        expect(store().dirtyIds).toEqual([store().tasks[0].id]);
+    });
+
+    it('güncelleme görevi tekrar bekleyenlere alır ve updatedAt tazeler', async () => {
+        addTask('Bir');
+        const id = store().tasks[0].id;
+        const before = store().tasks[0].updatedAt;
+
+        store().applySyncResult({
+            tasks: store().tasks, syncedIds: [id], clearedTombstoneIds: [], syncedAt: 'x',
+        });
+        expect(store().dirtyIds).toEqual([]);
+
+        await new Promise(r => setTimeout(r, 2));
+        store().updateTask(id, { title: 'Bir (güncel)' });
+
+        expect(store().dirtyIds).toEqual([id]);
+        expect(store().tasks[0].updatedAt > before).toBe(true);
+    });
+
+    it('silme mezar taşı bırakır ve bekleyenlerden düşer', () => {
+        addTask('Bir');
+        const id = store().tasks[0].id;
+
+        store().deleteTask(id);
+
+        expect(store().dirtyIds).toEqual([]);
+        expect(store().tombstones.map(t => t.id)).toEqual([id]);
+    });
+
+    it('tamamlananları temizlemek her biri için mezar taşı bırakır', () => {
+        addTask('Bir');
+        addTask('İki');
+        store().toggleComplete(store().tasks[0].id);
+        const completedId = store().tasks[0].id;
+
+        store().clearCompleted();
+
+        expect(store().tombstones.map(t => t.id)).toEqual([completedId]);
+    });
+
+    it('sıralama yalnızca konumu değişen görevleri bekleyenlere alır', () => {
+        addTask('Bir');
+        addTask('İki');
+        addTask('Üç');
+        const [a, b, c] = store().tasks;
+        store().applySyncResult({
+            tasks: store().tasks,
+            syncedIds: [a.id, b.id, c.id],
+            clearedTombstoneIds: [],
+            syncedAt: 'x',
+        });
+
+        // Son iki görevin yeri değişiyor; ilki yerinde kalıyor.
+        store().reorderTasks([a, c, b]);
+
+        expect(store().dirtyIds.sort()).toEqual([b.id, c.id].sort());
+    });
+
+    it('applySyncResult senkron sürerken yapılan değişikliği korur', () => {
+        addTask('Bir');
+        addTask('İki');
+        const [first, second] = store().tasks;
+
+        // Yalnızca ilk görev gönderildi; ikincisi hâlâ beklemeli.
+        store().applySyncResult({
+            tasks: store().tasks,
+            syncedIds: [first.id],
+            clearedTombstoneIds: [],
+            syncedAt: '2026-01-01T00:00:00.000Z',
+        });
+
+        expect(store().dirtyIds).toEqual([second.id]);
+        expect(store().lastSyncedAt).toBe('2026-01-01T00:00:00.000Z');
+    });
+});
+
+describe('prepareForSync', () => {
+    it('misafir verisini hesaba aktarır', () => {
+        addTask('Misafir görevi');
+        const id = store().tasks[0].id;
+        store().applySyncResult({
+            tasks: store().tasks, syncedIds: [id], clearedTombstoneIds: [], syncedAt: 'x',
+        });
+
+        store().prepareForSync('kullanici-1');
+
+        expect(store().ownerId).toBe('kullanici-1');
+        expect(store().dirtyIds).toEqual([id]);
+    });
+
+    it('veri zaten aynı hesaba aitse görevleri yeniden bekleyenlere ALMAZ', () => {
+        // Bu, başka cihazda silinen görevin geri dirilmesine yol açan hataydı.
+        addTask('Senkronlanmış görev');
+        const id = store().tasks[0].id;
+        store().prepareForSync('kullanici-1');
+        store().applySyncResult({
+            tasks: store().tasks, syncedIds: [id], clearedTombstoneIds: [], syncedAt: 'x',
+        });
+        expect(store().dirtyIds).toEqual([]);
+
+        store().prepareForSync('kullanici-1');
+
+        expect(store().dirtyIds).toEqual([]);
+    });
+
+    it('başka hesap giriş yaparsa cihazı temizler', () => {
+        addTask('Birinci kullanıcının görevi');
+        store().prepareForSync('kullanici-1');
+        store().applySyncResult({
+            tasks: store().tasks,
+            syncedIds: store().tasks.map(t => t.id),
+            clearedTombstoneIds: [],
+            syncedAt: 'x',
+        });
+
+        store().prepareForSync('kullanici-2');
+
+        expect(store().tasks).toEqual([]);
+        expect(store().dirtyIds).toEqual([]);
+        expect(store().ownerId).toBe('kullanici-2');
+        expect(store().lastSyncedAt).toBeNull();
+    });
+});
+
 describe('kalıcılık (persist)', () => {
     it('görevleri LocalStorage-a yazar', async () => {
         addTask('Kalıcı görev');
@@ -230,7 +366,7 @@ describe('kalıcılık (persist)', () => {
         expect(raw).toBeTruthy();
         const parsed = JSON.parse(raw as string);
         expect(parsed.state.tasks[0].title).toBe('Kalıcı görev');
-        expect(parsed.version).toBe(1);
+        expect(parsed.version).toBe(2);
     });
 
     it('yazılan tarihler string olarak saklanır', async () => {

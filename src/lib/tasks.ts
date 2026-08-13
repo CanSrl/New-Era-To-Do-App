@@ -77,6 +77,8 @@ export function normalizeTask(raw: unknown, fallbackPosition: number): Task | nu
         ? source.position
         : fallbackPosition;
 
+    const createdAt = toIsoTimestamp(source.createdAt);
+
     return {
         id: typeof source.id === 'string' && source.id ? source.id : createId(),
         title,
@@ -85,7 +87,9 @@ export function normalizeTask(raw: unknown, fallbackPosition: number): Task | nu
         priority,
         completed: source.completed === true,
         category,
-        createdAt: toIsoTimestamp(source.createdAt),
+        createdAt,
+        // Eski kayıtlarda updatedAt yok; oluşturma zamanına düşülür.
+        updatedAt: source.updatedAt == null ? createdAt : toIsoTimestamp(source.updatedAt),
         position,
     };
 }

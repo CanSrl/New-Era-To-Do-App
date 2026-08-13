@@ -17,6 +17,11 @@ export interface Task {
     category: Category;
     /** ISO 8601 zaman damgası. */
     createdAt: string;
+    /**
+     * ISO 8601 zaman damgası; her değişiklikte tazelenir.
+     * Senkronizasyonda çakışma bu alana göre çözülür (son yazan kazanır).
+     */
+    updatedAt: string;
     /** Kullanıcı tanımlı sıralama anahtarı; küçük değer listede üstte. */
     position: number;
 }

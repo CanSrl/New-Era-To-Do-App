@@ -19,6 +19,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
         completed: false,
         category: 'Kişisel',
         createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
         position: 0,
         ...overrides,
     };
@@ -84,8 +85,18 @@ describe('normalizeTask', () => {
             completed: true,
             category: 'İş',
             createdAt: '2026-01-05T08:00:00.000Z',
+            // Eski kayıtta updatedAt yok; oluşturma zamanına düşer.
+            updatedAt: '2026-01-05T08:00:00.000Z',
             position: 7,
         });
+    });
+
+    it('updatedAt varsa korunur', () => {
+        const task = normalizeTask(
+            { title: 'X', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-02-02T00:00:00.000Z' },
+            0
+        );
+        expect(task?.updatedAt).toBe('2026-02-02T00:00:00.000Z');
     });
 
     it('başlığı olmayan kaydı reddeder', () => {

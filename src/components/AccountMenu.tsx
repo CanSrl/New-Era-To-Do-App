@@ -2,6 +2,7 @@ import { LogIn, LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../lib/utils';
 import { useAuth } from './AuthProvider';
+import { SyncIndicator } from './SyncIndicator';
 
 interface AccountMenuProps {
     /** 'sidebar' masaüstü kenar çubuğu için, 'compact' mobil üst bar için. */
@@ -54,24 +55,29 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
     }
 
     return user ? (
-        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-secondary/50">
-            <div className="w-7 h-7 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center">
-                <User size={15} />
+        <div className="space-y-1.5">
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-secondary/50">
+                <div className="w-7 h-7 shrink-0 rounded-full bg-primary/15 text-primary flex items-center justify-center">
+                    <User size={15} />
+                </div>
+                <div className="min-w-0 flex-1">
+                    <p className="text-xs text-muted-foreground leading-tight">Giriş yapıldı</p>
+                    <p className="text-sm font-medium truncate leading-tight" title={user.email}>
+                        {user.email}
+                    </p>
+                </div>
+                <button
+                    onClick={handleSignOut}
+                    className="p-1.5 shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+                    aria-label="Çıkış yap"
+                    title="Çıkış yap"
+                >
+                    <LogOut size={16} />
+                </button>
             </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-xs text-muted-foreground leading-tight">Giriş yapıldı</p>
-                <p className="text-sm font-medium truncate leading-tight" title={user.email}>
-                    {user.email}
-                </p>
+            <div className="px-2">
+                <SyncIndicator />
             </div>
-            <button
-                onClick={handleSignOut}
-                className="p-1.5 shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-                aria-label="Çıkış yap"
-                title="Çıkış yap"
-            >
-                <LogOut size={16} />
-            </button>
         </div>
     ) : (
         <button

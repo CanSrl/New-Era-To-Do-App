@@ -14,6 +14,8 @@ ve verileri cihazlar arasında eşitlemeyi mümkün kılar.
 - 📱 **PWA ve Mobil Uyumlu:** Masaüstünde kenar çubuğu, mobilde alt gezinme menüsü.
 - 💾 **Çevrimdışı Çalışma:** Zustand persist ile LocalStorage'a kaydetme.
 - 🔐 **İsteğe Bağlı Hesap:** E-posta ve parola ile giriş (Supabase Auth).
+- ☁️ **Cihazlar Arası Eşitleme:** Giriş yapınca görevler buluta eşitlenir;
+  çevrimdışıyken yapılan değişiklikler bağlantı gelince gönderilir.
 - ↕️ **Sürükle & Bırak:** dnd-kit ile görevlerinizi kolayca sıralayın.
 - 🎉 **Confetti:** Tüm görevler bittiğinde kutlama efekti!
 - 📤 **Dışa/İçe Aktar:** Görevlerinizi JSON olarak yedekleyin.
@@ -97,6 +99,33 @@ npx supabase db reset
 | `npm run test:e2e` | Uçtan uca testler (Playwright) |
 | `npm run test:rls` | Şema güvenlik testleri (yerel Supabase gerekir) |
 | `npm run db:types` | Veritabanı tiplerini yeniden üret |
+
+## Eşitleme nasıl çalışır
+
+Cihazdaki veri birincil kaynaktır. Uygulama çevrimdışıyken de tam olarak
+çalışır; eşitleme bunun üzerine eklenen bir katmandır.
+
+- **Değişiklik takibi:** Her yazma işlemi görevi "gönderilmeyi bekliyor"
+  olarak işaretler, her silme bir mezar taşı bırakır. Bunlar LocalStorage'da
+  saklandığı için tarayıcı kapatılsa bile kaybolmaz.
+- **Ne zaman eşitlenir:** Girişte, bir değişiklikten 1,5 sn sonra (toplu
+  göndermek için), sekmeye geri dönüldüğünde, bağlantı geri geldiğinde ve
+  uygulama açıkken dakikada bir.
+- **Çakışma:** `updatedAt` damgası yeni olan kazanır. Eşitlikte bulut kazanır,
+  böylece bütün cihazlar aynı sonuca varır.
+- **Silme:** Bulut tam anlık görüntü olarak çekilir. Cihazda duran ama bulutta
+  olmayan ve gönderilmeyi beklemeyen bir görev, başka cihazda silinmiş
+  demektir ve cihazdan da kaldırılır.
+- **Hesap değişimi:** Cihazdaki verinin hangi hesaba ait olduğu tutulur.
+  Misafirken eklenen görevler ilk girişte hesaba aktarılır; farklı bir hesap
+  giriş yaparsa cihaz temizlenip o hesabın verisi çekilir.
+
+Birleştirme kararı ağ çağrısı içermeyen saf bir fonksiyondadır
+(`src/lib/sync-merge.ts`), bu yüzden tüm senaryolar birim testiyle kapsanır.
+
+> Ölçek notu: her turda bulutun tamamı çekilir. Birkaç bin göreve kadar
+> sorunsuz; ötesi için artımlı çekme ve sunucu tarafında mezar taşı tablosu
+> gerekir.
 
 ## Testler
 
