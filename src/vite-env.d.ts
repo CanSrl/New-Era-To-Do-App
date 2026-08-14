@@ -11,6 +11,11 @@ interface ImportMetaEnv {
    * projesinde GitHub sağlayıcısı etkinleştirildiyse açın.
    */
   readonly VITE_AUTH_GITHUB?: string;
+  /**
+   * Sentry DSN. Tanımlı değilse hata izleme tamamen kapalıdır ve Sentry
+   * paketi tarayıcıya hiç indirilmez.
+   */
+  readonly VITE_SENTRY_DSN?: string;
 }
 
 interface ImportMeta {

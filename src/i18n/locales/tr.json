@@ -252,5 +252,14 @@
   "notFound": {
     "title": "Sayfa bulunamadı",
     "body": "Aradığınız sayfa taşınmış veya hiç var olmamış olabilir."
+  },
+  "crash": {
+    "title": "Bir şeyler ters gitti",
+    "body": "Beklenmeyen bir hata oluştu. Görevleriniz bu cihazda güvende — sayfayı yenilemek çoğu zaman yeterli oluyor.",
+    "reload": "Sayfayı yenile",
+    "details": "Teknik ayrıntı",
+    "reportedTitle": "Hata raporlandı",
+    "reported": "Bu hata otomatik olarak bildirildi.",
+    "notReported": "Bu kurulumda hata raporlama kapalı; ayrıntıyı geliştiriciye siz iletebilirsiniz."
   }
 }

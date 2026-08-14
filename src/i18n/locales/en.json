@@ -252,5 +252,14 @@
   "notFound": {
     "title": "Page not found",
     "body": "The page you are looking for may have moved or never existed."
+  },
+  "crash": {
+    "title": "Something went wrong",
+    "body": "An unexpected error occurred. Your tasks are safe on this device — reloading the page usually fixes it.",
+    "reload": "Reload the page",
+    "details": "Technical details",
+    "reportedTitle": "Error reported",
+    "reported": "This error was reported automatically.",
+    "notReported": "Error reporting is disabled in this installation; you can pass the details to the developer yourself."
   }
 }

@@ -40,7 +40,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 253 otomatik test — 163 birim (Vitest), 60 uçtan uca (Playwright, 9'u
+**Test:** 265 otomatik test — 169 birim (Vitest), 66 uçtan uca (Playwright, 9'u
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 30 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -145,6 +145,26 @@ Supabase'in ham JSON hatasına düşer. Yani yanlış yapılandırma istemcide
 yakalanamaz — buton bu yüzden `features.githubAuth` bayrağıyla korunur ve
 varsayılan kapalıdır.
 
+**Hata izleme opsiyonel ve varsayılan kapalı.** `VITE_SENTRY_DSN` yoksa
+hiçbir ağ isteği yapılmaz **ve Sentry paketi indirilmez**: `src/lib/monitoring.ts`
+Sentry'yi `import()` ile yükler, dolayısıyla Vite onu ayrı bir parçaya böler.
+O parça `vite.config.ts` içinde `globIgnores` ile **precache dışında**
+tutulur — aksi halde service worker, izleme kapalı olsa bile her kullanıcıya
+~150 KB (gzip) indirtirdi. Uygulama kodu Sentry'yi doğrudan import etmez;
+sağlayıcı tek dosyada değiştirilebilir.
+
+**İki ayrı hata sınırı var, çünkü tek başına biri yetmiyor.** React Router bir
+rotanın render'ında oluşan hatayı kendisi yakalar ve kökteki sınıra hiç
+ulaştırmaz; bu yüzden her üst düzey rotada `errorElement` tanımlı. Kökteki
+`ErrorBoundary` ise sağlayıcıların (tema, auth, senkron) ve router'ın kendisinin
+çökmesi için — orada bir hata olursa kullanıcı bomboş sayfa görürdü. Sınır
+sağlayıcıların **dışında** durur.
+
+**`/app/__crash` yalnızca geliştirmede kayıtlıdır.** Hata sınırının çalıştığı
+ancak gerçek bir çökmeyle doğrulanabiliyor; bu rota `e2e/hata-siniri.spec.ts`
+için tetikleyici. `import.meta.env.DEV` derleme zamanı sabiti olduğu için
+üretim paketinde rota tamamen elenir (doğrulandı).
+
 **Erişilebilirlik:** Tüm modaller Radix (`role="dialog"`, odak tuzağı, Escape).
 İkon-only butonlarda görev başlığını içeren `aria-label`. `confirm()`/`alert()`
 kullanılmaz. Öncelik rozetlerinde renk + metin birlikte.
@@ -215,8 +235,7 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 
 ### ⏳ Kalan işler
 
-**Ürün sağlamlaştırma:** Sentry + `ErrorBoundary` (env ile opsiyonel);
-`eslint-plugin-jsx-a11y`.
+**Ürün sağlamlaştırma:** `eslint-plugin-jsx-a11y`.
 
 **Faz 5 — Niş modül:** `clients`, `projects`, `time_logs` tabloları ve
 `src/features/{clients,projects,timeLogs}/`. `src/config/features.ts` bayrağıyla

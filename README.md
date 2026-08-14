@@ -137,6 +137,31 @@ projesinde **Authentication → URL Configuration** altına
 > olarak kimlikleri tek hesapta birleştirir. İki ayrı hesap istiyorsanız
 > Supabase tarafındaki hesap birleştirme ayarını değiştirin.
 
+## Hata İzleme (opsiyonel)
+
+Varsayılan olarak **kapalıdır**. `VITE_SENTRY_DSN` tanımlı değilse:
+
+- hiçbir ağ isteği yapılmaz,
+- Sentry paketi tarayıcıya **indirilmez bile** (ayrı bir parçaya bölünür ve
+  service worker precache'inin dışında tutulur),
+- hata sınırı yine çalışır; hatalar konsola düşer.
+
+Açmak için `.env.local` içine Sentry projenizin DSN'ini yazın:
+
+```
+VITE_SENTRY_DSN=https://<anahtar>@<org>.ingest.sentry.io/<proje>
+```
+
+Değeri Sentry'de **Project Settings → Client Keys (DSN)** altında bulursunuz.
+
+Gönderilenler bilinçli olarak dardır: `sendDefaultPii` kapalı, kullanıcı
+nesnesi ve çerezler `beforeSend` içinde ayrıca temizlenir, performans izleme
+ve oturum tekrarı kapalıdır. Kullanıcı kimliği göndermek isterseniz
+`src/lib/monitoring.ts` içindeki `scrub` fonksiyonunu düzenleyin.
+
+Sağlayıcıyı değiştirmek isterseniz tek dosya yeter: uygulama kodu Sentry'yi
+doğrudan import etmez, yalnızca `initMonitoring` ve `captureError` kullanır.
+
 ## Komutlar
 
 | Komut | Açıklama |
