@@ -1,0 +1,13 @@
+{
+  "source_path": "C:/Users/ahmet/OneDrive/Masaüstü/Projeler/yapilacaklar-listesi/docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md",
+  "type": "SPEC",
+  "confidence": "medium",
+  "manifest_override": false,
+  "title": "Niş Modül 1. Dilim — Uygulama Planı",
+  "summary": "Implementation plan for linking tasks to clients and projects: new clients/projects tables, sync merge, UI, feature-flagged.",
+  "scope": ["clients tablosu", "projects tablosu", "tasks.client_id/project_id bileşik yabancı anahtar", "mergeNamed birleştirme çekirdeği", "runSync senkron sırası", "özellik bayrağı", "i18n tr/en", "Radix AlertDialog"],
+  "cross_refs": ["../specs/2026-08-14-nis-modul-musteri-proje-design.md"],
+  "locked": false,
+  "precedence": null,
+  "notes": "Implementation plan, not a decision record. Dominant signals are technical contracts: schema constraints (Postgres 15+, composite FK, no unique constraint), name-length limits, file structure, sync ordering → SPEC. Competing DOC signal (task checklist / execution guide) and one ADR-like section ('Spec'ten Sapma' justifying mergeNamed) are secondary; ADR precedence rule not applied because no Status field and the deviation is presented for approval, not accepted."
+}

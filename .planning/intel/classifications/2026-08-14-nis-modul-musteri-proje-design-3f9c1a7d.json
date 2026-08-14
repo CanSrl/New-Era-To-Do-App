@@ -1,0 +1,13 @@
+{
+  "source_path": "C:/Users/ahmet/OneDrive/Masaüstü/Projeler/yapilacaklar-listesi/docs/superpowers/specs/2026-08-14-nis-modul-musteri-proje-design.md",
+  "type": "SPEC",
+  "confidence": "high",
+  "manifest_override": false,
+  "title": "Niş modül, 1. dilim: müşteriler ve projeler",
+  "summary": "Technical design for clients and projects tables, sync support, management UI, TaskForm selectors, delivery view, and feature flag.",
+  "scope": ["clients tablosu", "projects tablosu", "senkron", "TaskForm seçiciler", "teslim görünümü", "özellik bayrağı", "RLS", "migration"],
+  "cross_refs": ["CLAUDE.md", "supabase/migrations/20260814120000_niche_module.sql"],
+  "locked": false,
+  "precedence": null,
+  "notes": ""
+}
