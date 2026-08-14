@@ -29,6 +29,8 @@ function addTask(title: string, overrides: Partial<Task> = {}) {
         title,
         priority: 'medium',
         categoryId: null,
+        clientId: null,
+        projectId: null,
         completed: false,
         ...overrides,
     });

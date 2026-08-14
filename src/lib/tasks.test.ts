@@ -18,6 +18,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
         priority: 'medium',
         completed: false,
         categoryId: null,
+        clientId: null,
+        projectId: null,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
         position: 0,
@@ -87,6 +89,9 @@ describe('normalizeTask', () => {
             // Kategori adını çözecek bir geri çağrı verilmediği için
             // görev kategorisiz gelir.
             categoryId: null,
+            // Niş modül alanları eski kayıtta hiç yok; boş gelirler.
+            clientId: null,
+            projectId: null,
             createdAt: '2026-01-05T08:00:00.000Z',
             // Eski kayıtta updatedAt yok; oluşturma zamanına düşer.
             updatedAt: '2026-01-05T08:00:00.000Z',
@@ -100,6 +105,30 @@ describe('normalizeTask', () => {
             0
         );
         expect(task?.updatedAt).toBe('2026-02-02T00:00:00.000Z');
+    });
+
+    it('müşteri ve proje bağlarını okur', () => {
+        const task = normalizeTask(
+            { title: 'X', clientId: 'c1', projectId: 'p1' },
+            0
+        );
+        expect(task?.clientId).toBe('c1');
+        expect(task?.projectId).toBe('p1');
+    });
+
+    it('müşterisi olmayan görevin proje bağını düşürür', () => {
+        // Şemadaki tasks_project_requires_client kısıtının istemci karşılığı.
+        // Bu olmadan bozuk kayıt senkron turunda 23514 ile reddedilir ve o
+        // turdaki bütün görev senkronizasyonunu düşürürdü.
+        const task = normalizeTask({ title: 'X', projectId: 'p1' }, 0);
+        expect(task?.clientId).toBeNull();
+        expect(task?.projectId).toBeNull();
+    });
+
+    it('boş metin bağları null sayar', () => {
+        const task = normalizeTask({ title: 'X', clientId: '', projectId: '' }, 0);
+        expect(task?.clientId).toBeNull();
+        expect(task?.projectId).toBeNull();
     });
 
     it('başlığı olmayan kaydı reddeder', () => {

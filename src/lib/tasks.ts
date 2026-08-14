@@ -124,6 +124,17 @@ export function normalizeTask(
 
     const createdAt = toIsoTimestamp(source.createdAt);
 
+    // Niş modül bağları. Şemadaki `tasks_project_requires_client` kısıtının
+    // istemci karşılığı burada zorlanır: müşterisi olmayan bir görev projeye
+    // bağlı KALAMAZ. Bu satır olmadan bozuk bir kayıt senkron turunda 23514
+    // ile reddedilir ve o turdaki bütün görev senkronizasyonunu düşürürdü.
+    const clientId = typeof source.clientId === 'string' && source.clientId
+        ? source.clientId
+        : null;
+    const projectId = clientId && typeof source.projectId === 'string' && source.projectId
+        ? source.projectId
+        : null;
+
     return {
         id: typeof source.id === 'string' && source.id ? source.id : createId(),
         title,
@@ -132,6 +143,8 @@ export function normalizeTask(
         priority,
         completed: source.completed === true,
         categoryId,
+        clientId,
+        projectId,
         createdAt,
         // Eski kayıtlarda updatedAt yok; oluşturma zamanına düşülür.
         updatedAt: source.updatedAt == null ? createdAt : toIsoTimestamp(source.updatedAt),

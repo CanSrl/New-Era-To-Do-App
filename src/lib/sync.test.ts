@@ -83,6 +83,8 @@ function makeTask(over: Partial<Task> & { id: string }): Task {
         priority: 'medium',
         completed: false,
         categoryId: null,
+        clientId: null,
+        projectId: null,
         position: 0,
         createdAt: ISO,
         updatedAt: ISO,

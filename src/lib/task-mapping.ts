@@ -25,6 +25,8 @@ export function taskToRow(task: Task, userId: string): TaskInsert {
         due_date: task.dueDate ?? null,
         priority: task.priority,
         category_id: task.categoryId,
+        client_id: task.clientId,
+        project_id: task.projectId,
         completed: task.completed,
         position: task.position,
         created_at: task.createdAt,
@@ -47,6 +49,8 @@ export function rowToTask(row: TaskRow): Task {
             dueDate: row.due_date ?? undefined,
             priority: row.priority,
             categoryId: row.category_id,
+            clientId: row.client_id,
+            projectId: row.project_id,
             completed: row.completed,
             createdAt: row.created_at,
             position: row.position,
@@ -63,6 +67,10 @@ export function rowToTask(row: TaskRow): Task {
             priority: row.priority,
             completed: row.completed,
             categoryId: row.category_id,
+            // Değişmez burada da korunur: müşterisi olmayan görev projeye
+            // bağlı kalamaz (şemadaki tasks_project_requires_client).
+            clientId: row.client_id,
+            projectId: row.client_id ? row.project_id : null,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
             position: row.position,

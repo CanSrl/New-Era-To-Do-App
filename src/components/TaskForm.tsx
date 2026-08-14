@@ -63,6 +63,10 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                 description,
                 priority,
                 categoryId: categoryId || null,
+                // Niş modül seçicileri Görev 8'de eklenecek; o zamana kadar
+                // her yeni görev müşteri/proje bağı olmadan oluşur.
+                clientId: null,
+                projectId: null,
                 completed: false,
                 dueDate: dueDate || undefined
             });

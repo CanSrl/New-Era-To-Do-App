@@ -21,6 +21,8 @@ function makeTask(id: string, overrides: Partial<Task> = {}): Task {
         priority: 'medium',
         completed: false,
         categoryId: null,
+        clientId: null,
+        projectId: null,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-01T00:00:00.000Z',
         position: 0,

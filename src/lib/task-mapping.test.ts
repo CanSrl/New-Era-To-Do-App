@@ -13,6 +13,8 @@ const task: Task = {
     priority: 'high',
     completed: false,
     categoryId: '33333333-3333-4333-8333-333333333333',
+    clientId: null,
+    projectId: null,
     createdAt: '2026-01-05T08:00:00.000Z',
     updatedAt: '2026-01-06T09:00:00.000Z',
     position: 3,

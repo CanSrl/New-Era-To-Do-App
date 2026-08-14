@@ -27,6 +27,35 @@ export interface Category {
     updatedAt: string;
 }
 
+/**
+ * Niş modül: kullanıcının müşterisi.
+ *
+ * Renk alanı bilinçli olarak yok: görev satırında zaten kategori renk rozeti
+ * var, ikinci renkli rozet gürültü olurdu.
+ */
+export interface Client {
+    id: string;
+    name: string;
+    /**
+     * Arşivlenmiş kayıt seçicilerde gizlenir ama geçmiş görevlerin bağı
+     * korunur. Silme tek seçenek olsaydı iki yıllık müşteri geçmişi ya
+     * birikir ya da görev bağlarını koparırdı.
+     */
+    archived: boolean;
+    /** Kullanıcı tanımlı sıralama anahtarı; küçük değer listede önde. */
+    position: number;
+    /** ISO 8601 zaman damgası. */
+    createdAt: string;
+    /** ISO 8601 zaman damgası; çakışma bu alana göre çözülür. */
+    updatedAt: string;
+}
+
+/** Niş modül: bir müşteriye ait proje. */
+export interface Project extends Client {
+    /** Her proje bir müşteriye aittir; şemada da `not null`. */
+    clientId: string;
+}
+
 export interface Task {
     id: string;
     title: string;
@@ -44,6 +73,16 @@ export interface Task {
      * görev silinmez, bu alan boşalır (veritabanında `on delete set null`).
      */
     categoryId: string | null;
+    /**
+     * Bağlı müşteri. `projectId` doluysa bu da dolu olmak zorundadır —
+     * şemadaki `tasks_project_requires_client` kısıtının istemci karşılığı.
+     */
+    clientId: string | null;
+    /**
+     * Bağlı proje. Doluysa projenin müşterisi `clientId` ile aynıdır; bunu
+     * `tasks_project_id_client_id_user_id_fkey` üçlüsü garanti eder.
+     */
+    projectId: string | null;
     /** ISO 8601 zaman damgası. */
     createdAt: string;
     /**
