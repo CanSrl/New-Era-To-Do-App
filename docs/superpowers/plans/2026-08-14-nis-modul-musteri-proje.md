@@ -1344,10 +1344,13 @@ import { describe, expect, it } from 'vitest';
 import { remapTaskLinks } from './sync-merge';
 import type { Task } from './types';
 
+// `dueDate` ve `description` opsiyoneldir (`string | undefined`) — `null`
+// atanamaz. `completedAt` istemci Task tipinde HİÇ YOKTUR; veritabanında
+// `completed_at` var ama istemciye açılmıyor. İkisi de tip hatası verir.
 const task = (over: Partial<Task> & { id: string }): Task => ({
-    title: 'Görev', description: '', dueDate: null, priority: 'medium',
+    title: 'Görev', priority: 'medium',
     categoryId: null, clientId: null, projectId: null,
-    completed: false, completedAt: null, position: 0,
+    completed: false, position: 0,
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
     ...over,
 });
@@ -2391,10 +2394,12 @@ import { createClient } from '@/lib/clients';
 import { createProject } from '@/lib/projects';
 import type { Task } from '@/lib/types';
 
+// `dueDate` opsiyoneldir (`string | undefined`), `null` atanamaz —
+// tarihsiz görev alanı hiç taşımaz. `completedAt` istemci Task tipinde yok.
 const task = (over: Partial<Task> & { id: string; title: string }): Task => ({
-    description: '', dueDate: null, priority: 'medium',
+    priority: 'medium',
     categoryId: null, clientId: null, projectId: null,
-    completed: false, completedAt: null, position: 0,
+    completed: false, position: 0,
     createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z',
     ...over,
 });
@@ -2477,8 +2482,8 @@ Kurallar:
   en sonda.
 - Her müşteri içinde projeler `byProjectPosition`; projesiz grup
   (`project: null`, arayüzde `project.none` = "Genel") **başta**.
-- Her grupta görevler `dueDate` artan; `dueDate === null` olanlar sonda,
-  aralarında `position`.
+- Her grupta görevler `dueDate` artan; `dueDate` **tanımsız** olanlar sonda,
+  aralarında `position`. (Alan opsiyoneldir — `null` değil `undefined`.)
 - Görevi olmayan müşteri/proje için grup üretilmez.
 - Arşivlenmiş müşteri **gizlenmez** — görevi varsa grubu görünür. Arşiv
   yalnızca seçicileri sadeleştirir.
