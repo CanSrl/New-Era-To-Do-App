@@ -227,6 +227,147 @@ let categoryA = null;
         `category_id=${data?.category_id}`);
 }
 
+// --- Niş modül: sahiplik ---------------------------------------------------
+const nicheClient = await (async () => {
+    const { data, error } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Acme', position: 0 }).select().single();
+    check('Müşteri oluşturulabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+const nicheProject = await (async () => {
+    const { data, error } = await a.client.from('projects')
+        .insert({ user_id: a.userId, client_id: nicheClient.id, name: 'Websitesi', position: 0 })
+        .select().single();
+    check('Proje oluşturulabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+{
+    const { data } = await b.client.from('clients').select('id').eq('id', nicheClient.id);
+    check('Başka kullanıcı müşterileri GÖREMİYOR', data?.length === 0, `adet=${data?.length}`);
+}
+{
+    const { data } = await b.client.from('projects').select('id').eq('id', nicheProject.id);
+    check('Başka kullanıcı projeleri GÖREMİYOR', data?.length === 0, `adet=${data?.length}`);
+}
+{
+    // projects.client_id bileşik FK'sının asıl işi: FK kontrolü RLS'i atladığı
+    // için tek sütunlu referansla B, A'nın müşterisine proje asabilirdi.
+    const { error } = await b.client.from('projects')
+        .insert({ user_id: b.userId, client_id: nicheClient.id, name: 'Sızma', position: 0 });
+    check('Proje BAŞKASININ müşterisine bağlanamıyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    const anon = mk();
+    const { error: c } = await anon.from('clients').select('id');
+    check('Oturumsuz müşteri erişimi reddediliyor', !!c, c ? `reddedildi: ${c.code}` : 'VERİ DÖNDÜ!');
+    const { error: p } = await anon.from('projects').select('id');
+    check('Oturumsuz proje erişimi reddediliyor', !!p, p ? `reddedildi: ${p.code}` : 'VERİ DÖNDÜ!');
+}
+
+// --- Niş modül: tasks bağlarının bütünlüğü --------------------------------
+const nicheTask = await (async () => {
+    const { data, error } = await a.client.from('tasks')
+        .insert({
+            user_id: a.userId, title: 'Logo taslağı', position: 20,
+            client_id: nicheClient.id, project_id: nicheProject.id,
+        }).select().single();
+    check('Görev müşteri ve projeye bağlanabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+{
+    // MATCH SIMPLE yüzünden client_id null iken üçlü FK hiç değerlendirilmez;
+    // bu check olmasaydı müşterisiz bir projeye asılı görev oluşurdu.
+    const { error } = await a.client.from('tasks')
+        .insert({ user_id: a.userId, title: 'Yetim', position: 21, project_id: nicheProject.id });
+    check('project_id varken client_id zorunlu', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    // Tasarımın kilit noktası: görevin müşterisiyle projenin müşterisi ayrışamaz.
+    const { data: other } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Diğer Müşteri', position: 1 }).select().single();
+    const { error } = await a.client.from('tasks')
+        .insert({
+            user_id: a.userId, title: 'Tutarsız', position: 22,
+            client_id: other.id, project_id: nicheProject.id,
+        });
+    check('Görevin müşterisi projenin müşterisiyle eşleşmek zorunda', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+    await a.client.from('clients').delete().eq('id', other.id);
+}
+{
+    // on update cascade: proje başka müşteriye taşınırsa görevin client_id'si
+    // de taşınmalı; olmasaydı güncelleme FK hatasıyla düşerdi.
+    const { data: target } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Taşınacak Müşteri', position: 2 }).select().single();
+    const { error } = await a.client.from('projects')
+        .update({ client_id: target.id }).eq('id', nicheProject.id);
+    check('Proje başka müşteriye taşınabiliyor', !error, error?.message ?? '');
+
+    const { data: moved } = await a.client.from('tasks')
+        .select('client_id, project_id').eq('id', nicheTask.id).single();
+    check('Proje taşınınca görevin müşterisi de taşınıyor (on update cascade)',
+        moved?.client_id === target.id && moved?.project_id === nicheProject.id,
+        `client_id=${moved?.client_id}`);
+
+    // Sonraki testler için geri al.
+    await a.client.from('projects').update({ client_id: nicheClient.id }).eq('id', nicheProject.id);
+    await a.client.from('clients').delete().eq('id', target.id);
+}
+{
+    // Proje silmek görevi silmemeli; yalnızca proje bağı kopar, müşteri kalır.
+    await a.client.from('projects').delete().eq('id', nicheProject.id);
+    const { data } = await a.client.from('tasks')
+        .select('id, client_id, project_id').eq('id', nicheTask.id).single();
+    check('Proje silinince görev duruyor', !!data, `görev=${data?.id}`);
+    check('Proje silinince yalnızca project_id boşalıyor',
+        data?.project_id === null && data?.client_id === nicheClient.id,
+        `project_id=${data?.project_id} client_id=${data?.client_id}`);
+}
+{
+    // Müşteri silme: tetikleyici önce görevlerin iki bağını da boşaltır,
+    // ardından cascade projeleri siler. Görevler silinmez.
+    const { data: p2 } = await a.client.from('projects')
+        .insert({ user_id: a.userId, client_id: nicheClient.id, name: 'Destek', position: 1 })
+        .select().single();
+    await a.client.from('tasks')
+        .update({ client_id: nicheClient.id, project_id: p2.id }).eq('id', nicheTask.id);
+
+    const { error } = await a.client.from('clients').delete().eq('id', nicheClient.id);
+    check('Müşteri silinebiliyor', !error, error?.message ?? '');
+
+    const { data: task } = await a.client.from('tasks')
+        .select('id, client_id, project_id').eq('id', nicheTask.id).single();
+    check('Müşteri silinince görev duruyor', !!task, `görev=${task?.id}`);
+    check('Müşteri silinince görevin iki bağı da boşalıyor',
+        task?.client_id === null && task?.project_id === null,
+        `client_id=${task?.client_id} project_id=${task?.project_id}`);
+
+    const { data: orphans } = await a.client.from('projects')
+        .select('id').eq('client_id', nicheClient.id);
+    check('Müşteri silinince projeleri de siliniyor', orphans?.length === 0,
+        `kalan=${orphans?.length}`);
+}
+{
+    // categories ile aynı gerekçe: benzersizlik kısıtı senkronu kilitlerdi.
+    const { error: first } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Tekrar', position: 7 });
+    const { error: second } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Tekrar', position: 8 });
+    check('Aynı adlı ikinci müşteri kabul ediliyor (local-first gereği)',
+        !first && !second, second?.message ?? '');
+}
+{
+    const { error } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: '   ', position: 9 });
+    check('Boş müşteri adı reddediliyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+
 const failed = results.filter((r) => !r.passed);
 console.log(`\n${results.length - failed.length}/${results.length} kontrol geçti`);
 process.exit(failed.length ? 1 : 0);

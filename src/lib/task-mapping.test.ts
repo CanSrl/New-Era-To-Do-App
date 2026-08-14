@@ -26,6 +26,11 @@ const row: TaskRow = {
     due_date: '2026-08-15',
     priority: 'high',
     category_id: '33333333-3333-4333-8333-333333333333',
+    // Niş modül sütunları. Bu fikstür henüz onları kullanmıyor — eşleme
+    // katmanına Görev 5'te eklenecekler; şimdilik yalnızca satır şeklinin
+    // veritabanıyla uyuşması için duruyorlar.
+    client_id: null,
+    project_id: null,
     completed: false,
     completed_at: null,
     position: 3,

@@ -64,6 +64,36 @@ export type Database = {
         }
         Relationships: []
       }
+      clients: {
+        Row: {
+          archived: boolean
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -88,9 +118,51 @@ export type Database = {
         }
         Relationships: []
       }
+      projects: {
+        Row: {
+          archived: boolean
+          client_id: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          client_id: string
+          created_at?: string
+          id?: string
+          name: string
+          position?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          client_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_client_id_user_id_fkey"
+            columns: ["client_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           category_id: string | null
+          client_id: string | null
           completed: boolean
           completed_at: string | null
           created_at: string
@@ -99,12 +171,14 @@ export type Database = {
           id: string
           position: number
           priority: Database["public"]["Enums"]["task_priority"]
+          project_id: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
           category_id?: string | null
+          client_id?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -113,12 +187,14 @@ export type Database = {
           id?: string
           position?: number
           priority?: Database["public"]["Enums"]["task_priority"]
+          project_id?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
           category_id?: string | null
+          client_id?: string | null
           completed?: boolean
           completed_at?: string | null
           created_at?: string
@@ -127,6 +203,7 @@ export type Database = {
           id?: string
           position?: number
           priority?: Database["public"]["Enums"]["task_priority"]
+          project_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -138,6 +215,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "categories"
             referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_client_id_user_id_fkey"
+            columns: ["client_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "tasks_project_id_client_id_user_id_fkey"
+            columns: ["project_id", "client_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "client_id", "user_id"]
           },
         ]
       }
