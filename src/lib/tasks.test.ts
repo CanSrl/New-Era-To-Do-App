@@ -15,7 +15,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     return {
         id: 'id-1',
         title: 'Görev',
-        priority: 'Orta',
+        priority: 'medium',
         completed: false,
         categoryId: null,
         createdAt: '2026-01-01T00:00:00.000Z',
@@ -82,7 +82,7 @@ describe('normalizeTask', () => {
             title: 'Eski görev',
             description: undefined,
             dueDate: '2026-08-15',
-            priority: 'Yüksek',
+            priority: 'high',
             completed: true,
             // Kategori adını çözecek bir geri çağrı verilmediği için
             // görev kategorisiz gelir.
@@ -111,7 +111,14 @@ describe('normalizeTask', () => {
 
     it('tanınmayan önceliği varsayılana düşürür', () => {
         const task = normalizeTask({ title: 'X', priority: 'Acil' }, 0);
-        expect(task?.priority).toBe('Orta');
+        expect(task?.priority).toBe('medium');
+    });
+
+    it('eski Türkçe öncelik etiketlerini anahtara çevirir', () => {
+        // Yıllar önce alınmış bir yedek dosyası hâlâ içe aktarılabilmeli.
+        expect(normalizeTask({ title: 'X', priority: 'Düşük' }, 0)?.priority).toBe('low');
+        expect(normalizeTask({ title: 'X', priority: 'Orta' }, 0)?.priority).toBe('medium');
+        expect(normalizeTask({ title: 'X', priority: 'Yüksek' }, 0)?.priority).toBe('high');
     });
 
     it('eski metin kategoriyi verilen çözücüyle bir kategori id-sine bağlar', () => {

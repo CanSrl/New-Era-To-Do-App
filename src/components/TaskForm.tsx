@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store';
-import { PRIORITIES, UNCATEGORIZED_LABEL, type Task, type Priority } from '../lib/types';
+import { PRIORITIES, type Task, type Priority } from '../lib/types';
 import { byCategoryPosition } from '../lib/categories';
 import { Calendar as CalendarIcon, Tag } from 'lucide-react';
 import { toast } from 'sonner';
@@ -18,12 +19,13 @@ interface TaskFormProps {
 }
 
 const PRIORITY_STYLES: Record<Priority, string> = {
-    'Düşük': 'bg-green-500/10 text-green-600 dark:text-green-500 border-green-500/20',
-    'Orta': 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20',
-    'Yüksek': 'bg-red-500/10 text-red-600 dark:text-red-500 border-red-500/20',
+    low: 'bg-green-500/10 text-green-600 dark:text-green-500 border-green-500/20',
+    medium: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20',
+    high: 'bg-red-500/10 text-red-600 dark:text-red-500 border-red-500/20',
 };
 
 export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
+    const { t } = useTranslation();
     const addTask = useTaskStore(state => state.addTask);
     const updateTask = useTaskStore(state => state.updateTask);
     const categories = useTaskStore(state => state.categories);
@@ -32,7 +34,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
 
     const [title, setTitle] = useState(taskToEdit?.title || '');
     const [description, setDescription] = useState(taskToEdit?.description || '');
-    const [priority, setPriority] = useState<Priority>(taskToEdit?.priority || 'Orta');
+    const [priority, setPriority] = useState<Priority>(taskToEdit?.priority || 'medium');
     // Boş metin "Kategorisiz" demek: select değeri null taşıyamaz.
     const [categoryId, setCategoryId] = useState<string>(taskToEdit?.categoryId ?? '');
     // dueDate zaten 'YYYY-MM-DD' — date input'unun beklediği biçimle aynı.
@@ -42,7 +44,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
         e.preventDefault();
 
         if (!title.trim()) {
-            toast.error('Görev başlığı zorunludur!');
+            toast.error(t('taskForm.titleRequired'));
             return;
         }
 
@@ -54,7 +56,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                 categoryId: categoryId || null,
                 dueDate: dueDate || undefined
             });
-            toast.success('Görev başarıyla güncellendi!');
+            toast.success(t('taskForm.updated'));
         } else {
             addTask({
                 title,
@@ -64,7 +66,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                 completed: false,
                 dueDate: dueDate || undefined
             });
-            toast.success('Yeni görev eklendi!');
+            toast.success(t('taskForm.created'));
         }
 
         onClose();
@@ -75,7 +77,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>
-                        {taskToEdit ? 'Görevi Düzenle' : 'Yeni Görev Ekle'}
+                        {taskToEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -83,7 +85,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                     <div className="p-5 overflow-y-auto flex-1 space-y-5">
                         <div className="space-y-1.5">
                             <label htmlFor="title" className="text-sm font-medium">
-                                Başlık <span className="text-red-500">*</span>
+                                {t('taskForm.title')} <span className="text-red-500">*</span>
                             </label>
                             <input
                                 id="title"
@@ -91,20 +93,23 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                                 type="text"
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
-                                placeholder="Örn: Yıllık raporu tamamla"
+                                placeholder={t('taskForm.titlePlaceholder')}
                                 className="flex h-11 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                             />
                         </div>
 
                         <div className="space-y-1.5">
                             <label htmlFor="description" className="text-sm font-medium">
-                                Açıklama <span className="text-muted-foreground font-normal">(Opsiyonel)</span>
+                                {t('taskForm.description')}{' '}
+                                <span className="text-muted-foreground font-normal">
+                                    {t('common.optional')}
+                                </span>
                             </label>
                             <textarea
                                 id="description"
                                 value={description}
                                 onChange={e => setDescription(e.target.value)}
-                                placeholder="Görev detayları..."
+                                placeholder={t('taskForm.descriptionPlaceholder')}
                                 className="flex min-h-[80px] w-full rounded-xl border border-input bg-transparent px-3 py-2 justify-start text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                             />
                         </div>
@@ -113,7 +118,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                             <div className="space-y-1.5">
                                 <label htmlFor="dueDate" className="text-sm font-medium flex items-center gap-1.5">
                                     <CalendarIcon size={14} className="text-muted-foreground" />
-                                    Son Tarih
+                                    {t('taskForm.dueDate')}
                                 </label>
                                 <input
                                     id="dueDate"
@@ -127,7 +132,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                             <div className="space-y-1.5">
                                 <label htmlFor="category" className="text-sm font-medium flex items-center gap-1.5">
                                     <Tag size={14} className="text-muted-foreground" />
-                                    Kategori
+                                    {t('taskForm.category')}
                                 </label>
                                 <select
                                     id="category"
@@ -135,7 +140,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                                     onChange={e => setCategoryId(e.target.value)}
                                     className="flex h-11 w-full rounded-xl border border-input bg-card px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                                 >
-                                    <option value="">{UNCATEGORIZED_LABEL}</option>
+                                    <option value="">{t('category.uncategorized')}</option>
                                     {sortedCategories.map(c => (
                                         <option key={c.id} value={c.id}>{c.name}</option>
                                     ))}
@@ -144,7 +149,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                         </div>
 
                         <fieldset className="space-y-2">
-                            <legend className="text-sm font-medium mb-2">Öncelik</legend>
+                            <legend className="text-sm font-medium mb-2">{t('taskForm.priority')}</legend>
                             <div className="flex gap-2">
                                 {PRIORITIES.map(p => (
                                     <button
@@ -157,7 +162,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                                             : 'border-border bg-card text-muted-foreground hover:bg-muted font-normal'
                                             }`}
                                     >
-                                        {p}
+                                        {t(`priority.${p}`)}
                                     </button>
                                 ))}
                             </div>
@@ -170,13 +175,13 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                             onClick={onClose}
                             className="px-5 py-2.5 rounded-xl font-medium text-foreground hover:bg-muted transition-colors border border-transparent hover:border-border"
                         >
-                            İptal
+                            {t('common.cancel')}
                         </button>
                         <button
                             type="submit"
                             className="px-6 py-2.5 rounded-xl font-medium bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/30 active:scale-95 transition-all"
                         >
-                            {taskToEdit ? 'Güncelle' : 'Görev Ekle'}
+                            {taskToEdit ? t('taskForm.submitEdit') : t('taskForm.submitCreate')}
                         </button>
                     </DialogFooter>
                 </form>

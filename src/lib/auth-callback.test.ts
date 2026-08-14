@@ -16,7 +16,7 @@ describe('parseAuthCallbackError', () => {
 
         expect(result).toEqual({
             code: 'otp_expired',
-            message: 'Bağlantının süresi dolmuş. Lütfen yeni bir bağlantı isteyin.',
+            messageKey: 'auth.callbackError.otpExpired',
         });
     });
 
@@ -27,7 +27,7 @@ describe('parseAuthCallbackError', () => {
         );
 
         expect(result?.code).toBe('access_denied');
-        expect(result?.message).toContain('Authorize');
+        expect(result?.messageKey).toBe('auth.callbackError.accessDenied');
     });
 
     it('`?` ve `#` önekleri olmadan da çalışır', () => {
@@ -44,7 +44,9 @@ describe('parseAuthCallbackError', () => {
         );
 
         expect(result?.code).toBe('provider_email_needs_verification');
-        expect(result?.message).toContain('doğrulanmamış');
+        expect(result?.messageKey).toBe(
+            'auth.callbackError.providerEmailNeedsVerification'
+        );
     });
 
     it('yalnızca `error_code` gelse de hatayı yakalar', () => {
@@ -58,15 +60,17 @@ describe('parseAuthCallbackError', () => {
 
         // Kod günlüğe/destek kaydına yazılabilsin diye kaybedilmez.
         expect(result?.code).toBe('teleport_failed');
-        expect(result?.message).toBe('Giriş tamamlanamadı. Lütfen tekrar deneyin.');
+        expect(result?.messageKey).toBe('auth.callbackError.fallback');
     });
 
-    it('sağlayıcının İngilizce açıklamasını kullanıcıya sızdırmaz', () => {
+    it('sağlayıcının İngilizce açıklamasını sonuca taşımaz', () => {
+        // Açıklama ham İngilizce metindir; kullanıcıya yalnızca çeviri
+        // anahtarından üretilen metin gösterilir.
         const result = parseAuthCallbackError(
             '?error=server_error&error_description=Unable+to+exchange+external+code',
             ''
         );
 
-        expect(result?.message).not.toContain('Unable to exchange');
+        expect(result?.messageKey).toBe('auth.callbackError.fallback');
     });
 });

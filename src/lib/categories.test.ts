@@ -80,7 +80,12 @@ describe('seedCategories', () => {
     it('varsayılan dört kategoriyi sırayla üretir', () => {
         const seeded = seedCategories();
 
-        expect(seeded.map((c) => c.name)).toEqual(DEFAULT_CATEGORIES.map((c) => c.name));
+        // Varsayılan dil Türkçe olduğu için tohum adları legacyName ile
+        // aynı çıkar; bu, veritabanı migration'ıyla da hizalı olduklarını
+        // gösterir.
+        expect(seeded.map((c) => c.name)).toEqual(
+            DEFAULT_CATEGORIES.map((c) => c.legacyName)
+        );
         expect(seeded.map((c) => c.position)).toEqual([0, 1, 2, 3]);
     });
 

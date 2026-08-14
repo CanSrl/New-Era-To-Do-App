@@ -15,6 +15,10 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: 'on-first-retry',
+    // Uygulama dili tarayıcıdan algılanıyor ve Chromium varsayılanı en-US.
+    // Sabitlenmezse testler İngilizce arayüzle karşılaşır. Dil değiştirme
+    // akışı kategoriler/dil testinde ayrıca sınanıyor.
+    locale: 'tr-TR',
   },
 
   projects: [

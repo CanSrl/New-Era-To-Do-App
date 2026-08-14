@@ -1,4 +1,12 @@
-export type Priority = 'Düşük' | 'Orta' | 'Yüksek';
+/**
+ * Öncelik dile bağımsız anahtarlarla tutulur.
+ *
+ * Eskiden istemcide Türkçe etiketlerdi (`'Düşük'|'Orta'|'Yüksek'`) ve
+ * veritabanı sınırında çevriliyordu. i18n bunu sürdürülemez kıldı: etiket
+ * hem tipin kendisi hem de ekranda görünen metin olamaz. Görünen karşılıklar
+ * artık çeviri dosyalarında (`task.priority.*`).
+ */
+export type Priority = 'low' | 'medium' | 'high';
 
 /**
  * Kullanıcı tanımlı görev kategorisi.
@@ -47,9 +55,8 @@ export interface Task {
     position: number;
 }
 
-export type FilterStatus = 'Tüm Görevler' | 'Aktif' | 'Tamamlandı';
+export type FilterStatus = 'all' | 'active' | 'completed';
 
-export const PRIORITIES: readonly Priority[] = ['Düşük', 'Orta', 'Yüksek'];
+export const PRIORITIES: readonly Priority[] = ['low', 'medium', 'high'];
 
-/** Kategorisi olmayan görevlerin arayüzde göründüğü etiket. */
-export const UNCATEGORIZED_LABEL = 'Kategorisiz';
+export const FILTERS: readonly FilterStatus[] = ['all', 'active', 'completed'];

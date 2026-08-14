@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useAuth } from './AuthProvider';
 import { useTaskStore } from '../store';
 import { runSync } from '../lib/sync';
+import type { TranslationKey } from '../i18n';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'disabled';
 
@@ -10,7 +11,8 @@ type SyncProviderState = {
     lastSyncedAt: string | null;
     /** Buluta gönderilmeyi bekleyen değişiklik sayısı. */
     pendingCount: number;
-    errorMessage: string | null;
+    /** Çeviri anahtarı; metin arayüzde üretilir. */
+    errorMessageKey: TranslationKey | null;
     syncNow: () => void;
 };
 
@@ -29,7 +31,7 @@ const POLL_MS = 60_000;
 export function SyncProvider({ children }: { children: React.ReactNode }) {
     const { user, isConfigured } = useAuth();
     const [status, setStatus] = useState<SyncStatus>('idle');
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [errorMessageKey, setErrorMessageKey] = useState<TranslationKey | null>(null);
 
     const lastSyncedAt = useTaskStore((state) => state.lastSyncedAt);
     const dirtyIds = useTaskStore((state) => state.dirtyIds);
@@ -64,10 +66,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
         if (result.status === 'ok') {
             setStatus('idle');
-            setErrorMessage(null);
+            setErrorMessageKey(null);
         } else if (result.status === 'error') {
             setStatus('error');
-            setErrorMessage(result.message);
+            setErrorMessageKey(result.messageKey);
         } else if (result.reason === 'offline') {
             setStatus('offline');
         } else if (result.reason === 'unavailable') {
@@ -131,9 +133,9 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         status: userId ? status : (isConfigured ? 'idle' : 'disabled'),
         lastSyncedAt,
         pendingCount,
-        errorMessage,
+        errorMessageKey,
         syncNow: () => { if (userId) void sync(userId); },
-    }), [userId, status, isConfigured, lastSyncedAt, pendingCount, errorMessage, sync]);
+    }), [userId, status, isConfigured, lastSyncedAt, pendingCount, errorMessageKey, sync]);
 
     return (
         <SyncProviderContext.Provider value={value}>

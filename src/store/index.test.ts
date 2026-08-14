@@ -12,7 +12,7 @@ function resetStore() {
         tasks: [],
         categories: seedCategories(),
         searchQuery: '',
-        filter: 'Tüm Görevler',
+        filter: 'all',
         dirtyIds: [],
         tombstones: [],
         dirtyCategoryIds: [],
@@ -27,7 +27,7 @@ const store = () => useTaskStore.getState();
 function addTask(title: string, overrides: Partial<Task> = {}) {
     store().addTask({
         title,
-        priority: 'Orta',
+        priority: 'medium',
         categoryId: null,
         completed: false,
         ...overrides,
@@ -224,10 +224,10 @@ describe('importTasks', () => {
 describe('filtre durumu', () => {
     it('arama ve filtre değerlerini saklar', () => {
         store().setSearchQuery('rapor');
-        store().setFilter('Aktif');
+        store().setFilter('active');
 
         expect(store().searchQuery).toBe('rapor');
-        expect(store().filter).toBe('Aktif');
+        expect(store().filter).toBe('active');
     });
 });
 
@@ -385,7 +385,7 @@ describe('kalıcılık (persist)', () => {
         expect(raw).toBeTruthy();
         const parsed = JSON.parse(raw as string);
         expect(parsed.state.tasks[0].title).toBe('Kalıcı görev');
-        expect(parsed.version).toBe(3);
+        expect(parsed.version).toBe(4);
     });
 
     it('yazılan tarihler string olarak saklanır', async () => {
@@ -408,7 +408,7 @@ describe('v0 -> v1 göçü', () => {
             version: 0,
             state: {
                 searchQuery: '',
-                filter: 'Tüm Görevler',
+                filter: 'all',
                 tasks: [
                     {
                         id: 'eski-1',
@@ -429,7 +429,7 @@ describe('v0 -> v1 göçü', () => {
         expect(task.title).toBe('Eski görev');
         expect(task.dueDate).toBe('2026-08-15');
         expect(task.position).toBe(0);
-        expect(task.priority).toBe('Yüksek');
+        expect(task.priority).toBe('high');
         expect(task.categoryId).toBe(store().categories.find(c => c.name === 'İş')?.id);
     });
 
@@ -438,7 +438,7 @@ describe('v0 -> v1 göçü', () => {
             version: 0,
             state: {
                 searchQuery: '',
-                filter: 'Tüm Görevler',
+                filter: 'all',
                 tasks: [
                     { id: 'iyi', title: 'Sağlam' },
                     { id: 'bozuk', title: '' },
@@ -569,12 +569,68 @@ describe('kategoriler', () => {
     });
 });
 
+describe('v3 -> v4 göçü (dile bağımsız değerler)', () => {
+    it('Türkçe öncelik etiketlerini anahtara çevirir', async () => {
+        // Bu göç olmadan mevcut kullanıcının bütün görevleri sessizce
+        // "Orta" önceliğe düşerdi.
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 3,
+            state: {
+                filter: 'Tüm Görevler', dirtyIds: [], tombstones: [],
+                dirtyCategoryIds: [], categoryTombstones: [], ownerId: null,
+                categories: [],
+                tasks: [
+                    { id: 'a', title: 'Acil', priority: 'Yüksek', completed: false, categoryId: null,
+                      createdAt: '2026-01-05T08:00:00.000Z', updatedAt: '2026-01-05T08:00:00.000Z', position: 0 },
+                    { id: 'b', title: 'Sonra', priority: 'Düşük', completed: false, categoryId: null,
+                      createdAt: '2026-01-05T08:00:00.000Z', updatedAt: '2026-01-05T08:00:00.000Z', position: 1 },
+                ],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().tasks.map(t => t.priority)).toEqual(['high', 'low']);
+    });
+
+    it('Türkçe filtre değerini anahtara çevirir', async () => {
+        // Çevrilmezse kayıtlı filtre hiçbir görevle eşleşmez ve liste boş görünür.
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 3,
+            state: {
+                filter: 'Aktif', dirtyIds: [], tombstones: [],
+                dirtyCategoryIds: [], categoryTombstones: [], ownerId: null,
+                categories: [], tasks: [],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().filter).toBe('active');
+    });
+
+    it('tanınmayan filtre değerini varsayılana düşürür', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 3,
+            state: {
+                filter: 'Bozuk', dirtyIds: [], tombstones: [],
+                dirtyCategoryIds: [], categoryTombstones: [], ownerId: null,
+                categories: [], tasks: [],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().filter).toBe('all');
+    });
+});
+
 describe('v2 -> v3 göçü (kategoriler)', () => {
     it('metin kategoriyi tohumlanan kategoriye bağlar', async () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             version: 2,
             state: {
-                filter: 'Tüm Görevler',
+                filter: 'all',
                 dirtyIds: [],
                 tombstones: [],
                 ownerId: null,
@@ -604,9 +660,9 @@ describe('v2 -> v3 göçü (kategoriler)', () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             version: 2,
             state: {
-                filter: 'Tüm Görevler', dirtyIds: [], tombstones: [], ownerId: null,
+                filter: 'all', dirtyIds: [], tombstones: [], ownerId: null,
                 tasks: [{
-                    id: 't1', title: 'X', priority: 'Orta', category: 'Bahçe',
+                    id: 't1', title: 'X', priority: 'medium', category: 'Bahçe',
                     completed: false, createdAt: '2026-01-05T08:00:00.000Z',
                     updatedAt: '2026-01-05T08:00:00.000Z', position: 0,
                 }],
@@ -622,7 +678,7 @@ describe('v2 -> v3 göçü (kategoriler)', () => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             version: 2,
             state: {
-                filter: 'Tüm Görevler', dirtyIds: [], tombstones: [], ownerId: null, tasks: [],
+                filter: 'all', dirtyIds: [], tombstones: [], ownerId: null, tasks: [],
             },
         }));
 

@@ -10,28 +10,34 @@
  * testiyle kapsanabilir.
  */
 
+import type { TranslationKey } from '../i18n';
+
 export interface AuthCallbackError {
     /** Supabase'in kararlı hata kodu; bilinmeyen hatalarda günlüğe yazmak için. */
     code: string | null;
-    /** Kullanıcıya gösterilebilir Türkçe mesaj. */
-    message: string;
+    /**
+     * Çeviri anahtarı, hazır metin değil.
+     *
+     * Bu modül saf tutulabilsin diye çeviri burada yapılmaz: `t()` etkin dile
+     * bağlıdır ve dil değişince yeniden çalışması gerekir. Anahtarı render
+     * anında sayfa çevirir.
+     */
+    messageKey: TranslationKey;
 }
 
-const MESSAGES: Record<string, string> = {
-    otp_expired: 'Bağlantının süresi dolmuş. Lütfen yeni bir bağlantı isteyin.',
-    access_denied: 'Giriş isteği onaylanmadı. İzin ekranında "Authorize" demeniz gerekiyor.',
-    provider_disabled: 'Bu giriş yöntemi şu anda kapalı.',
-    provider_email_needs_verification:
-        'Sağlayıcıdaki e-posta adresiniz doğrulanmamış. Önce orada doğrulayıp tekrar deneyin.',
-    signup_disabled: 'Yeni kayıtlar şu anda kapalı.',
-    email_exists:
-        'Bu e-posta adresi zaten parolayla kayıtlı. Parolanızla giriş yapıp hesapları birleştirebilirsiniz.',
-    validation_failed: 'Giriş isteği geçersiz. Lütfen tekrar deneyin.',
-    bad_oauth_state: 'Giriş isteği doğrulanamadı. Lütfen baştan deneyin.',
-    unexpected_failure: 'Sağlayıcı tarafında bir sorun oluştu. Lütfen tekrar deneyin.',
+const MESSAGE_KEYS: Record<string, TranslationKey> = {
+    otp_expired: 'auth.callbackError.otpExpired',
+    access_denied: 'auth.callbackError.accessDenied',
+    provider_disabled: 'auth.callbackError.providerDisabled',
+    provider_email_needs_verification: 'auth.callbackError.providerEmailNeedsVerification',
+    signup_disabled: 'auth.callbackError.signupDisabled',
+    email_exists: 'auth.callbackError.emailExists',
+    validation_failed: 'auth.callbackError.validationFailed',
+    bad_oauth_state: 'auth.callbackError.badOauthState',
+    unexpected_failure: 'auth.callbackError.unexpectedFailure',
 };
 
-const FALLBACK = 'Giriş tamamlanamadı. Lütfen tekrar deneyin.';
+const FALLBACK: TranslationKey = 'auth.callbackError.fallback';
 
 /**
  * @param search `window.location.search` (`?` ile başlayabilir)
@@ -51,8 +57,12 @@ export function parseAuthCallbackError(search: string, hash: string): AuthCallba
     // `error_code` daha ayrıntılıdır (`otp_expired`), `error` daha geneldir
     // (`access_denied`); önce ayrıntılı olana bakılır.
     const code = errorCode ?? error;
-    const message =
-        (errorCode && MESSAGES[errorCode]) ?? (error && MESSAGES[error]) ?? FALLBACK;
+    // `x && MESSAGE_KEYS[x]` yerine üçlü kullanılıyor: `&&` boş dizgede
+    // dizginin kendisini döndürür ve sonuç tipi anahtar birliğinden taşardı.
+    const messageKey =
+        (errorCode ? MESSAGE_KEYS[errorCode] : undefined) ??
+        (error ? MESSAGE_KEYS[error] : undefined) ??
+        FALLBACK;
 
-    return { code, message };
+    return { code, messageKey };
 }

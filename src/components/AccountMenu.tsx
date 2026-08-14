@@ -1,5 +1,6 @@
 import { LogIn, LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { useAuth } from './AuthProvider';
 import { SyncIndicator } from './SyncIndicator';
@@ -11,6 +12,7 @@ interface AccountMenuProps {
 }
 
 export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
+    const { t } = useTranslation();
     const { user, isLoading, isConfigured, signOut } = useAuth();
 
     // Bulut senkronizasyonu yapılandırılmamışsa hesap arayüzü hiç görünmez;
@@ -18,12 +20,12 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
     if (!isConfigured) return null;
 
     const handleSignOut = async () => {
-        const { error } = await signOut();
-        if (error) {
-            toast.error(error);
+        const { errorKey } = await signOut();
+        if (errorKey) {
+            toast.error(t(errorKey));
             return;
         }
-        toast.success('Çıkış yapıldı. Görevlerin bu cihazda duruyor.');
+        toast.success(t('auth.signedOut'));
     };
 
     if (variant === 'compact') {
@@ -34,7 +36,7 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
             <button
                 onClick={handleSignOut}
                 className="p-2 rounded-full bg-secondary text-secondary-foreground"
-                aria-label={`Çıkış yap (${user.email})`}
+                aria-label={t('auth.signOutWithEmail', { email: user.email })}
                 title={user.email}
             >
                 <LogOut size={18} />
@@ -43,7 +45,7 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
             <button
                 onClick={onSignInClick}
                 className="p-2 rounded-full bg-secondary text-secondary-foreground"
-                aria-label="Giriş yap"
+                aria-label={t('auth.signInAria')}
             >
                 <LogIn size={18} />
             </button>
@@ -61,7 +63,7 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
                     <User size={15} />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <p className="text-xs text-muted-foreground leading-tight">Giriş yapıldı</p>
+                    <p className="text-xs text-muted-foreground leading-tight">{t('auth.signedInAs')}</p>
                     <p className="text-sm font-medium truncate leading-tight" title={user.email}>
                         {user.email}
                     </p>
@@ -69,8 +71,8 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
                 <button
                     onClick={handleSignOut}
                     className="p-1.5 shrink-0 rounded-md text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
-                    aria-label="Çıkış yap"
-                    title="Çıkış yap"
+                    aria-label={t('auth.signOutAria')}
+                    title={t('auth.signOutAria')}
                 >
                     <LogOut size={16} />
                 </button>
@@ -89,7 +91,7 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
             )}
         >
             <LogIn size={16} />
-            Giriş Yap
+            {t('auth.signIn')}
         </button>
     );
 }

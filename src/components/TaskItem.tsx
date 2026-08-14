@@ -5,7 +5,8 @@ import type { Task } from '../lib/types';
 import { useTaskStore } from '../store';
 import { GripVertical, Edit2, Trash2, Calendar, Tag, Check } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { tr } from 'date-fns/locale';
+import { useTranslation } from 'react-i18next';
+import { dateLocaleFor } from '../i18n';
 import { isOverdue } from '../lib/tasks';
 import {
     AlertDialog,
@@ -25,12 +26,13 @@ interface TaskItemProps {
 }
 
 const priorityColors = {
-    'Düşük': 'bg-green-500/10 text-green-600 dark:text-green-500',
-    'Orta': 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500',
-    'Yüksek': 'bg-red-500/10 text-red-600 dark:text-red-500',
+    low: 'bg-green-500/10 text-green-600 dark:text-green-500',
+    medium: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500',
+    high: 'bg-red-500/10 text-red-600 dark:text-red-500',
 };
 
 export function TaskItem({ task, onEdit }: TaskItemProps) {
+    const { t, i18n } = useTranslation();
     const toggleComplete = useTaskStore(state => state.toggleComplete);
     const deleteTask = useTaskStore(state => state.deleteTask);
     const category = useTaskStore(state =>
@@ -80,8 +82,8 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                 aria-pressed={task.completed}
                 aria-label={
                     task.completed
-                        ? `"${task.title}" görevini tamamlanmadı olarak işaretle`
-                        : `"${task.title}" görevini tamamlandı olarak işaretle`
+                        ? t('taskItem.markIncomplete', { title: task.title })
+                        : t('taskItem.markComplete', { title: task.title })
                 }
                 className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all ${task.completed
                     ? 'bg-green-500 border-green-500 text-white shadow-sm'
@@ -108,8 +110,8 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         <button
                             onClick={() => onEdit(task)}
                             className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
-                            title="Düzenle"
-                            aria-label={`"${task.title}" görevini düzenle`}
+                            title={t('common.edit')}
+                            aria-label={t('taskItem.edit', { title: task.title })}
                         >
                             <Edit2 size={16} />
                         </button>
@@ -117,22 +119,24 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                             <AlertDialogTrigger asChild>
                                 <button
                                     className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-                                    title="Sil"
-                                    aria-label={`"${task.title}" görevini sil`}
+                                    title={t('common.delete')}
+                                    aria-label={t('taskItem.delete', { title: task.title })}
                                 >
                                     <Trash2 size={16} />
                                 </button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                    <AlertDialogTitle>Görevi sil</AlertDialogTitle>
+                                    <AlertDialogTitle>{t('taskItem.deleteConfirmTitle')}</AlertDialogTitle>
                                     <AlertDialogDescription>
-                                        Bu görevi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                                        {t('taskItem.deleteConfirmBody')}
                                     </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                    <AlertDialogCancel>İptal</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleConfirmDelete}>Sil</AlertDialogAction>
+                                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleConfirmDelete}>
+                                        {t('common.delete')}
+                                    </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
@@ -141,7 +145,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
 
                 <div className="flex flex-wrap items-center gap-3 mt-3">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${priorityColors[task.priority]}`}>
-                        {task.priority}
+                        {t(`priority.${task.priority}`)}
                     </span>
 
                     {/*
@@ -170,7 +174,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                             : 'text-muted-foreground bg-muted'
                             }`}>
                             <Calendar size={12} />
-                            {format(parseISO(task.dueDate), 'd MMM yyyy', { locale: tr })}
+                            {format(parseISO(task.dueDate), 'd MMM yyyy', { locale: dateLocaleFor(i18n.language) })}
                         </span>
                     )}
                 </div>

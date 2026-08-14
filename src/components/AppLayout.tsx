@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PlusCircle, Settings } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -10,11 +11,12 @@ import { AuthDialog } from './AuthDialog';
 import { TaskForm } from './TaskForm';
 
 const NAV_ITEMS = [
-    { to: '/app', label: 'Görevlerim', shortLabel: 'Görevler', icon: ListTodo, end: true },
-    { to: '/app/settings', label: 'Ayarlar', shortLabel: 'Ayarlar', icon: Settings, end: false },
-];
+    { to: '/app', labelKey: 'nav.tasks', icon: ListTodo, end: true },
+    { to: '/app/settings', labelKey: 'nav.settings', icon: Settings, end: false },
+] as const;
 
 export function AppLayout() {
+    const { t } = useTranslation();
     const { theme, setTheme } = useTheme();
     const tasks = useTaskStore((state) => state.tasks);
     const activeCount = tasks.filter(t => !t.completed).length;
@@ -59,11 +61,11 @@ export function AppLayout() {
                     <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
                         <CheckCircle2 size={18} strokeWidth={2.5} />
                     </div>
-                    <h1 className="font-bold text-lg tracking-tight">Yapılacaklar</h1>
+                    <h1 className="font-bold text-lg tracking-tight">{t('app.name')}</h1>
                 </div>
 
                 <nav className="flex-1 space-y-2">
-                    {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+                    {NAV_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
                         <NavLink
                             key={to}
                             to={to}
@@ -77,7 +79,7 @@ export function AppLayout() {
                         >
                             <span className="flex items-center gap-3">
                                 <Icon size={18} />
-                                {label}
+                                {t(labelKey)}
                             </span>
                             {to === '/app' && activeCount > 0 && (
                                 <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full inline-block">
@@ -95,21 +97,21 @@ export function AppLayout() {
                         <button
                             onClick={() => setTheme('light')}
                             className={cn('p-2 rounded-md transition-colors', theme === 'light' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
-                            aria-label="Açık Tema"
+                            aria-label={t('theme.lightAria')}
                         >
                             <Sun size={16} />
                         </button>
                         <button
                             onClick={() => setTheme('system')}
                             className={cn('p-2 rounded-md transition-colors', theme === 'system' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
-                            aria-label="Sistem Teması"
+                            aria-label={t('theme.systemAria')}
                         >
                             <Monitor size={16} />
                         </button>
                         <button
                             onClick={() => setTheme('dark')}
                             className={cn('p-2 rounded-md transition-colors', theme === 'dark' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
-                            aria-label="Koyu Tema"
+                            aria-label={t('theme.darkAria')}
                         >
                             <Moon size={16} />
                         </button>
@@ -121,14 +123,14 @@ export function AppLayout() {
             <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20">
                 <div className="flex items-center gap-2">
                     <CheckCircle2 className="text-primary" size={24} />
-                    <h1 className="font-bold text-lg">Yapılacaklar</h1>
+                    <h1 className="font-bold text-lg">{t('app.name')}</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <AccountMenu variant="compact" onSignInClick={() => setIsAuthDialogOpen(true)} />
                     <button
                         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
                         className="p-2 rounded-full bg-secondary text-secondary-foreground"
-                        aria-label={theme === 'dark' ? 'Açık temaya geç' : 'Koyu temaya geç'}
+                        aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
                     >
                         {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                     </button>
@@ -154,14 +156,14 @@ export function AppLayout() {
                         )}
                     >
                         <ListTodo size={20} />
-                        <span className="text-[10px] font-medium">Görevler</span>
+                        <span className="text-[10px] font-medium">{t('nav.tasksShort')}</span>
                     </NavLink>
 
                     <div className="flex justify-center">
                         <button
                             onClick={() => openTaskForm()}
                             className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform -translate-y-6"
-                            aria-label="Görev Ekle"
+                            aria-label={t('tasks.addTask')}
                         >
                             <PlusCircle size={28} />
                         </button>
@@ -175,7 +177,7 @@ export function AppLayout() {
                         )}
                     >
                         <Settings size={20} />
-                        <span className="text-[10px] font-medium">Ayarlar</span>
+                        <span className="text-[10px] font-medium">{t('nav.settings')}</span>
                     </NavLink>
                 </div>
             </nav>
@@ -185,7 +187,7 @@ export function AppLayout() {
                 <button
                     onClick={() => openTaskForm()}
                     className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-105 hover:bg-primary/90 active:scale-95 transition-all group"
-                    title="Görev Ekle"
+                    title={t('tasks.addTask')}
                 >
                     <PlusCircle size={28} className="group-hover:rotate-90 transition-transform duration-300" />
                 </button>

@@ -12,6 +12,8 @@ ve verileri cihazlar arasında eşitlemeyi mümkün kılar.
 ## Özellikler
 
 - 🚀 **Modern UI:** Tailwind CSS ile tasarlanmış, glassmorphism estetiği.
+- 🌍 **İki Dil:** Türkçe ve İngilizce. Tarayıcı diline göre açılır, ayarlardan
+  değiştirilebilir.
 - 🌙 **Karanlık Mod:** Sistem tercihine uygun otomatik veya manuel Light/Dark mod.
 - 📱 **PWA ve Mobil Uyumlu:** Masaüstünde kenar çubuğu, mobilde alt gezinme menüsü.
 - 💾 **Çevrimdışı Çalışma:** Zustand persist ile LocalStorage'a kaydetme.

@@ -6,6 +6,9 @@ import { ThemeProvider } from './components/ThemeProvider'
 import { AuthProvider } from './components/AuthProvider'
 import { SyncProvider } from './components/SyncProvider'
 import { router } from './router'
+// i18n yan etkisi olarak kurulur ve ilk render'dan önce hazır olmalı:
+// bileşenler t() çağırdığında kaynaklar yüklenmiş olsun diye en üstte durur.
+import './i18n'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(

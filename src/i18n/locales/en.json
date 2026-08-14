@@ -1,0 +1,256 @@
+{
+  "app": {
+    "name": "Tasks",
+    "documentTitle": "Tasks — A Modern Task Manager"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "add": "Add",
+    "edit": "Edit",
+    "update": "Update",
+    "backToTasks": "Back to tasks",
+    "required": "*",
+    "optional": "(optional)"
+  },
+  "nav": {
+    "tasks": "My Tasks",
+    "tasksShort": "Tasks",
+    "settings": "Settings"
+  },
+  "theme": {
+    "light": "Light",
+    "system": "System",
+    "dark": "Dark",
+    "lightAria": "Light theme",
+    "systemAria": "System theme",
+    "darkAria": "Dark theme",
+    "toggleToLight": "Switch to light theme",
+    "toggleToDark": "Switch to dark theme"
+  },
+  "language": {
+    "title": "Language",
+    "description": "Interface language. Your choice is remembered on this device.",
+    "aria": "Language",
+    "tr": "Turkish",
+    "en": "English",
+    "changed": "Language changed."
+  },
+  "tasks": {
+    "greeting": "Hello! 👋",
+    "subtitle": "What would you like to get done today?",
+    "addTask": "Add task",
+    "allDone": "Nice work! You finished everything. 🎉",
+    "clearCompleted": "Clear completed",
+    "clearConfirmTitle": "Clear completed tasks",
+    "clearConfirmBody": "Are you sure you want to delete all completed tasks? This cannot be undone.",
+    "clearAction": "Clear",
+    "cleared": "Completed tasks cleared",
+    "emptyTitle": "No tasks yet",
+    "emptyBody": "Let's add one and get the day started!",
+    "emptyAction": "Add your first task",
+    "noResultsTitle": "No tasks found",
+    "noResultsBody": "No tasks match your search.",
+    "searchPlaceholder": "Search tasks..."
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "filter": {
+    "all": "All tasks",
+    "active": "Active",
+    "completed": "Completed"
+  },
+  "stats": {
+    "total": "Total tasks",
+    "completed": "Completed",
+    "dueToday": "Due today",
+    "urgent": "Urgent"
+  },
+  "taskItem": {
+    "markComplete": "Mark \"{{title}}\" as completed",
+    "markIncomplete": "Mark \"{{title}}\" as not completed",
+    "edit": "Edit \"{{title}}\"",
+    "delete": "Delete \"{{title}}\"",
+    "deleteConfirmTitle": "Delete task",
+    "deleteConfirmBody": "Are you sure you want to delete this task? This cannot be undone."
+  },
+  "taskForm": {
+    "createTitle": "New task",
+    "editTitle": "Edit task",
+    "title": "Title",
+    "titlePlaceholder": "e.g. Finish the annual report",
+    "titleRequired": "A task title is required.",
+    "description": "Description",
+    "descriptionPlaceholder": "Task details...",
+    "dueDate": "Due date",
+    "category": "Category",
+    "priority": "Priority",
+    "submitCreate": "Add task",
+    "submitEdit": "Update",
+    "created": "Task added.",
+    "updated": "Task updated."
+  },
+  "category": {
+    "uncategorized": "Uncategorized",
+    "sectionTitle": "Categories",
+    "sectionDescription": "Define your own categories to group tasks. Deleting a category does not delete its tasks.",
+    "empty": "No categories yet. Add one below.",
+    "newPlaceholder": "New category",
+    "newNameLabel": "New category name",
+    "newColorLabel": "New category colour",
+    "nameLabel": "Name of category {{name}}",
+    "colorLabel": "Colour of category {{name}}",
+    "deleteLabel": "Delete category \"{{name}}\"",
+    "taskCount_one": "{{count}} task",
+    "taskCount_other": "{{count}} tasks",
+    "deleteConfirmTitle": "Delete \"{{name}}\"?",
+    "deleteConfirmWithTasks_one": "The {{count}} task in this category will not be deleted; it stays in the list as \"Uncategorized\".",
+    "deleteConfirmWithTasks_other": "The {{count}} tasks in this category will not be deleted; they stay in the list as \"Uncategorized\".",
+    "deleteConfirmEmpty": "No tasks use this category.",
+    "nameEmpty": "Category name cannot be empty.",
+    "nameTaken": "The name \"{{name}}\" is already in use.",
+    "added": "\"{{name}}\" added.",
+    "updated": "Category updated.",
+    "deleted": "\"{{name}}\" deleted.",
+    "deletedWithTasks_one": "\"{{name}}\" deleted. {{count}} task is now uncategorized.",
+    "deletedWithTasks_other": "\"{{name}}\" deleted. {{count}} tasks are now uncategorized.",
+    "seed": {
+      "work": "Work",
+      "personal": "Personal",
+      "shopping": "Shopping",
+      "school": "School"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "appearanceTitle": "Appearance",
+    "appearanceDescription": "Theme preference for the app.",
+    "accountTitle": "Account",
+    "accountDescription": "Signing in is optional. Your tasks are stored on this device either way; signing in syncs them across devices.",
+    "dataTitle": "Data",
+    "dataDescription": "Back up your tasks as a JSON file or restore them.",
+    "export": "Export",
+    "import": "Import",
+    "exported": "Tasks exported successfully",
+    "importInvalidFormat": "Invalid file format",
+    "importUnreadable": "Could not read the file",
+    "importNothingNew": "No new tasks to import",
+    "imported_one": "{{count}} task imported",
+    "imported_other": "{{count}} tasks imported"
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signInAria": "Sign in",
+    "signOut": "Sign out",
+    "signOutAria": "Sign out",
+    "signOutWithEmail": "Sign out ({{email}})",
+    "signedIn": "Signed in.",
+    "signedInAs": "Signed in",
+    "signedOut": "Signed out. Your tasks stay on this device.",
+    "accountCreated": "Your account is ready. Welcome!",
+    "github": "Continue with GitHub",
+    "orEmail": "or with email",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "emailRequired": "An email address is required.",
+    "passwordTooShort": "Password must be at least 6 characters.",
+    "signin": {
+      "title": "Sign in",
+      "description": "Sign in to sync your tasks across all your devices.",
+      "submit": "Sign in"
+    },
+    "signup": {
+      "title": "Create account",
+      "description": "Create a free account and keep your tasks safe.",
+      "submit": "Create account"
+    },
+    "reset": {
+      "title": "Forgot password",
+      "description": "We'll send a reset link to your registered email address.",
+      "submit": "Send reset link"
+    },
+    "forgotPassword": "Forgot my password",
+    "noAccount": "Don't have an account?",
+    "createAccount": "Create account",
+    "haveAccount": "Already have an account?",
+    "backToSignIn": "Back to sign in",
+    "checkEmailTitle": "Check your email",
+    "checkEmailConfirm": "We sent a confirmation link to {{email}}. Click it to activate your account.",
+    "checkEmailReset": "We sent a password reset link to {{email}}.",
+    "resetPage": {
+      "title": "Set a new password",
+      "notConfigured": "Account features are not configured in this installation.",
+      "verifying": "Verifying the link…",
+      "invalidTitle": "Link is invalid or expired",
+      "invalidBody": "Reset links are short-lived. Please request a new reset email.",
+      "intro": "Set a new password for <0>{{email}}</0>.",
+      "newPassword": "New password",
+      "confirmPassword": "New password (again)",
+      "confirmPlaceholder": "Re-enter the password",
+      "mismatch": "Passwords do not match.",
+      "submit": "Update password",
+      "success": "Your password has been updated."
+    },
+    "callback": {
+      "completing": "Completing sign-in…",
+      "failedTitle": "Sign-in could not be completed",
+      "invalidTitle": "Link could not be verified",
+      "invalidBody": "The link may be invalid or expired. You can keep using your tasks on this device."
+    },
+    "error": {
+      "notConfigured": "Cloud sync is not configured in this installation.",
+      "invalidCredentials": "Incorrect email or password.",
+      "userAlreadyExists": "That email address is already registered. Try signing in.",
+      "weakPassword": "That password is too weak. Use at least 6 characters.",
+      "emailNotConfirmed": "Your email address is not verified yet. Check your inbox.",
+      "validationFailed": "The details you entered are invalid. Please check them.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again.",
+      "signupDisabled": "New sign-ups are currently closed.",
+      "invalidEmail": "Invalid email address.",
+      "network": "Could not reach the server. Check your internet connection.",
+      "unknown": "Something went wrong. Please try again."
+    },
+    "callbackError": {
+      "otpExpired": "The link has expired. Please request a new one.",
+      "accessDenied": "The sign-in request was not approved. You need to click \"Authorize\" on the consent screen.",
+      "providerDisabled": "This sign-in method is currently disabled.",
+      "providerEmailNeedsVerification": "Your email address is unverified at the provider. Verify it there and try again.",
+      "signupDisabled": "New sign-ups are currently closed.",
+      "emailExists": "That email is already registered with a password. Sign in with your password to link the accounts.",
+      "validationFailed": "The sign-in request was invalid. Please try again.",
+      "badOauthState": "The sign-in request could not be verified. Please start over.",
+      "unexpectedFailure": "Something went wrong on the provider's side. Please try again.",
+      "fallback": "Sign-in could not be completed. Please try again."
+    }
+  },
+  "sync": {
+    "syncing": "Syncing…",
+    "failed": "Sync failed — retry",
+    "offline": "Offline",
+    "offlinePending_one": "Offline — {{count}} change pending",
+    "offlinePending_other": "Offline — {{count}} changes pending",
+    "pending_one": "{{count}} change pending",
+    "pending_other": "{{count}} changes pending",
+    "synced": "Synced",
+    "syncedAt": "Synced · {{relative}}",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "error": {
+      "network": "Could not reach the server.",
+      "expiredSession": "Your session has expired. Please sign in again.",
+      "unknown": "Sync failed."
+    }
+  },
+  "notFound": {
+    "title": "Page not found",
+    "body": "The page you are looking for may have moved or never existed."
+  }
+}

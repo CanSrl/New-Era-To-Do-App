@@ -1,10 +1,11 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Category, Task, FilterStatus } from '../lib/types';
-import { createId, nextPosition, normalizeTask } from '../lib/tasks';
+import { createId, nextPosition, normalizeTask, toPriority } from '../lib/tasks';
 import {
     categoryKey,
     createCategory,
+    DEFAULT_CATEGORIES,
     nextCategoryPosition,
     seedCategories,
 } from '../lib/categories';
@@ -17,6 +18,13 @@ export interface Tombstone {
 
 /** Mezar taşları bu süreden eski ise atılır (senkronlanmamış olsalar bile). */
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** v3 ve öncesinde kaydedilmiş Türkçe filtre değerleri. */
+const LEGACY_FILTERS: Record<string, FilterStatus> = {
+    'Tüm Görevler': 'all',
+    'Aktif': 'active',
+    'Tamamlandı': 'completed',
+};
 
 interface TaskState {
     tasks: Task[];
@@ -84,7 +92,7 @@ export const useTaskStore = create<TaskState>()(
             // üzerine yazar.
             categories: seedCategories(),
             searchQuery: '',
-            filter: 'Tüm Görevler',
+            filter: 'all',
             dirtyIds: [],
             tombstones: [],
             dirtyCategoryIds: [],
@@ -377,7 +385,7 @@ export const useTaskStore = create<TaskState>()(
         }),
         {
             name: 'yapilacaklar-storage',
-            version: 3,
+            version: 4,
             partialize: (state) => ({
                 tasks: state.tasks,
                 categories: state.categories,
@@ -410,9 +418,18 @@ export const useTaskStore = create<TaskState>()(
                 // olmalı; ayrışırlarsa aynı kategori senkron sonrası iki kez
                 // görünür (ada göre tekilleştirme tutmaz).
                 const seeded = version < 3 ? seedCategories() : [];
-                const idByName = new Map(seeded.map((c) => [categoryKey(c.name), c.id]));
+
+                // Eşleme çevrilmiş ada değil sabit Türkçe `legacyName`'e
+                // dayanır: kategoriler tabloya taşınmadan önceki bütün veri
+                // Türkçeydi, arayüz şu an hangi dilde olursa olsun.
+                const idByLegacyName = new Map(
+                    DEFAULT_CATEGORIES.map((seed, index) => [
+                        categoryKey(seed.legacyName),
+                        seeded[index]?.id,
+                    ])
+                );
                 const resolveCategoryName = (name: string) =>
-                    idByName.get(categoryKey(name)) ?? null;
+                    idByLegacyName.get(categoryKey(name)) ?? null;
 
                 if (version === 0) {
                     state.tasks = state.tasks
@@ -452,6 +469,18 @@ export const useTaskStore = create<TaskState>()(
                     // tekilleştirilip düşecek.
                     state.dirtyCategoryIds = seeded.map((c) => c.id);
                     state.categoryTombstones = [];
+                }
+
+                if (version < 4) {
+                    // Öncelik ve filtre istemcide Türkçe etiketti; i18n ile
+                    // dile bağımsız anahtarlara geçtiler. Çevrilmezse mevcut
+                    // kullanıcının bütün görevleri sessizce "Orta"ya düşer ve
+                    // seçili filtre hiçbir görevle eşleşmez.
+                    state.tasks = state.tasks.map((task) => ({
+                        ...task,
+                        priority: toPriority(task.priority),
+                    }));
+                    state.filter = LEGACY_FILTERS[state.filter as string] ?? 'all';
                 }
 
                 return state as TaskState;

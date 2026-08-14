@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { Download, LogIn, LogOut, Monitor, Moon, Sun, Upload, User } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useTheme, type Theme } from '../components/ThemeProvider';
 import { useAuth } from '../components/AuthProvider';
 import { SyncIndicator } from '../components/SyncIndicator';
 import { AuthDialog } from '../components/AuthDialog';
 import { CategoryManager } from '../components/CategoryManager';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 import { useTaskStore } from '../store';
 import { cn } from '../lib/utils';
 
-const THEMES: { value: Theme; label: string; icon: typeof Sun }[] = [
-    { value: 'light', label: 'Açık', icon: Sun },
-    { value: 'system', label: 'Sistem', icon: Monitor },
-    { value: 'dark', label: 'Koyu', icon: Moon },
+const THEMES: { value: Theme; labelKey: 'theme.light' | 'theme.system' | 'theme.dark'; icon: typeof Sun }[] = [
+    { value: 'light', labelKey: 'theme.light', icon: Sun },
+    { value: 'system', labelKey: 'theme.system', icon: Monitor },
+    { value: 'dark', labelKey: 'theme.dark', icon: Moon },
 ];
 
 function Section({ title, description, children }: {
@@ -30,6 +32,7 @@ function Section({ title, description, children }: {
 }
 
 export function SettingsPage() {
+    const { t } = useTranslation();
     const { theme, setTheme } = useTheme();
     const { user, isConfigured, signOut } = useAuth();
     const tasks = useTaskStore(state => state.tasks);
@@ -44,7 +47,7 @@ export function SettingsPage() {
         document.body.appendChild(link);
         link.click();
         link.remove();
-        toast.success('Görevler başarıyla dışa aktarıldı');
+        toast.success(t('settings.exported'));
     };
 
     const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,17 +59,17 @@ export function SettingsPage() {
             try {
                 const imported = JSON.parse(event.target?.result as string);
                 if (!Array.isArray(imported)) {
-                    toast.error('Geçersiz dosya formatı');
+                    toast.error(t('settings.importInvalidFormat'));
                     return;
                 }
                 const added = importTasks(imported);
                 if (added === 0) {
-                    toast.info('İçe aktarılacak yeni görev bulunamadı');
+                    toast.info(t('settings.importNothingNew'));
                 } else {
-                    toast.success(`${added} görev içe aktarıldı`);
+                    toast.success(t('settings.imported', { count: added }));
                 }
             } catch {
-                toast.error('Dosya okunamadı');
+                toast.error(t('settings.importUnreadable'));
             }
         };
         reader.readAsText(file);
@@ -74,26 +77,36 @@ export function SettingsPage() {
     };
 
     const handleSignOut = async () => {
-        const { error } = await signOut();
-        if (error) {
-            toast.error(error);
+        const { errorKey } = await signOut();
+        if (errorKey) {
+            toast.error(t(errorKey));
             return;
         }
-        toast.success('Çıkış yapıldı. Görevlerin bu cihazda duruyor.');
+        toast.success(t('auth.signedOut'));
     };
 
     return (
         <div className="max-w-2xl">
-            <h2 className="text-2xl font-bold tracking-tight mb-6">Ayarlar</h2>
+            <h2 className="text-2xl font-bold tracking-tight mb-6">{t('settings.title')}</h2>
 
             <div className="space-y-4">
-                <Section title="Görünüm" description="Uygulamanın tema tercihi.">
+                <Section
+                    title={t('language.title')}
+                    description={t('language.description')}
+                >
+                    <LanguageSwitcher />
+                </Section>
+
+                <Section
+                    title={t('settings.appearanceTitle')}
+                    description={t('settings.appearanceDescription')}
+                >
                     <div
                         role="radiogroup"
-                        aria-label="Tema"
+                        aria-label={t('settings.appearanceTitle')}
                         className="flex gap-2"
                     >
-                        {THEMES.map(({ value, label, icon: Icon }) => (
+                        {THEMES.map(({ value, labelKey, icon: Icon }) => (
                             <button
                                 key={value}
                                 role="radio"
@@ -107,7 +120,7 @@ export function SettingsPage() {
                                 )}
                             >
                                 <Icon size={16} />
-                                {label}
+                                {t(labelKey)}
                             </button>
                         ))}
                     </div>
@@ -115,8 +128,8 @@ export function SettingsPage() {
 
                 {isConfigured && (
                     <Section
-                        title="Hesap"
-                        description="Giriş yapmak isteğe bağlıdır. Görevleriniz her hâlükârda bu cihazda saklanır; giriş yaparsanız cihazlar arasında eşitlenir."
+                        title={t('settings.accountTitle')}
+                        description={t('settings.accountDescription')}
                     >
                         {user ? (
                             <div className="space-y-3">
@@ -134,7 +147,7 @@ export function SettingsPage() {
                                     className="flex items-center gap-2 h-10 px-4 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
                                 >
                                     <LogOut size={16} />
-                                    Çıkış Yap
+                                    {t('auth.signOut')}
                                 </button>
                             </div>
                         ) : (
@@ -143,22 +156,22 @@ export function SettingsPage() {
                                 className="flex items-center gap-2 h-11 px-5 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:bg-primary/90 transition-colors"
                             >
                                 <LogIn size={16} />
-                                Giriş Yap
+                                {t('auth.signIn')}
                             </button>
                         )}
                     </Section>
                 )}
 
                 <Section
-                    title="Kategoriler"
-                    description="Görevlerinizi gruplamak için kendi kategorilerinizi tanımlayın. Bir kategoriyi silmek görevlerini silmez."
+                    title={t('category.sectionTitle')}
+                    description={t('category.sectionDescription')}
                 >
                     <CategoryManager />
                 </Section>
 
                 <Section
-                    title="Veri"
-                    description="Görevlerinizi JSON dosyası olarak yedekleyin veya geri yükleyin."
+                    title={t('settings.dataTitle')}
+                    description={t('settings.dataDescription')}
                 >
                     <div className="flex flex-wrap gap-2">
                         <button
@@ -166,11 +179,11 @@ export function SettingsPage() {
                             className="flex items-center gap-2 h-10 px-4 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
                         >
                             <Download size={16} />
-                            Dışa Aktar
+                            {t('settings.export')}
                         </button>
                         <label className="flex items-center gap-2 h-10 px-4 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors cursor-pointer">
                             <Upload size={16} />
-                            İçe Aktar
+                            {t('settings.import')}
                             <input
                                 type="file"
                                 accept=".json"

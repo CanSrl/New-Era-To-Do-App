@@ -10,7 +10,7 @@ const task: Task = {
     title: 'Rapor yaz',
     description: 'Yıllık özet',
     dueDate: '2026-08-15',
-    priority: 'Yüksek',
+    priority: 'high',
     completed: false,
     categoryId: '33333333-3333-4333-8333-333333333333',
     createdAt: '2026-01-05T08:00:00.000Z',
@@ -51,8 +51,10 @@ describe('taskToRow', () => {
         expect(result.due_date).toBeNull();
     });
 
-    it('tüm öncelik değerlerini eşler', () => {
-        const priorities = (['Düşük', 'Orta', 'Yüksek'] as const).map(
+    it('öncelik değerini olduğu gibi yazar', () => {
+        // İstemci ve veritabanı aynı anahtarları kullanıyor; eşleme
+        // katmanı değeri olduğu gibi taşımalı.
+        const priorities = (['low', 'medium', 'high'] as const).map(
             p => taskToRow({ ...task, priority: p }, 'u1').priority
         );
         expect(priorities).toEqual(['low', 'medium', 'high']);
@@ -75,11 +77,11 @@ describe('rowToTask', () => {
         expect(result.dueDate).toBeUndefined();
     });
 
-    it('tüm veritabanı enum değerlerini eşler', () => {
+    it('öncelik değerini olduğu gibi taşır', () => {
         const priorities = (['low', 'medium', 'high'] as const).map(
             p => rowToTask({ ...row, priority: p }).priority
         );
-        expect(priorities).toEqual(['Düşük', 'Orta', 'Yüksek']);
+        expect(priorities).toEqual(['low', 'medium', 'high']);
     });
 
     it('boş category_id alanını null olarak taşır', () => {
@@ -104,7 +106,7 @@ describe('gidiş-dönüş', () => {
             completed: true,
             dueDate: undefined,
             description: undefined,
-            priority: 'Düşük',
+            priority: 'low',
             categoryId: null,
         };
 

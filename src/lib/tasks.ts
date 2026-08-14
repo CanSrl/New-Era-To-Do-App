@@ -48,6 +48,26 @@ function createId(): string {
 }
 
 /**
+ * Öncelik dile bağımsız hale gelmeden önce istemcide Türkçe etiketti ve
+ * hem LocalStorage'a hem dışa aktarma dosyalarına öyle yazıldı.
+ *
+ * Eşleme burada duruyor ki hem eski cihaz kaydı hem de yıllar önce alınmış
+ * bir yedek dosyası önceliğini kaybetmesin; tanınmayan değer 'medium'a düşer.
+ */
+const LEGACY_PRIORITIES: Record<string, Priority> = {
+    'Düşük': 'low',
+    'Orta': 'medium',
+    'Yüksek': 'high',
+};
+
+/** Herhangi bir değeri geçerli bir önceliğe indirger. */
+export function toPriority(value: unknown): Priority {
+    if (typeof value !== 'string') return 'medium';
+    if (PRIORITIES.includes(value as Priority)) return value as Priority;
+    return LEGACY_PRIORITIES[value] ?? 'medium';
+}
+
+/**
  * Ham kaydın kategori bağını çözer.
  *
  * İki biçim desteklenir: yeni `categoryId` alanı ve kategoriler kayıt hâline
@@ -90,9 +110,7 @@ export function normalizeTask(
     const title = typeof source.title === 'string' ? source.title.trim() : '';
     if (!title) return null;
 
-    const priority = PRIORITIES.includes(source.priority as Priority)
-        ? (source.priority as Priority)
-        : 'Orta';
+    const priority = toPriority(source.priority);
 
     const categoryId = resolveCategoryId(source, resolveCategoryName);
 

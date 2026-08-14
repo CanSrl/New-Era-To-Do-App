@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store';
 import { byCategoryPosition, CATEGORY_COLORS, CATEGORY_NAME_MAX } from '../lib/categories';
 import type { Category } from '../lib/types';
@@ -61,6 +62,7 @@ function ColorInput({ value, onChange, label }: {
  * durumuna sokardı.
  */
 function CategoryRow({ category, taskCount }: { category: Category; taskCount: number }) {
+    const { t } = useTranslation();
     const updateCategory = useTaskStore((state) => state.updateCategory);
     const deleteCategory = useTaskStore((state) => state.deleteCategory);
 
@@ -81,18 +83,18 @@ function CategoryRow({ category, taskCount }: { category: Category; taskCount: n
         const saved = useTaskStore.getState().categories.find((c) => c.id === category.id);
         if (saved?.name !== trimmed) {
             setDraft(category.name);
-            toast.error(`"${trimmed}" adı zaten kullanılıyor.`);
+            toast.error(t('category.nameTaken', { name: trimmed }));
             return;
         }
-        toast.success('Kategori güncellendi.');
+        toast.success(t('category.updated'));
     };
 
     const handleDelete = () => {
         deleteCategory(category.id);
         toast.success(
             taskCount > 0
-                ? `"${category.name}" silindi. ${taskCount} görev kategorisiz oldu.`
-                : `"${category.name}" silindi.`
+                ? t('category.deletedWithTasks', { name: category.name, count: taskCount })
+                : t('category.deleted', { name: category.name })
         );
     };
 
@@ -101,13 +103,13 @@ function CategoryRow({ category, taskCount }: { category: Category; taskCount: n
             <ColorInput
                 value={category.color}
                 onChange={(color) => updateCategory(category.id, { color })}
-                label={`${category.name} kategorisinin rengi`}
+                label={t('category.colorLabel', { name: category.name })}
             />
 
             <input
                 value={draft}
                 maxLength={CATEGORY_NAME_MAX}
-                aria-label={`${category.name} kategorisinin adı`}
+                aria-label={t('category.nameLabel', { name: category.name })}
                 onChange={(e) => setDraft(e.target.value)}
                 onBlur={commitName}
                 onKeyDown={(e) => {
@@ -124,14 +126,14 @@ function CategoryRow({ category, taskCount }: { category: Category; taskCount: n
             />
 
             <span className="w-20 shrink-0 text-xs text-muted-foreground text-right tabular-nums">
-                {taskCount} görev
+                {t('category.taskCount', { count: taskCount })}
             </span>
 
             <AlertDialog>
                 <AlertDialogTrigger asChild>
                     <button
                         type="button"
-                        aria-label={`"${category.name}" kategorisini sil`}
+                        aria-label={t('category.deleteLabel', { name: category.name })}
                         className="p-2 shrink-0 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                     >
                         <Trash2 size={16} />
@@ -139,16 +141,20 @@ function CategoryRow({ category, taskCount }: { category: Category; taskCount: n
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>"{category.name}" silinsin mi?</AlertDialogTitle>
+                        <AlertDialogTitle>
+                            {t('category.deleteConfirmTitle', { name: category.name })}
+                        </AlertDialogTitle>
                         <AlertDialogDescription>
                             {taskCount > 0
-                                ? `Bu kategoriye bağlı ${taskCount} görev silinmez, "Kategorisiz" olarak listede kalır.`
-                                : 'Bu kategoriye bağlı görev yok.'}
+                                ? t('category.deleteConfirmWithTasks', { count: taskCount })
+                                : t('category.deleteConfirmEmpty')}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel>Vazgeç</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete}>Sil</AlertDialogAction>
+                        <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete}>
+                            {t('common.delete')}
+                        </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -157,6 +163,7 @@ function CategoryRow({ category, taskCount }: { category: Category; taskCount: n
 }
 
 export function CategoryManager() {
+    const { t } = useTranslation();
     const categories = useTaskStore((state) => state.categories);
     const tasks = useTaskStore((state) => state.tasks);
     const addCategory = useTaskStore((state) => state.addCategory);
@@ -175,12 +182,12 @@ export function CategoryManager() {
 
         const trimmed = name.trim();
         if (!trimmed) {
-            toast.error('Kategori adı boş olamaz.');
+            toast.error(t('category.nameEmpty'));
             return;
         }
 
         if (!addCategory(trimmed, color)) {
-            toast.error(`"${trimmed}" adı zaten kullanılıyor.`);
+            toast.error(t('category.nameTaken', { name: trimmed }));
             return;
         }
 
@@ -188,7 +195,7 @@ export function CategoryManager() {
         // Bir sonraki kategori farklı bir renkle gelsin; kullanıcı her
         // seferinde elle değiştirmek zorunda kalmasın.
         setColor(CATEGORY_COLORS[(categories.length + 1) % CATEGORY_COLORS.length]);
-        toast.success(`"${trimmed}" eklendi.`);
+        toast.success(t('category.added', { name: trimmed }));
     };
 
     return (
@@ -204,22 +211,24 @@ export function CategoryManager() {
                     ))}
                 </ul>
             ) : (
-                <p className="text-sm text-muted-foreground">
-                    Henüz kategori yok. Aşağıdan ekleyebilirsiniz.
-                </p>
+                <p className="text-sm text-muted-foreground">{t('category.empty')}</p>
             )}
 
             <form onSubmit={handleAdd} className="flex items-center gap-2 pt-2 border-t border-border">
-                <ColorInput value={color} onChange={setColor} label="Yeni kategorinin rengi" />
+                <ColorInput
+                    value={color}
+                    onChange={setColor}
+                    label={t('category.newColorLabel')}
+                />
                 <label htmlFor={`${fieldId}-name`} className="sr-only">
-                    Yeni kategori adı
+                    {t('category.newNameLabel')}
                 </label>
                 <input
                     id={`${fieldId}-name`}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     maxLength={CATEGORY_NAME_MAX}
-                    placeholder="Yeni kategori"
+                    placeholder={t('category.newPlaceholder')}
                     className={inputClass}
                 />
                 <button
@@ -227,7 +236,7 @@ export function CategoryManager() {
                     className="flex items-center gap-1.5 h-10 px-4 shrink-0 rounded-lg bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors"
                 >
                     <Plus size={16} />
-                    Ekle
+                    {t('common.add')}
                 </button>
             </form>
         </div>

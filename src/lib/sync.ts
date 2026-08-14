@@ -1,3 +1,4 @@
+import type { TranslationKey } from '../i18n';
 import { useTaskStore } from '../store';
 import { mergeCategories, mergeTasks, remapTaskCategories } from './sync-merge';
 import {
@@ -13,7 +14,7 @@ import {
 export type SyncOutcome =
     | { status: 'ok'; pushed: number; pulled: number; deleted: number }
     | { status: 'skipped'; reason: 'unavailable' | 'offline' | 'busy' }
-    | { status: 'error'; message: string };
+    | { status: 'error'; messageKey: TranslationKey };
 
 /**
  * Aynı anda birden fazla senkron turu çalışmasın. İki tur çakışırsa biri
@@ -21,17 +22,18 @@ export type SyncOutcome =
  */
 let inFlight = false;
 
-function translateError(error: unknown): string {
+/** Ham hatayı çeviri anahtarına indirger; metin arayüz katmanında üretilir. */
+function errorKeyFor(error: unknown): TranslationKey {
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
 
     if (lower.includes('failed to fetch') || lower.includes('networkerror')) {
-        return 'Sunucuya ulaşılamadı.';
+        return 'sync.error.network';
     }
     if (lower.includes('jwt') || lower.includes('token')) {
-        return 'Oturumun süresi dolmuş. Tekrar giriş yapın.';
+        return 'sync.error.expiredSession';
     }
-    return 'Senkronizasyon başarısız oldu.';
+    return 'sync.error.unknown';
 }
 
 /**
@@ -134,7 +136,7 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
         if (error instanceof SyncUnavailableError) {
             return { status: 'skipped', reason: 'unavailable' };
         }
-        return { status: 'error', message: translateError(error) };
+        return { status: 'error', messageKey: errorKeyFor(error) };
     } finally {
         inFlight = false;
     }

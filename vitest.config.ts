@@ -13,6 +13,8 @@ export default defineConfig({
     // persist middleware localStorage'a ihtiyaç duyuyor.
     environment: 'jsdom',
     include: ['src/**/*.test.ts'],
+    // i18n dilini sabitler; bkz. src/test-setup.ts
+    setupFiles: ['./src/test-setup.ts'],
     restoreMocks: true,
   },
 })

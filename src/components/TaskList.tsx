@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store';
 import { TaskItem } from './TaskItem';
 import { byPosition } from '../lib/tasks';
@@ -25,6 +26,7 @@ interface TaskListProps {
 }
 
 export function TaskList({ onEditTask }: TaskListProps) {
+    const { t } = useTranslation();
     const tasks = useTaskStore(state => state.tasks);
     const reorderTasks = useTaskStore(state => state.reorderTasks);
     const searchQuery = useTaskStore(state => state.searchQuery);
@@ -43,8 +45,8 @@ export function TaskList({ onEditTask }: TaskListProps) {
         }
 
         // Status filter
-        if (filter === 'Aktif' && task.completed) return false;
-        if (filter === 'Tamamlandı' && !task.completed) return false;
+        if (filter === 'active' && task.completed) return false;
+        if (filter === 'completed' && !task.completed) return false;
 
         return true;
     });
@@ -75,8 +77,8 @@ export function TaskList({ onEditTask }: TaskListProps) {
         return (
             <div className="bg-card border border-border rounded-xl p-12 text-center text-muted-foreground flex flex-col items-center">
                 <span className="text-4xl mb-4">📭</span>
-                <p className="font-medium text-lg text-foreground">Görev bulunamadı</p>
-                <p>Arama kriterlerinize uygun görev yok.</p>
+                <p className="font-medium text-lg text-foreground">{t('tasks.noResultsTitle')}</p>
+                <p>{t('tasks.noResultsBody')}</p>
             </div>
         );
     }

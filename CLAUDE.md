@@ -23,7 +23,7 @@ modülü olarak tasarlanır ki jenerik starter kit değerini bozmasın.
 Depo: [CanSrl/New-Era-To-Do-App](https://github.com/CanSrl/New-Era-To-Do-App) (private), varsayılan dal `main`.
 
 **Yığın:** React 19 + TypeScript + Vite 8 + Tailwind v4 + Zustand + Supabase +
-Radix + dnd-kit + framer-motion + PWA (vite-plugin-pwa).
+Radix + dnd-kit + framer-motion + react-i18next + PWA (vite-plugin-pwa).
 
 **Veritabanı** (`supabase/migrations/`): üç tablo var.
 ```
@@ -40,7 +40,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 225 otomatik test — 142 birim (Vitest), 53 uçtan uca (Playwright, 9'u
+**Test:** 253 otomatik test — 163 birim (Vitest), 60 uçtan uca (Playwright, 9'u
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 30 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -82,12 +82,38 @@ cihazlar aynı sonuca varsın diye). Bulut her turda **tam anlık görüntü** o
 Bu olmadan her girişte tüm görevler "gönderilmeyi bekliyor" sayılıyor ve başka
 cihazda silinen görev diriliyordu. Değiştirmeyin.
 
-**Arayüz etiketleri hâlâ Türkçe union.** `Priority` istemcide
-`'Düşük'|'Orta'|'Yüksek'`, veritabanında `low|medium|high`. Dönüşüm
-`src/lib/task-mapping.ts`'te. **i18n'e geçildiğinde istemci tarafı yine de
-dile bağımsız hale getirilmeli** — bu iş ertelendi, yok olmadı. Kategoriler
-artık kullanıcı verisi olduğu için bu sorundan çıktı; yalnızca tohumlanan dört
-varsayılanın adı Türkçe.
+**İstemci tipleri dile bağımsız.** `Priority` = `low|medium|high`,
+`FilterStatus` = `all|active|completed`, iki tarafta da aynı. Görünen
+karşılıkları çeviri dosyalarında (`priority.*`, `filter.*`). Bu, i18n'in
+önkoşuluydu: bir etiket hem tipin kendisi hem ekrandaki metin olamaz.
+`task-mapping.ts` artık yalnızca alan adı çeviriyor.
+
+**i18n: `react-i18next`, tr + en.** Dil tarayıcıdan algılanır, yedek `tr`;
+kullanıcı seçimi LocalStorage'da (`yapilacaklar-language`) saklanır ve
+tarayıcı tercihini yener.
+
+- **Çeviri anahtarları tiplidir.** `src/i18n/i18next.d.ts` Türkçe dosyayı
+  referans alır, yani `t('yanls.anahtar')` derleme hatası verir. İki dosyanın
+  aynı şekli taşıdığını tip sistemi göremez — `src/i18n/i18n.test.ts` bunu ve
+  yer tutucu/çoğul eşleşmesini doğrular.
+- **Kullanıcıya metin döndüren saf katmanlar anahtar döndürür**, hazır metin
+  değil (`TranslationKey`). Auth hataları, senkron hataları, callback
+  hataları böyle. Aksi halde dil değişince ekranda duran hata eski dilde
+  kalırdı.
+- **Modül sırası tuzağı:** store, başlangıç durumunda `seedCategories()`
+  çağırıyor ve bu modül gövdesi çalışırken oluyor. `categories.ts` bu yüzden
+  i18n'i doğrudan import eder — aksi halde tohumlar ad yerine çeviri anahtarı
+  taşırdı.
+- **Playwright yereli `tr-TR` olarak sabitlenmiştir.** Chromium varsayılanı
+  en-US; sabitlenmezse Türkçe metinle seçim yapan bütün testler kırılır.
+- Birim testlerinde dil `src/test-setup.ts` ile `tr`ye sabitlenir (jsdom da
+  en-US bildiriyor).
+
+**Tohum kategori adları çevrilir, ama bu bir çakışma riski taşır.** Aynı
+hesabın iki cihazı ilk kez farklı dillerde tohumlanırsa ("İş" ve "Work") ada
+göre tekilleştirme tutmaz ve kullanıcı iki kategori seti görür. Dar bir
+senaryo; bilinçli kabul edildi. LocalStorage göçü çevrilmiş ada değil sabit
+`legacyName`'e bakar, çünkü o dönemki bütün veri Türkçeydi.
 
 **Kategorilerde benzersizlik kısıtı bilinçli olarak YOKTUR.** İki cihaz
 çevrimdışıyken aynı adla kategori oluşturabilir. `unique (user_id, name)`
@@ -189,9 +215,8 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 
 ### ⏳ Kalan işler
 
-**Ürün sağlamlaştırma:** i18n (`react-i18next`, tr+en) — önkoşulu istemci
-tiplerinin dile bağımsız hale getirilmesi; Sentry + `ErrorBoundary` (env ile
-opsiyonel); `eslint-plugin-jsx-a11y`.
+**Ürün sağlamlaştırma:** Sentry + `ErrorBoundary` (env ile opsiyonel);
+`eslint-plugin-jsx-a11y`.
 
 **Faz 5 — Niş modül:** `clients`, `projects`, `time_logs` tabloları ve
 `src/features/{clients,projects,timeLogs}/`. `src/config/features.ts` bayrağıyla
@@ -230,7 +255,10 @@ yeniden yazımı, ekran görüntüleri (i18n'den sonra), Vercel/Netlify deploy,
 4. **Pro kapılama veritabanı seviyesinde de olmalı**, yalnızca UI'da değil.
 5. **Çakışma çözümü kaybeden değişikliği sessizce atar** (son yazan kazanır).
    Görev listesi için makul, ama bilinçli bir karar — dokümante edilmeli.
-6. **i18n ertelendi, yok olmadı** — istemci union'ları hâlâ Türkçe.
+6. **Üçüncü bir dil eklemek** `SUPPORTED_LANGUAGES` + yeni JSON + date-fns
+   yerelliği demek; `i18n.test.ts` eksik anahtarı yakalar. Ancak tohum
+   kategori adları o dilde de çevrileceği için yukarıdaki çakışma riski
+   büyür.
 7. **Takım/çoklu kiracılık v1 kapsamında yok.** `workspace_id` migrasyon yolu
    dokümante edilecek ama inşa edilmeyecek.
 
@@ -256,7 +284,7 @@ Plandan neden ayrıldığımızın kaydı — gelecekte "burada ne olmuş?" soru
 | `categories` tablosu | Faz 1'de var | Faz 1'in en sonunda geldi | Şema önce mevcut koddan türetilmişti; enum'dan tabloya geçiş sonradan yapıldı |
 | OAuth | Google + GitHub | Yalnızca GitHub | Google, Cloud Console hesabı istiyor; kullanıcının hesabı yok |
 | react-query | Veri katmanı olacaktı | Bağımlılıktan kaldırıldı | Zustand birincil kaldı, hiç kullanılmadı |
-| İstemci tipleri | Faz 2'de dile bağımsız | Türkçe kaldı, DB sınırında eşleme | Tasarım kararı, plan görülmeden alındı |
+| İstemci tipleri | Faz 2'de dile bağımsız | Faz 1 sonrası, i18n ile birlikte | Tasarım kararı önce Türkçe union'dan yanaydı; i18n bunu sürdürülemez kıldı |
 | Test + CI | Faz 4 | Faz 1.5 ve hemen sonrası | Kullanıcı istedi; doğru karar çıktı |
 | Ödeme | Stripe | Belirsiz (iyzico / LemonSqueezy) | Türkiye'den Stripe açılamıyor |
 

@@ -1,5 +1,10 @@
 import type { Category } from './types';
 import { createId, toIsoTimestamp } from './tasks';
+// i18n buradan içe aktarılıyor ki modül sırası kendiliğinden doğru olsun:
+// store, başlangıç durumunda seedCategories() çağırıyor ve bu, modül gövdesi
+// çalışırken gerçekleşiyor. Bu import olmasa i18n henüz kurulmamış olabilir
+// ve tohumlar ad yerine çeviri anahtarı taşırdı.
+import i18n from '../i18n';
 
 /** Veritabanı kısıtıyla aynı: '#rrggbb', küçük harf. */
 const HEX_COLOR = /^#[0-9a-f]{6}$/;
@@ -23,16 +28,26 @@ export const DEFAULT_CATEGORY_COLOR = '#6366f1';
 /**
  * Yeni bir cihazda oluşturulan başlangıç kategorileri.
  *
- * Enum döneminden gelen dört değerin birebir karşılığı; böylece eski
- * kayıtlar LocalStorage göçünde adlarıyla eşleşebiliyor. Veritabanı
- * migration'ı da aynı dört adı ve rengi kullanır — ikisi ayrışırsa aynı
- * kategori iki kez oluşur.
+ * `legacyName`, kategoriler tabloya taşınmadan önceki enum'ın Türkçe
+ * karşılığıdır ve LocalStorage v2 -> v3 göçünde eski görevleri bağlamak için
+ * kullanılır. Göç bilinçli olarak çevrilmiş ada değil bu sabit ada bakar:
+ * o dönemki bütün veri Türkçeydi, arayüz o an hangi dilde olursa olsun.
+ *
+ * ⚠️ Tohum adları arayüz diline göre çevrilir. Aynı hesabın iki cihazı farklı
+ * dillerde ilk kez tohumlanırsa ("İş" ve "Work") ada göre tekilleştirme
+ * tutmaz ve kullanıcı iki kategori seti görür. Dar bir senaryo — iki taze
+ * kurulumun aynı hesaba farklı dillerde bağlanması — ve kullanıcı fazlalıkları
+ * silebilir. Veritabanı migration'ı da Türkçe adları yazar.
  */
-export const DEFAULT_CATEGORIES: readonly { name: string; color: string }[] = [
-    { name: 'İş', color: '#3b82f6' },
-    { name: 'Kişisel', color: '#8b5cf6' },
-    { name: 'Alışveriş', color: '#10b981' },
-    { name: 'Okul', color: '#f59e0b' },
+export const DEFAULT_CATEGORIES: readonly {
+    key: 'work' | 'personal' | 'shopping' | 'school';
+    legacyName: string;
+    color: string;
+}[] = [
+    { key: 'work', legacyName: 'İş', color: '#3b82f6' },
+    { key: 'personal', legacyName: 'Kişisel', color: '#8b5cf6' },
+    { key: 'shopping', legacyName: 'Alışveriş', color: '#10b981' },
+    { key: 'school', legacyName: 'Okul', color: '#f59e0b' },
 ];
 
 /**
@@ -97,7 +112,7 @@ export function createCategory(
 /** Cihaz ilk kez açıldığında oluşturulan başlangıç kategorileri. */
 export function seedCategories(now: string = new Date().toISOString()): Category[] {
     return DEFAULT_CATEGORIES.map((seed, index) =>
-        createCategory(seed.name, seed.color, index, now)
+        createCategory(i18n.t(`category.seed.${seed.key}`), seed.color, index, now)
     );
 }
 

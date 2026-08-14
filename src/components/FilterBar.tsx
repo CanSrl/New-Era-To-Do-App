@@ -1,10 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store';
-import type { FilterStatus } from '../lib/types';
+import { FILTERS } from '../lib/types';
 import { Search, ListFilter } from 'lucide-react';
 
-const FILTERS: FilterStatus[] = ['Tüm Görevler', 'Aktif', 'Tamamlandı'];
-
 export function FilterBar() {
+    const { t } = useTranslation();
     const searchQuery = useTaskStore(state => state.searchQuery);
     const setSearchQuery = useTaskStore(state => state.setSearchQuery);
     const filter = useTaskStore(state => state.filter);
@@ -21,7 +21,7 @@ export function FilterBar() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="block w-full h-11 pl-10 pr-3 rounded-xl border border-input shadow-sm bg-card transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    placeholder="Görev ara..."
+                    placeholder={t('tasks.searchPlaceholder')}
                 />
             </div>
 
@@ -35,8 +35,8 @@ export function FilterBar() {
                                 : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
                             }`}
                     >
-                        {f === 'Tüm Görevler' && <ListFilter size={14} />}
-                        {f}
+                        {f === 'all' && <ListFilter size={14} />}
+                        {t(`filter.${f}`)}
                     </button>
                 ))}
             </div>

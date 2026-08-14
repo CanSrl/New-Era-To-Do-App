@@ -1,8 +1,17 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
 import type { Session, User } from "@supabase/supabase-js"
 import { supabase, isSupabaseConfigured } from "../lib/supabase"
+import type { TranslationKey } from "../i18n"
+import { authErrorKey } from "../lib/auth-errors"
 
-type AuthResult = { error: string | null }
+/**
+ * `errorKey` bir çeviri anahtarıdır, hazır metin değil.
+ *
+ * Sağlayıcıdan gelen İngilizce hata bu katmanda anahtara indirgenir; metne
+ * çevirme işi arayüze bırakılır. Böylece dil değiştiğinde ekrandaki hata da
+ * değişir ve bu modül React'ten bağımsız kalır.
+ */
+type AuthResult = { errorKey: TranslationKey | null }
 
 type SignUpResult = AuthResult & { needsEmailConfirmation: boolean }
 
@@ -33,49 +42,9 @@ type AuthProviderState = {
     updatePassword: (password: string) => Promise<AuthResult>
 }
 
-const NOT_CONFIGURED: AuthResult = {
-    error: "Bulut senkronizasyonu bu kurulumda yapılandırılmamış.",
-}
+const NOT_CONFIGURED: AuthResult = { errorKey: "auth.error.notConfigured" }
 
 const AuthProviderContext = createContext<AuthProviderState | undefined>(undefined)
-
-/**
- * Supabase'in İngilizce hata metinlerini kullanıcıya gösterilebilir Türkçe
- * karşılıklarına çevirir. Önce kararlı `code` alanına, o yoksa mesaj
- * içeriğine bakar; tanınmayan hatalar için genel bir mesaj döner.
- */
-function translateAuthError(error: { code?: string; message: string }): string {
-    switch (error.code) {
-        case "invalid_credentials":
-            return "E-posta veya parola hatalı."
-        case "user_already_exists":
-        case "email_exists":
-            return "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin."
-        case "weak_password":
-            return "Parola çok zayıf. En az 6 karakter kullanın."
-        case "email_not_confirmed":
-            return "E-posta adresiniz henüz doğrulanmamış. Gelen kutunuzu kontrol edin."
-        case "validation_failed":
-            return "Girdiğiniz bilgiler geçersiz. Lütfen kontrol edin."
-        case "over_email_send_rate_limit":
-        case "over_request_rate_limit":
-            return "Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin."
-        case "signup_disabled":
-            return "Yeni kayıtlar şu anda kapalı."
-    }
-
-    const message = error.message.toLowerCase()
-    if (message.includes("invalid login credentials")) return "E-posta veya parola hatalı."
-    if (message.includes("already registered")) return "Bu e-posta adresi zaten kayıtlı."
-    if (message.includes("password should be at least")) return "Parola en az 6 karakter olmalı."
-    if (message.includes("unable to validate email")) return "Geçersiz e-posta adresi."
-    if (message.includes("email not confirmed")) return "E-posta adresiniz henüz doğrulanmamış."
-    if (message.includes("failed to fetch") || message.includes("network")) {
-        return "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin."
-    }
-
-    return "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
-}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [session, setSession] = useState<Session | null>(null)
@@ -118,24 +87,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
             })
             if (error) {
-                return { error: translateAuthError(error), needsEmailConfirmation: false }
+                return { errorKey: authErrorKey(error), needsEmailConfirmation: false }
             }
             // Supabase, kayıtlı bir e-posta ile tekrar kayıt denendiğinde hesap
             // sızdırmamak için hata yerine boş `identities` dizisi döndürür.
             if (data.user && data.user.identities?.length === 0) {
                 return {
-                    error: "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.",
+                    errorKey: "auth.error.userAlreadyExists",
                     needsEmailConfirmation: false,
                 }
             }
-            return { error: null, needsEmailConfirmation: data.session === null }
+            return { errorKey: null, needsEmailConfirmation: data.session === null }
         },
 
         signIn: async (email, password) => {
             if (!supabase) return NOT_CONFIGURED
 
             const { error } = await supabase.auth.signInWithPassword({ email, password })
-            return { error: error ? translateAuthError(error) : null }
+            return { errorKey: error ? authErrorKey(error) : null }
         },
 
         signInWithGitHub: async () => {
@@ -148,14 +117,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 provider: 'github',
                 options: { redirectTo: `${window.location.origin}/auth/callback` },
             })
-            return { error: error ? translateAuthError(error) : null }
+            return { errorKey: error ? authErrorKey(error) : null }
         },
 
         signOut: async () => {
             if (!supabase) return NOT_CONFIGURED
 
             const { error } = await supabase.auth.signOut()
-            return { error: error ? translateAuthError(error) : null }
+            return { errorKey: error ? authErrorKey(error) : null }
         },
 
         resetPassword: async (email) => {
@@ -166,14 +135,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { error } = await supabase.auth.resetPasswordForEmail(email, {
                 redirectTo: `${window.location.origin}/reset-password`,
             })
-            return { error: error ? translateAuthError(error) : null }
+            return { errorKey: error ? authErrorKey(error) : null }
         },
 
         updatePassword: async (password) => {
             if (!supabase) return NOT_CONFIGURED
 
             const { error } = await supabase.auth.updateUser({ password })
-            return { error: error ? translateAuthError(error) : null }
+            return { errorKey: error ? authErrorKey(error) : null }
         },
     }), [session, isLoading])
 

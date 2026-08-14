@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatsDashboard } from '../components/StatsDashboard';
 import { FilterBar } from '../components/FilterBar';
 import { TaskList } from '../components/TaskList';
@@ -20,6 +21,7 @@ import {
 } from '../components/ui/alert-dialog';
 
 export function TasksPage() {
+    const { t } = useTranslation();
     const tasks = useTaskStore(state => state.tasks);
     const clearCompleted = useTaskStore(state => state.clearCompleted);
 
@@ -37,41 +39,41 @@ export function TasksPage() {
                 origin: { y: 0.6 },
                 colors: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899']
             });
-            toast.success('Harika! Tüm görevleri tamamladınız. 🎉', { id: 'all-done' });
+            toast.success(t('tasks.allDone'), { id: 'all-done' });
         }
-    }, [activeTasks, tasks.length]);
+    }, [activeTasks, tasks.length, t]);
 
     return (
         <>
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
                 <div>
-                    <h2 className="text-2xl font-bold tracking-tight mb-1">Merhaba! 👋</h2>
-                    <p className="text-muted-foreground">Bugün neler başarmak istiyorsun?</p>
+                    <h2 className="text-2xl font-bold tracking-tight mb-1">{t('tasks.greeting')}</h2>
+                    <p className="text-muted-foreground">{t('tasks.subtitle')}</p>
                 </div>
 
                 {completedTasks > 0 && (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <button className="px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex items-center gap-1.5 self-start sm:self-auto">
-                                <Trash2 size={16} /> Tamamlananları Temizle
+                                <Trash2 size={16} /> {t('tasks.clearCompleted')}
                             </button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Tamamlanan görevleri temizle</AlertDialogTitle>
+                                <AlertDialogTitle>{t('tasks.clearConfirmTitle')}</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Tamamlanan tüm görevleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                                    {t('tasks.clearConfirmBody')}
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                                <AlertDialogCancel>İptal</AlertDialogCancel>
+                                <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                                 <AlertDialogAction
                                     onClick={() => {
                                         clearCompleted();
-                                        toast.success('Tamamlanan görevler temizlendi');
+                                        toast.success(t('tasks.cleared'));
                                     }}
                                 >
-                                    Temizle
+                                    {t('tasks.clearAction')}
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
@@ -88,13 +90,13 @@ export function TasksPage() {
                         <div className="w-24 h-24 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
                             <span className="text-4xl">🚀</span>
                         </div>
-                        <h3 className="text-xl font-bold tracking-tight mb-2">Henüz görev yok</h3>
-                        <p className="text-muted-foreground mb-6">Hadi bir tane ekleyelim ve güne başlayalım!</p>
+                        <h3 className="text-xl font-bold tracking-tight mb-2">{t('tasks.emptyTitle')}</h3>
+                        <p className="text-muted-foreground mb-6">{t('tasks.emptyBody')}</p>
                         <button
                             onClick={() => openTaskForm()}
                             className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/30 active:scale-95 transition-all"
                         >
-                            İlk Görevini Ekle
+                            {t('tasks.emptyAction')}
                         </button>
                     </div>
                 ) : (

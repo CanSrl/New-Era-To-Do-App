@@ -1,0 +1,256 @@
+{
+  "app": {
+    "name": "Yapılacaklar",
+    "documentTitle": "Yapılacaklar Listesi — Modern Görev Yöneticisi"
+  },
+  "common": {
+    "cancel": "İptal",
+    "delete": "Sil",
+    "close": "Kapat",
+    "add": "Ekle",
+    "edit": "Düzenle",
+    "update": "Güncelle",
+    "backToTasks": "Görevlere dön",
+    "required": "*",
+    "optional": "(Opsiyonel)"
+  },
+  "nav": {
+    "tasks": "Görevlerim",
+    "tasksShort": "Görevler",
+    "settings": "Ayarlar"
+  },
+  "theme": {
+    "light": "Açık",
+    "system": "Sistem",
+    "dark": "Koyu",
+    "lightAria": "Açık Tema",
+    "systemAria": "Sistem Teması",
+    "darkAria": "Koyu Tema",
+    "toggleToLight": "Açık temaya geç",
+    "toggleToDark": "Koyu temaya geç"
+  },
+  "language": {
+    "title": "Dil",
+    "description": "Arayüz dili. Seçiminiz bu cihazda hatırlanır.",
+    "aria": "Dil",
+    "tr": "Türkçe",
+    "en": "İngilizce",
+    "changed": "Dil değiştirildi."
+  },
+  "tasks": {
+    "greeting": "Merhaba! 👋",
+    "subtitle": "Bugün neler başarmak istiyorsun?",
+    "addTask": "Görev Ekle",
+    "allDone": "Harika! Tüm görevleri tamamladınız. 🎉",
+    "clearCompleted": "Tamamlananları Temizle",
+    "clearConfirmTitle": "Tamamlanan görevleri temizle",
+    "clearConfirmBody": "Tamamlanan tüm görevleri silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+    "clearAction": "Temizle",
+    "cleared": "Tamamlanan görevler temizlendi",
+    "emptyTitle": "Henüz görev yok",
+    "emptyBody": "Hadi bir tane ekleyelim ve güne başlayalım!",
+    "emptyAction": "İlk Görevini Ekle",
+    "noResultsTitle": "Görev bulunamadı",
+    "noResultsBody": "Arama kriterlerinize uygun görev yok.",
+    "searchPlaceholder": "Görev ara..."
+  },
+  "priority": {
+    "low": "Düşük",
+    "medium": "Orta",
+    "high": "Yüksek"
+  },
+  "filter": {
+    "all": "Tüm Görevler",
+    "active": "Aktif",
+    "completed": "Tamamlandı"
+  },
+  "stats": {
+    "total": "Toplam Görev",
+    "completed": "Tamamlanan",
+    "dueToday": "Bugün Bitmesi Gereken",
+    "urgent": "Acil"
+  },
+  "taskItem": {
+    "markComplete": "\"{{title}}\" görevini tamamlandı olarak işaretle",
+    "markIncomplete": "\"{{title}}\" görevini tamamlanmadı olarak işaretle",
+    "edit": "\"{{title}}\" görevini düzenle",
+    "delete": "\"{{title}}\" görevini sil",
+    "deleteConfirmTitle": "Görevi sil",
+    "deleteConfirmBody": "Bu görevi silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+  },
+  "taskForm": {
+    "createTitle": "Yeni Görev Ekle",
+    "editTitle": "Görevi Düzenle",
+    "title": "Başlık",
+    "titlePlaceholder": "Örn: Yıllık raporu tamamla",
+    "titleRequired": "Görev başlığı zorunludur!",
+    "description": "Açıklama",
+    "descriptionPlaceholder": "Görev detayları...",
+    "dueDate": "Son Tarih",
+    "category": "Kategori",
+    "priority": "Öncelik",
+    "submitCreate": "Görev Ekle",
+    "submitEdit": "Güncelle",
+    "created": "Yeni görev eklendi!",
+    "updated": "Görev başarıyla güncellendi!"
+  },
+  "category": {
+    "uncategorized": "Kategorisiz",
+    "sectionTitle": "Kategoriler",
+    "sectionDescription": "Görevlerinizi gruplamak için kendi kategorilerinizi tanımlayın. Bir kategoriyi silmek görevlerini silmez.",
+    "empty": "Henüz kategori yok. Aşağıdan ekleyebilirsiniz.",
+    "newPlaceholder": "Yeni kategori",
+    "newNameLabel": "Yeni kategori adı",
+    "newColorLabel": "Yeni kategorinin rengi",
+    "nameLabel": "{{name}} kategorisinin adı",
+    "colorLabel": "{{name}} kategorisinin rengi",
+    "deleteLabel": "\"{{name}}\" kategorisini sil",
+    "taskCount_one": "{{count}} görev",
+    "taskCount_other": "{{count}} görev",
+    "deleteConfirmTitle": "\"{{name}}\" silinsin mi?",
+    "deleteConfirmWithTasks_one": "Bu kategoriye bağlı {{count}} görev silinmez, \"Kategorisiz\" olarak listede kalır.",
+    "deleteConfirmWithTasks_other": "Bu kategoriye bağlı {{count}} görev silinmez, \"Kategorisiz\" olarak listede kalır.",
+    "deleteConfirmEmpty": "Bu kategoriye bağlı görev yok.",
+    "nameEmpty": "Kategori adı boş olamaz.",
+    "nameTaken": "\"{{name}}\" adı zaten kullanılıyor.",
+    "added": "\"{{name}}\" eklendi.",
+    "updated": "Kategori güncellendi.",
+    "deleted": "\"{{name}}\" silindi.",
+    "deletedWithTasks_one": "\"{{name}}\" silindi. {{count}} görev kategorisiz oldu.",
+    "deletedWithTasks_other": "\"{{name}}\" silindi. {{count}} görev kategorisiz oldu.",
+    "seed": {
+      "work": "İş",
+      "personal": "Kişisel",
+      "shopping": "Alışveriş",
+      "school": "Okul"
+    }
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "appearanceTitle": "Görünüm",
+    "appearanceDescription": "Uygulamanın tema tercihi.",
+    "accountTitle": "Hesap",
+    "accountDescription": "Giriş yapmak isteğe bağlıdır. Görevleriniz her hâlükârda bu cihazda saklanır; giriş yaparsanız cihazlar arasında eşitlenir.",
+    "dataTitle": "Veri",
+    "dataDescription": "Görevlerinizi JSON dosyası olarak yedekleyin veya geri yükleyin.",
+    "export": "Dışa Aktar",
+    "import": "İçe Aktar",
+    "exported": "Görevler başarıyla dışa aktarıldı",
+    "importInvalidFormat": "Geçersiz dosya formatı",
+    "importUnreadable": "Dosya okunamadı",
+    "importNothingNew": "İçe aktarılacak yeni görev bulunamadı",
+    "imported_one": "{{count}} görev içe aktarıldı",
+    "imported_other": "{{count}} görev içe aktarıldı"
+  },
+  "auth": {
+    "signIn": "Giriş Yap",
+    "signInAria": "Giriş yap",
+    "signOut": "Çıkış Yap",
+    "signOutAria": "Çıkış yap",
+    "signOutWithEmail": "Çıkış yap ({{email}})",
+    "signedIn": "Giriş yapıldı.",
+    "signedInAs": "Giriş yapıldı",
+    "signedOut": "Çıkış yapıldı. Görevlerin bu cihazda duruyor.",
+    "accountCreated": "Hesabın oluşturuldu. Hoş geldin!",
+    "github": "GitHub ile devam et",
+    "orEmail": "veya e-posta ile",
+    "email": "E-posta",
+    "emailPlaceholder": "ornek@eposta.com",
+    "password": "Parola",
+    "passwordPlaceholder": "En az 6 karakter",
+    "emailRequired": "E-posta adresi gerekli.",
+    "passwordTooShort": "Parola en az 6 karakter olmalı.",
+    "signin": {
+      "title": "Giriş Yap",
+      "description": "Görevlerini tüm cihazlarında eşitlemek için giriş yap.",
+      "submit": "Giriş Yap"
+    },
+    "signup": {
+      "title": "Hesap Oluştur",
+      "description": "Ücretsiz hesap oluştur, görevlerin güvende kalsın.",
+      "submit": "Hesap Oluştur"
+    },
+    "reset": {
+      "title": "Parolamı Unuttum",
+      "description": "Kayıtlı e-posta adresine sıfırlama bağlantısı gönderelim.",
+      "submit": "Sıfırlama Bağlantısı Gönder"
+    },
+    "forgotPassword": "Parolamı unuttum",
+    "noAccount": "Hesabın yok mu?",
+    "createAccount": "Hesap oluştur",
+    "haveAccount": "Zaten hesabın var mı?",
+    "backToSignIn": "Girişe dön",
+    "checkEmailTitle": "E-postanı kontrol et",
+    "checkEmailConfirm": "{{email}} adresine bir doğrulama bağlantısı gönderdik. Hesabını etkinleştirmek için bağlantıya tıkla.",
+    "checkEmailReset": "{{email}} adresine parola sıfırlama bağlantısı gönderdik.",
+    "resetPage": {
+      "title": "Yeni Parola Belirle",
+      "notConfigured": "Bu kurulumda hesap özellikleri yapılandırılmamış.",
+      "verifying": "Bağlantı doğrulanıyor…",
+      "invalidTitle": "Bağlantı geçersiz veya süresi dolmuş",
+      "invalidBody": "Sıfırlama bağlantıları kısa ömürlüdür. Lütfen yeni bir sıfırlama e-postası isteyin.",
+      "intro": "<0>{{email}}</0> hesabı için yeni bir parola belirleyin.",
+      "newPassword": "Yeni parola",
+      "confirmPassword": "Yeni parola (tekrar)",
+      "confirmPlaceholder": "Parolayı tekrar girin",
+      "mismatch": "Parolalar eşleşmiyor.",
+      "submit": "Parolayı Güncelle",
+      "success": "Parolan güncellendi."
+    },
+    "callback": {
+      "completing": "Giriş tamamlanıyor…",
+      "failedTitle": "Giriş tamamlanamadı",
+      "invalidTitle": "Bağlantı doğrulanamadı",
+      "invalidBody": "Bağlantı geçersiz ya da süresi dolmuş olabilir. Görevlerinize bu cihazdan erişmeye devam edebilirsiniz."
+    },
+    "error": {
+      "notConfigured": "Bulut senkronizasyonu bu kurulumda yapılandırılmamış.",
+      "invalidCredentials": "E-posta veya parola hatalı.",
+      "userAlreadyExists": "Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.",
+      "weakPassword": "Parola çok zayıf. En az 6 karakter kullanın.",
+      "emailNotConfirmed": "E-posta adresiniz henüz doğrulanmamış. Gelen kutunuzu kontrol edin.",
+      "validationFailed": "Girdiğiniz bilgiler geçersiz. Lütfen kontrol edin.",
+      "rateLimited": "Çok fazla deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.",
+      "signupDisabled": "Yeni kayıtlar şu anda kapalı.",
+      "invalidEmail": "Geçersiz e-posta adresi.",
+      "network": "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.",
+      "unknown": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+    },
+    "callbackError": {
+      "otpExpired": "Bağlantının süresi dolmuş. Lütfen yeni bir bağlantı isteyin.",
+      "accessDenied": "Giriş isteği onaylanmadı. İzin ekranında \"Authorize\" demeniz gerekiyor.",
+      "providerDisabled": "Bu giriş yöntemi şu anda kapalı.",
+      "providerEmailNeedsVerification": "Sağlayıcıdaki e-posta adresiniz doğrulanmamış. Önce orada doğrulayıp tekrar deneyin.",
+      "signupDisabled": "Yeni kayıtlar şu anda kapalı.",
+      "emailExists": "Bu e-posta adresi zaten parolayla kayıtlı. Parolanızla giriş yapıp hesapları birleştirebilirsiniz.",
+      "validationFailed": "Giriş isteği geçersiz. Lütfen tekrar deneyin.",
+      "badOauthState": "Giriş isteği doğrulanamadı. Lütfen baştan deneyin.",
+      "unexpectedFailure": "Sağlayıcı tarafında bir sorun oluştu. Lütfen tekrar deneyin.",
+      "fallback": "Giriş tamamlanamadı. Lütfen tekrar deneyin."
+    }
+  },
+  "sync": {
+    "syncing": "Eşitleniyor…",
+    "failed": "Eşitlenemedi — yeniden dene",
+    "offline": "Çevrimdışı",
+    "offlinePending_one": "Çevrimdışı — {{count}} değişiklik bekliyor",
+    "offlinePending_other": "Çevrimdışı — {{count}} değişiklik bekliyor",
+    "pending_one": "{{count}} değişiklik bekliyor",
+    "pending_other": "{{count}} değişiklik bekliyor",
+    "synced": "Eşitlendi",
+    "syncedAt": "Eşitlendi · {{relative}}",
+    "justNow": "az önce",
+    "minutesAgo": "{{count}} dk önce",
+    "hoursAgo": "{{count}} sa önce",
+    "daysAgo": "{{count}} gün önce",
+    "error": {
+      "network": "Sunucuya ulaşılamadı.",
+      "expiredSession": "Oturumun süresi dolmuş. Tekrar giriş yapın.",
+      "unknown": "Senkronizasyon başarısız oldu."
+    }
+  },
+  "notFound": {
+    "title": "Sayfa bulunamadı",
+    "body": "Aradığınız sayfa taşınmış veya hiç var olmamış olabilir."
+  }
+}

@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store';
 import { CheckCircle, AlertCircle, ListTodo } from 'lucide-react';
 import { isDueToday } from '../lib/tasks';
 
 export function StatsDashboard() {
+    const { t } = useTranslation();
     const tasks = useTaskStore((state) => state.tasks);
 
     const total = tasks.length;
@@ -19,7 +21,7 @@ export function StatsDashboard() {
                     <ListTodo size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-muted-foreground font-medium mb-0.5">Toplam Görev</p>
+                    <p className="text-sm text-muted-foreground font-medium mb-0.5">{t('stats.total')}</p>
                     <p className="text-2xl font-bold">{total}</p>
                 </div>
             </div>
@@ -30,7 +32,7 @@ export function StatsDashboard() {
                 </div>
                 <div className="flex-1">
                     <div className="flex justify-between items-baseline mb-0.5">
-                        <p className="text-sm text-muted-foreground font-medium">Tamamlanan</p>
+                        <p className="text-sm text-muted-foreground font-medium">{t('stats.completed')}</p>
                         <span className="text-sm font-bold text-green-500">%{percent}</span>
                     </div>
                     <div className="h-2 w-full bg-secondary rounded-full overflow-hidden mt-1.5">
@@ -47,7 +49,7 @@ export function StatsDashboard() {
                     <AlertCircle size={24} />
                 </div>
                 <div>
-                    <p className="text-sm text-muted-foreground font-medium mb-0.5">Bugün Bitmesi Gereken</p>
+                    <p className="text-sm text-muted-foreground font-medium mb-0.5">{t('stats.dueToday')}</p>
                     <p className="text-2xl font-bold flex items-center gap-2">
                         {dueToday}
                         {dueToday > 0 && (
@@ -60,7 +62,7 @@ export function StatsDashboard() {
                 </div>
                 {dueToday > 0 && (
                     <div className="absolute top-0 right-0 w-max bg-red-500/10 text-red-500 text-xs px-2 py-1 rounded-bl-lg font-medium border-b border-l border-red-500/20">
-                        Acil
+                        {t('stats.urgent')}
                     </div>
                 )}
             </div>
