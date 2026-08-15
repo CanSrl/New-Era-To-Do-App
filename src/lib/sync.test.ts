@@ -15,7 +15,7 @@
  * vermediği değil, `runSync`'in onu doğru düzende çağırıp çağırmadığı sınanıyor.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Category, Task } from './types';
+import type { Category, Client, Project, Task } from './types';
 
 /**
  * Çağrı sırası buraya kaydedilir. `vi.hoisted` şart: `vi.mock` fabrikaları
@@ -23,6 +23,18 @@ import type { Category, Task } from './types';
  * olmaz.
  */
 const calls = vi.hoisted(() => [] as string[]);
+
+/**
+ * Niş modül bayrağı testler arasında değiştirilebilsin diye taklit ediliyor.
+ * Gerçekte derleme zamanı sabiti; burada mutasyona açık bir nesne.
+ */
+const flags = vi.hoisted(() => ({ nicheModule: true }));
+
+vi.mock('../config/features', () => ({
+    features: flags,
+    isEnabled: () => false,
+    isEnabledByDefault: () => true,
+}));
 
 vi.mock('./task-repository', () => {
     class SyncUnavailableError extends Error {
@@ -55,6 +67,28 @@ vi.mock('./task-repository', () => {
         }),
         deleteRemoteTasks: vi.fn(async () => {
             calls.push('deleteTasks');
+        }),
+        fetchRemoteClients: vi.fn(async () => {
+            calls.push('fetchClients');
+            return [] as Client[];
+        }),
+        fetchRemoteProjects: vi.fn(async () => {
+            calls.push('fetchProjects');
+            return [] as Project[];
+        }),
+        pushRemoteClients: vi.fn(async (clients: readonly Client[]) => {
+            calls.push('pushClients');
+            return [...clients];
+        }),
+        pushRemoteProjects: vi.fn(async (projects: readonly Project[]) => {
+            calls.push('pushProjects');
+            return [...projects];
+        }),
+        deleteRemoteClients: vi.fn(async () => {
+            calls.push('deleteClients');
+        }),
+        deleteRemoteProjects: vi.fn(async () => {
+            calls.push('deleteProjects');
         }),
     };
 });
@@ -92,17 +126,45 @@ function makeTask(over: Partial<Task> & { id: string }): Task {
     };
 }
 
+function makeClient(over: Partial<Client> & { id: string }): Client {
+    return {
+        name: `Müşteri ${over.id}`,
+        archived: false,
+        position: 0,
+        createdAt: ISO,
+        updatedAt: ISO,
+        ...over,
+    };
+}
+
+function makeProject(over: Partial<Project> & { id: string; clientId: string }): Project {
+    return {
+        name: `Proje ${over.id}`,
+        archived: false,
+        position: 0,
+        createdAt: ISO,
+        updatedAt: ISO,
+        ...over,
+    };
+}
+
 /** Store'u bilinen bir başlangıca çeker. */
 function seedStore(over: Partial<ReturnType<typeof useTaskStore.getState>> = {}) {
     useTaskStore.setState({
         tasks: [],
         categories: [],
+        clients: [],
+        projects: [],
         searchQuery: '',
         filter: 'all',
         dirtyIds: [],
         tombstones: [],
         dirtyCategoryIds: [],
         categoryTombstones: [],
+        dirtyClientIds: [],
+        clientTombstones: [],
+        dirtyProjectIds: [],
+        projectTombstones: [],
         lastSyncedAt: null,
         ownerId: 'user-1',
         ...over,
@@ -111,8 +173,11 @@ function seedStore(over: Partial<ReturnType<typeof useTaskStore.getState>> = {})
 
 beforeEach(() => {
     calls.length = 0;
+    flags.nicheModule = true;
     vi.mocked(repo.fetchRemoteCategories).mockResolvedValue([]);
     vi.mocked(repo.fetchRemoteTasks).mockResolvedValue([]);
+    vi.mocked(repo.fetchRemoteClients).mockResolvedValue([]);
+    vi.mocked(repo.fetchRemoteProjects).mockResolvedValue([]);
     vi.mocked(repo.pushRemoteCategories).mockImplementation(async (c) => {
         calls.push('pushCategories');
         return [...c];
@@ -120,6 +185,14 @@ beforeEach(() => {
     vi.mocked(repo.pushRemoteTasks).mockImplementation(async (t) => {
         calls.push('pushTasks');
         return [...t];
+    });
+    vi.mocked(repo.pushRemoteClients).mockImplementation(async (c) => {
+        calls.push('pushClients');
+        return [...c];
+    });
+    vi.mocked(repo.pushRemoteProjects).mockImplementation(async (p) => {
+        calls.push('pushProjects');
+        return [...p];
     });
     resetSyncLock();
     localStorage.clear();
@@ -171,10 +244,9 @@ describe('runSync — yazma ve silme sırası', () => {
         await runSync('user-1');
 
         // Çekmeler Promise.all ile paralel; yazmalar sıralı olmak zorunda.
-        expect(calls.filter((c) => c.startsWith('push'))).toEqual([
-            'pushCategories',
-            'pushTasks',
-        ]);
+        // (Araya niş modülün yazmaları da giriyor; buradaki iddia yalnızca
+        // kategori-görev ilişkisi — tam sıra kendi testinde.)
+        expect(calls.lastIndexOf('pushCategories')).toBeLessThan(calls.indexOf('pushTasks'));
     });
 });
 
@@ -345,5 +417,221 @@ describe('runSync — store\'a uygulanan sonuç', () => {
         await runSync('user-1');
 
         expect(useTaskStore.getState().lastSyncedAt).not.toBeNull();
+    });
+});
+
+describe('runSync — niş modül yazma ve silme sırası', () => {
+    it('müşteri -> proje -> görev sırasıyla yazar', async () => {
+        seedStore({
+            clients: [makeClient({ id: 'c1' })],
+            projects: [makeProject({ id: 'p1', clientId: 'c1' })],
+            tasks: [makeTask({ id: 't1', clientId: 'c1', projectId: 'p1' })],
+            dirtyClientIds: ['c1'],
+            dirtyProjectIds: ['p1'],
+            dirtyIds: ['t1'],
+        });
+
+        await runSync('user-1');
+
+        // Yabancı anahtar zinciri: tasks -> projects -> clients. Hedef önce
+        // var olmalı, yoksa 23503 alınır.
+        expect(calls.filter((c) => c.startsWith('push'))).toEqual([
+            'pushClients',
+            'pushProjects',
+            'pushCategories',
+            'pushTasks',
+        ]);
+    });
+
+    it('görev -> proje -> müşteri sırasıyla siler', async () => {
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([makeClient({ id: 'c-uzak' })]);
+        vi.mocked(repo.fetchRemoteProjects).mockResolvedValue([
+            makeProject({ id: 'p-uzak', clientId: 'c-uzak' }),
+        ]);
+        vi.mocked(repo.fetchRemoteTasks).mockResolvedValue([makeTask({ id: 't-uzak' })]);
+
+        seedStore({
+            tombstones: [{ id: 't-uzak', deletedAt: ISO }],
+            projectTombstones: [{ id: 'p-uzak', deletedAt: ISO }],
+            clientTombstones: [{ id: 'c-uzak', deletedAt: ISO }],
+        });
+
+        await runSync('user-1');
+
+        // Silme sırası yazmanın tersidir: referans veren önce gider.
+        expect(calls.filter((c) => c.startsWith('delete'))).toEqual([
+            'deleteTasks',
+            'deleteProjects',
+            'deleteClients',
+            'deleteCategories',
+        ]);
+    });
+
+    it('bütün yazmalar bütün silmelerden önce biter', async () => {
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([makeClient({ id: 'c-uzak' })]);
+        seedStore({
+            clients: [makeClient({ id: 'c1' })],
+            dirtyClientIds: ['c1'],
+            clientTombstones: [{ id: 'c-uzak', deletedAt: ISO }],
+        });
+
+        await runSync('user-1');
+
+        const lastPush = Math.max(...calls.map((c, i) => (c.startsWith('push') ? i : -1)));
+        const firstDelete = calls.findIndex((c) => c.startsWith('delete'));
+        expect(lastPush).toBeLessThan(firstDelete);
+    });
+});
+
+describe('runSync — niş modül bayrağı kapalı', () => {
+    it('clients/projects tablolarına hiç dokunmaz', async () => {
+        flags.nicheModule = false;
+        seedStore({
+            clients: [makeClient({ id: 'c1' })],
+            projects: [makeProject({ id: 'p1', clientId: 'c1' })],
+            dirtyClientIds: ['c1'],
+            dirtyProjectIds: ['p1'],
+        });
+
+        const outcome = await runSync('user-1');
+
+        // Modülü çıkarmış bir kurulumda bu tablolar YOKTUR; sorgulamak
+        // "relation does not exist" ile görev senkronunu da düşürürdü.
+        expect(outcome.status).toBe('ok');
+        expect(calls.filter((c) => c.includes('Client') || c.includes('Project'))).toEqual([]);
+    });
+
+    it('yereldeki müşteri/proje verisini silmez', async () => {
+        // Bayrak kapalıyken veri senkronlanmaz ama yok da edilmez: bayrak
+        // yeniden açılırsa kullanıcı verisini yerinde bulmalı.
+        flags.nicheModule = false;
+        seedStore({
+            clients: [makeClient({ id: 'c1' })],
+            projects: [makeProject({ id: 'p1', clientId: 'c1' })],
+            dirtyClientIds: ['c1'],
+        });
+
+        await runSync('user-1');
+
+        const state = useTaskStore.getState();
+        expect(state.clients.map((c) => c.id)).toEqual(['c1']);
+        expect(state.projects.map((p) => p.id)).toEqual(['p1']);
+        expect(state.dirtyClientIds).toEqual(['c1']);
+    });
+});
+
+describe('runSync — niş modül bağ onarımı', () => {
+    it('tekilleştirilen müşteriye bağlı projeyi ve görevi bulut id\'sine taşır', async () => {
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([
+            makeClient({ id: 'c-bulut', name: 'Acme' }),
+        ]);
+        seedStore({
+            clients: [makeClient({ id: 'c-yerel', name: 'Acme' })],
+            projects: [makeProject({ id: 'p1', clientId: 'c-yerel' })],
+            tasks: [makeTask({ id: 't1', clientId: 'c-yerel' })],
+            dirtyClientIds: ['c-yerel'],
+            dirtyProjectIds: ['p1'],
+            dirtyIds: ['t1'],
+        });
+
+        await runSync('user-1');
+
+        const state = useTaskStore.getState();
+        expect(state.clients.map((c) => c.id)).toEqual(['c-bulut']);
+        expect(state.projects[0].clientId).toBe('c-bulut');
+        expect(state.tasks[0].clientId).toBe('c-bulut');
+    });
+
+    it('proje, müşteri bağı onarıldıktan SONRA gönderilir', async () => {
+        // Onarılmamış hâlini göndermek olmayan bir müşteriye işaret eden satır
+        // demektir ve 23503 ile bütün turu düşürürdü.
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([
+            makeClient({ id: 'c-bulut', name: 'Acme' }),
+        ]);
+        seedStore({
+            clients: [makeClient({ id: 'c-yerel', name: 'Acme' })],
+            projects: [makeProject({ id: 'p1', clientId: 'c-yerel' })],
+            dirtyClientIds: ['c-yerel'],
+            dirtyProjectIds: ['p1'],
+        });
+
+        await runSync('user-1');
+
+        const pushed = vi.mocked(repo.pushRemoteProjects).mock.calls.at(-1)?.[0];
+        expect(pushed?.[0].clientId).toBe('c-bulut');
+    });
+
+    it('görev, müşteri ve proje bağları onarıldıktan SONRA gönderilir', async () => {
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([
+            makeClient({ id: 'c-bulut', name: 'Acme' }),
+        ]);
+        vi.mocked(repo.fetchRemoteProjects).mockResolvedValue([
+            makeProject({ id: 'p-bulut', clientId: 'c-bulut', name: 'Websitesi' }),
+        ]);
+        seedStore({
+            clients: [makeClient({ id: 'c-yerel', name: 'Acme' })],
+            projects: [makeProject({ id: 'p-yerel', clientId: 'c-yerel', name: 'Websitesi' })],
+            tasks: [makeTask({ id: 't1', clientId: 'c-yerel', projectId: 'p-yerel' })],
+            dirtyClientIds: ['c-yerel'],
+            dirtyProjectIds: ['p-yerel'],
+            dirtyIds: ['t1'],
+        });
+
+        await runSync('user-1');
+
+        const pushed = vi.mocked(repo.pushRemoteTasks).mock.calls.at(-1)?.[0];
+        expect(pushed?.[0].clientId).toBe('c-bulut');
+        expect(pushed?.[0].projectId).toBe('p-bulut');
+    });
+
+    it('müşterisi kalmayan projeyi düşürür ve dirty bayrağını temizler', async () => {
+        // Veritabanındaki cascade'in karşılığı. Bayrak temizlenmezse kayıt
+        // her turda var olmayan bir müşteriye gönderilmeye çalışılırdı.
+        seedStore({
+            clients: [],
+            projects: [makeProject({ id: 'p1', clientId: 'c-silinmis' })],
+            dirtyProjectIds: ['p1'],
+        });
+
+        await runSync('user-1');
+
+        const state = useTaskStore.getState();
+        expect(state.projects).toEqual([]);
+        expect(state.dirtyProjectIds).toEqual([]);
+    });
+
+    it('silinen müşterinin görevlerindeki iki bağı da koparır', async () => {
+        seedStore({
+            clients: [],
+            projects: [],
+            tasks: [makeTask({ id: 't1', clientId: 'c-silinmis', projectId: 'p-silinmis' })],
+            dirtyIds: ['t1'],
+        });
+
+        await runSync('user-1');
+
+        const [task] = useTaskStore.getState().tasks;
+        expect(task.clientId).toBeNull();
+        expect(task.projectId).toBeNull();
+    });
+
+    it('gönderilen müşterinin dirty bayrağını temizler', async () => {
+        seedStore({ clients: [makeClient({ id: 'c1' })], dirtyClientIds: ['c1'] });
+
+        await runSync('user-1');
+
+        expect(useTaskStore.getState().dirtyClientIds).toEqual([]);
+    });
+
+    it('silinen projenin mezar taşını atar', async () => {
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([makeClient({ id: 'c1' })]);
+        vi.mocked(repo.fetchRemoteProjects).mockResolvedValue([
+            makeProject({ id: 'p-uzak', clientId: 'c1' }),
+        ]);
+        seedStore({ projectTombstones: [{ id: 'p-uzak', deletedAt: ISO }] });
+
+        await runSync('user-1');
+
+        expect(useTaskStore.getState().projectTombstones).toEqual([]);
     });
 });

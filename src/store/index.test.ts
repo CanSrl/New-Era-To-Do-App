@@ -11,12 +11,18 @@ function resetStore() {
     useTaskStore.setState({
         tasks: [],
         categories: seedCategories(),
+        clients: [],
+        projects: [],
         searchQuery: '',
         filter: 'all',
         dirtyIds: [],
         tombstones: [],
         dirtyCategoryIds: [],
         categoryTombstones: [],
+        dirtyClientIds: [],
+        clientTombstones: [],
+        dirtyProjectIds: [],
+        projectTombstones: [],
         lastSyncedAt: null,
         ownerId: null,
     });
@@ -387,7 +393,7 @@ describe('kalıcılık (persist)', () => {
         expect(raw).toBeTruthy();
         const parsed = JSON.parse(raw as string);
         expect(parsed.state.tasks[0].title).toBe('Kalıcı görev');
-        expect(parsed.version).toBe(4);
+        expect(parsed.version).toBe(5);
     });
 
     it('yazılan tarihler string olarak saklanır', async () => {
@@ -688,5 +694,297 @@ describe('v2 -> v3 göçü (kategoriler)', () => {
 
         expect(store().dirtyCategoryIds).toHaveLength(4);
         expect(store().categoryTombstones).toEqual([]);
+    });
+});
+
+describe('müşteriler', () => {
+    it('müşteri ekler ve gönderilmeyi bekleyenlere alır', () => {
+        const created = store().addClient('Acme A.Ş.');
+
+        expect(created).not.toBeNull();
+        expect(store().clients.map(c => c.name)).toEqual(['Acme A.Ş.']);
+        expect(store().dirtyClientIds).toContain(created!.id);
+    });
+
+    it('boş adı reddeder', () => {
+        expect(store().addClient('   ')).toBeNull();
+    });
+
+    it('aynı adı ikinci kez eklemez', () => {
+        store().addClient('Acme');
+        expect(store().addClient('acme')).toBeNull();
+        expect(store().clients).toHaveLength(1);
+    });
+
+    it('müşteriyi yeniden adlandırır', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().updateClient(id, { name: 'Acme A.Ş.' });
+
+        expect(store().clients.find(c => c.id === id)?.name).toBe('Acme A.Ş.');
+        expect(store().dirtyClientIds).toContain(id);
+    });
+
+    it('başka bir müşteriyle çakışan ada izin vermez', () => {
+        store().addClient('Acme');
+        const other = store().addClient('Globex')!;
+
+        store().updateClient(other.id, { name: 'acme' });
+
+        expect(store().clients.find(c => c.id === other.id)?.name).toBe('Globex');
+    });
+
+    it('arşivler', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().updateClient(id, { archived: true });
+
+        expect(store().clients.find(c => c.id === id)?.archived).toBe(true);
+    });
+
+    it('bilinmeyen id için hiçbir şey değiştirmez', () => {
+        const before = store().clients;
+        store().updateClient('yok-boyle-id', { name: 'X' });
+        expect(store().clients).toEqual(before);
+    });
+
+    it('sıralama yalnızca konumu değişen müşterileri bekleyenlere alır', () => {
+        const a = store().addClient('Bir')!;
+        const b = store().addClient('İki')!;
+        const c = store().addClient('Üç')!;
+        store().applySyncResult({
+            tasks: [], categories: [], syncedIds: [], clearedTombstoneIds: [],
+            syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedClientIds: [a.id, b.id, c.id], syncedAt: 'x',
+        });
+
+        store().reorderClients([a, c, b]);
+
+        expect(store().dirtyClientIds.sort()).toEqual([b.id, c.id].sort());
+    });
+
+    describe('deleteClient', () => {
+        it('müşteriyi siler ve mezar taşı bırakır', () => {
+            const id = store().addClient('Acme')!.id;
+
+            store().deleteClient(id);
+
+            expect(store().clients).toEqual([]);
+            expect(store().clientTombstones.map(t => t.id)).toEqual([id]);
+            expect(store().dirtyClientIds).not.toContain(id);
+        });
+
+        it('bağlı projeleri cascade ile siler, mezar taşı bırakmaz', () => {
+            const clientId = store().addClient('Acme')!.id;
+            const projectId = store().addProject(clientId, 'Websitesi')!.id;
+
+            store().deleteClient(clientId);
+
+            expect(store().projects).toEqual([]);
+            expect(store().projectTombstones).toEqual([]);
+            expect(store().dirtyProjectIds).not.toContain(projectId);
+        });
+
+        it('bağlı görevlerin hem müşteri hem proje bağını boşaltır', () => {
+            const clientId = store().addClient('Acme')!.id;
+            const projectId = store().addProject(clientId, 'Websitesi')!.id;
+            addTask('Rapor', { clientId, projectId });
+            addTask('İlgisiz', {});
+
+            store().deleteClient(clientId);
+
+            const [rapor, ilgisiz] = store().tasks;
+            expect(rapor.clientId).toBeNull();
+            expect(rapor.projectId).toBeNull();
+            expect(ilgisiz.clientId).toBeNull();
+        });
+
+        it('görevleri dirty yapmaz', () => {
+            const clientId = store().addClient('Acme')!.id;
+            addTask('Rapor', { clientId });
+            const taskId = store().tasks[0].id;
+            store().applySyncResult({
+                tasks: store().tasks, categories: store().categories,
+                syncedIds: [taskId], clearedTombstoneIds: [],
+                syncedCategoryIds: [], clearedCategoryTombstoneIds: [], syncedAt: 'x',
+            });
+
+            store().deleteClient(clientId);
+
+            expect(store().dirtyIds).toEqual([]);
+        });
+    });
+
+    it('misafir verisi hesaba aktarılırken müşteriler de bekleyenlere alınır', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().prepareForSync('kullanici-1');
+
+        expect(store().dirtyClientIds).toEqual([id]);
+    });
+
+    it('başka hesap giriş yaparsa müşterileri temizler', () => {
+        store().addClient('Acme');
+        store().prepareForSync('kullanici-1');
+
+        store().prepareForSync('kullanici-2');
+
+        expect(store().clients).toEqual([]);
+        expect(store().dirtyClientIds).toEqual([]);
+    });
+});
+
+describe('projeler', () => {
+    it('proje ekler ve gönderilmeyi bekleyenlere alır', () => {
+        const clientId = store().addClient('Acme')!.id;
+
+        const created = store().addProject(clientId, 'Websitesi');
+
+        expect(created).not.toBeNull();
+        expect(created!.clientId).toBe(clientId);
+        expect(store().dirtyProjectIds).toContain(created!.id);
+    });
+
+    it('boş adı reddeder', () => {
+        const clientId = store().addClient('Acme')!.id;
+        expect(store().addProject(clientId, '  ')).toBeNull();
+    });
+
+    it('aynı müşteride aynı adı ikinci kez eklemez', () => {
+        const clientId = store().addClient('Acme')!.id;
+        store().addProject(clientId, 'Websitesi');
+
+        expect(store().addProject(clientId, 'websitesi')).toBeNull();
+    });
+
+    it('farklı müşterilerde aynı ada izin verir', () => {
+        const a = store().addClient('Acme')!.id;
+        const b = store().addClient('Globex')!.id;
+        store().addProject(a, 'Websitesi');
+
+        expect(store().addProject(b, 'Websitesi')).not.toBeNull();
+    });
+
+    it('projeyi yeniden adlandırır', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+
+        store().updateProject(id, { name: 'Mobil Uygulama' });
+
+        expect(store().projects.find(p => p.id === id)?.name).toBe('Mobil Uygulama');
+        expect(store().dirtyProjectIds).toContain(id);
+    });
+
+    it('arşivler', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+
+        store().updateProject(id, { archived: true });
+
+        expect(store().projects.find(p => p.id === id)?.archived).toBe(true);
+    });
+
+    it('sıralama yalnızca konumu değişen projeleri bekleyenlere alır', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const a = store().addProject(clientId, 'Bir')!;
+        const b = store().addProject(clientId, 'İki')!;
+        const c = store().addProject(clientId, 'Üç')!;
+        store().applySyncResult({
+            tasks: [], categories: [], syncedIds: [], clearedTombstoneIds: [],
+            syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedProjectIds: [a.id, b.id, c.id], syncedAt: 'x',
+        });
+
+        store().reorderProjects([a, c, b]);
+
+        expect(store().dirtyProjectIds.sort()).toEqual([b.id, c.id].sort());
+    });
+
+    describe('deleteProject', () => {
+        it('projeyi siler ve mezar taşı bırakır', () => {
+            const clientId = store().addClient('Acme')!.id;
+            const id = store().addProject(clientId, 'Websitesi')!.id;
+
+            store().deleteProject(id);
+
+            expect(store().projects).toEqual([]);
+            expect(store().projectTombstones.map(t => t.id)).toEqual([id]);
+            expect(store().dirtyProjectIds).not.toContain(id);
+        });
+
+        it('bağlı görevin proje bağını boşaltır, müşteri bağına dokunmaz', () => {
+            const clientId = store().addClient('Acme')!.id;
+            const projectId = store().addProject(clientId, 'Websitesi')!.id;
+            addTask('Rapor', { clientId, projectId });
+
+            store().deleteProject(projectId);
+
+            const [task] = store().tasks;
+            expect(task.projectId).toBeNull();
+            expect(task.clientId).toBe(clientId);
+        });
+
+        it('görevleri dirty yapmaz', () => {
+            const clientId = store().addClient('Acme')!.id;
+            const projectId = store().addProject(clientId, 'Websitesi')!.id;
+            addTask('Rapor', { clientId, projectId });
+            const taskId = store().tasks[0].id;
+            store().applySyncResult({
+                tasks: store().tasks, categories: store().categories,
+                syncedIds: [taskId], clearedTombstoneIds: [],
+                syncedCategoryIds: [], clearedCategoryTombstoneIds: [], syncedAt: 'x',
+            });
+
+            store().deleteProject(projectId);
+
+            expect(store().dirtyIds).toEqual([]);
+        });
+    });
+
+    it('misafir verisi hesaba aktarılırken projeler de bekleyenlere alınır', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+
+        store().prepareForSync('kullanici-1');
+
+        expect(store().dirtyProjectIds).toEqual([id]);
+    });
+
+    it('başka hesap giriş yaparsa projeleri temizler', () => {
+        const clientId = store().addClient('Acme')!.id;
+        store().addProject(clientId, 'Websitesi');
+        store().prepareForSync('kullanici-1');
+
+        store().prepareForSync('kullanici-2');
+
+        expect(store().projects).toEqual([]);
+        expect(store().dirtyProjectIds).toEqual([]);
+    });
+});
+
+describe('v4 -> v5 göçü (niş modül)', () => {
+    it('eski kayıtta olmayan clients/projects alanlarına varsayılan değer verir', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 4,
+            state: {
+                filter: 'all', dirtyIds: [], tombstones: [],
+                dirtyCategoryIds: [], categoryTombstones: [], ownerId: null,
+                categories: [],
+                tasks: [
+                    { id: 't1', title: 'Eski görev', priority: 'medium', completed: false,
+                      categoryId: null, createdAt: '2026-01-05T08:00:00.000Z',
+                      updatedAt: '2026-01-05T08:00:00.000Z', position: 0 },
+                ],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().clients).toEqual([]);
+        expect(store().projects).toEqual([]);
+        expect(store().dirtyClientIds).toEqual([]);
+        expect(store().dirtyProjectIds).toEqual([]);
+        expect(store().tasks[0].clientId).toBeNull();
+        expect(store().tasks[0].projectId).toBeNull();
     });
 });

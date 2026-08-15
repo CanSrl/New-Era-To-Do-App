@@ -1,12 +1,26 @@
 import type { TranslationKey } from '../i18n';
+import type { Task } from './types';
 import { useTaskStore } from '../store';
+import { features } from '../config/features';
 import { mergeCategories, mergeTasks, remapTaskCategories } from './sync-merge';
 import {
+    mergeClients,
+    mergeProjects,
+    remapProjectClients,
+    remapTaskLinks,
+} from './sync-merge-niche';
+import {
     deleteRemoteCategories,
+    deleteRemoteClients,
+    deleteRemoteProjects,
     deleteRemoteTasks,
     fetchRemoteCategories,
+    fetchRemoteClients,
+    fetchRemoteProjects,
     fetchRemoteTasks,
     pushRemoteCategories,
+    pushRemoteClients,
+    pushRemoteProjects,
     pushRemoteTasks,
     SyncUnavailableError,
 } from './task-repository';
@@ -40,13 +54,18 @@ function errorKeyFor(error: unknown): TranslationKey {
  * Bir senkron turu çalıştırır: uzaktaki durumu çeker, yerelle birleştirir,
  * farkları buluta yazar ve sonucu store'a uygular.
  *
- * **Sıra yabancı anahtar yüzünden serbest değildir.** `tasks.category_id`,
- * `categories` tablosuna bileşik bir FK ile bağlıdır:
+ * **Sıra yabancı anahtar yüzünden serbest değildir.** Bağımlılık zinciri:
+ * `tasks` → `projects` → `clients`, ayrıca `tasks` → `categories`.
  *
- *   1. Kategoriler önce yazılır — henüz var olmayan bir kategoriye bağlı görev
- *      göndermek 23503 ile reddedilir.
- *   2. Görevler yazılır ve silinir.
- *   3. Kategoriler en sonda silinir — bağlı görevler önce güncellensin diye.
+ *   1. Yazma, bağımsızdan bağımlıya: müşteri → proje → kategori → görev.
+ *      Henüz var olmayan bir kayda işaret eden satır 23503 ile reddedilir.
+ *   2. Silme, tam tersi: görev → proje → müşteri → kategori. Referans veren
+ *      satır önce gitmeli.
+ *   3. Bütün yazmalar bütün silmelerden önce biter: aynı turda hem yeni bir
+ *      projeye bağlanan hem eski projesi silinen bir görev olabilir.
+ *
+ * Bağ onarımı da bu sıraya tabi: her katman gönderilmeden ÖNCE bir üstteki
+ * katmanın tekilleştirme sonucu (`idRemap`) ona uygulanır.
  *
  * Yerel store birincil kaynaktır; bu fonksiyon başarısız olsa bile kullanıcının
  * verisi cihazda durur ve uygulama çalışmaya devam eder.
@@ -59,8 +78,15 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
 
     inFlight = true;
     try {
-        const [remoteCategories, remoteTasks] = await Promise.all([
+        // Bayrak kapalıyken bu tablolar sorgulanmaz: modülü çıkarmış bir
+        // kurulumda mevcut değiller ve tek bir "relation does not exist"
+        // hatası GÖREV senkronunu da beraberinde düşürürdü.
+        const niche = features.nicheModule;
+
+        const [remoteCategories, remoteClients, remoteProjects, remoteTasks] = await Promise.all([
             fetchRemoteCategories(),
+            niche ? fetchRemoteClients() : [],
+            niche ? fetchRemoteProjects() : [],
             fetchRemoteTasks(),
         ]);
 
@@ -68,6 +94,51 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
         // birleştirme anında okunur.
         const state = useTaskStore.getState();
 
+        // --- Müşteriler: zincirin kökü, önce yazılır. -----------------------
+        const clientPlan = niche
+            ? mergeClients({
+                local: state.clients,
+                remote: remoteClients,
+                dirtyIds: state.dirtyClientIds,
+                tombstones: state.clientTombstones,
+            })
+            : null;
+
+        const pushedClients = clientPlan
+            ? await pushRemoteClients(clientPlan.toPush, userId)
+            : [];
+        const pushedClientById = new Map(pushedClients.map((c) => [c.id, c]));
+        const clients = clientPlan
+            ? clientPlan.clients.map((c) => pushedClientById.get(c.id) ?? c)
+            : [];
+        const validClientIds = new Set(clients.map((c) => c.id));
+
+        // --- Projeler: müşteri bağları onarıldıktan SONRA birleştirilir. ----
+        // Tekilleştirme anahtarı (müşteri + ad) doğru müşteriyi görmek zorunda,
+        // yoksa aynı projenin iki kopyası ayrı müşterilere asılı kalırdı.
+        const localProjects = clientPlan
+            ? remapProjectClients(state.projects, clientPlan.idRemap, validClientIds)
+            : { projects: [], droppedIds: [] };
+
+        const projectPlan = niche
+            ? mergeProjects({
+                local: localProjects.projects,
+                remote: remoteProjects,
+                dirtyIds: state.dirtyProjectIds,
+                tombstones: state.projectTombstones,
+            })
+            : null;
+
+        const pushedProjects = projectPlan
+            ? await pushRemoteProjects(projectPlan.toPush, userId)
+            : [];
+        const pushedProjectById = new Map(pushedProjects.map((p) => [p.id, p]));
+        const projects = projectPlan
+            ? projectPlan.projects.map((p) => pushedProjectById.get(p.id) ?? p)
+            : [];
+        const projectsById = new Map(projects.map((p) => [p.id, p]));
+
+        // --- Kategoriler ----------------------------------------------------
         const categoryPlan = mergeCategories({
             local: state.categories,
             remote: remoteCategories,
@@ -78,41 +149,53 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
         const pushedCategories = await pushRemoteCategories(categoryPlan.toPush, userId);
         const pushedCategoryById = new Map(pushedCategories.map((c) => [c.id, c]));
         const categories = categoryPlan.categories.map((c) => pushedCategoryById.get(c.id) ?? c);
-
-        // Görevlerin bağları, kategoriler kesinleştikten sonra çözülür:
-        // tekilleştirilenler bulut id'sine taşınır, kalmayanlar boşaltılır.
         const validCategoryIds = new Set(categories.map((c) => c.id));
-        const localTasks = remapTaskCategories(
-            state.tasks,
-            categoryPlan.idRemap,
-            validCategoryIds
-        );
+
+        // --- Görevler: bütün bağlar kesinleştikten sonra. --------------------
+        const linkContext = {
+            clientIdRemap: clientPlan?.idRemap ?? {},
+            projectIdRemap: projectPlan?.idRemap ?? {},
+            validClientIds,
+            projectsById,
+        };
+
+        // Bayrak kapalıyken görevlerin müşteri/proje alanlarına dokunulmaz:
+        // veri yerinde kalır, yalnızca senkronlanmaz.
+        const repairLinks = (list: readonly Task[]) => {
+            const withCategories = remapTaskCategories(
+                list,
+                categoryPlan.idRemap,
+                validCategoryIds
+            );
+            return niche ? remapTaskLinks(withCategories, linkContext) : [...withCategories];
+        };
 
         const plan = mergeTasks({
-            local: localTasks,
+            local: repairLinks(state.tasks),
             remote: remoteTasks,
             dirtyIds: state.dirtyIds,
             tombstones: state.tombstones,
         });
 
         const pushedTasks = await pushRemoteTasks(plan.toPush, userId);
-        await deleteRemoteTasks(plan.toDelete);
 
-        // Kategoriler en sonda silinir: bağlı görevler artık güncellendi.
+        // --- Silmeler: referans verenden referans verilene. ------------------
+        await deleteRemoteTasks(plan.toDelete);
+        if (projectPlan) await deleteRemoteProjects(projectPlan.toDelete);
+        if (clientPlan) await deleteRemoteClients(clientPlan.toDelete);
         await deleteRemoteCategories(categoryPlan.toDelete);
 
         // Sunucunun döndürdüğü sürümler (tetikleyici tarafından tazelenmiş
         // updated_at ile) yerel kopyaların yerine geçer.
         const pushedById = new Map(pushedTasks.map((task) => [task.id, task]));
-        const tasks = remapTaskCategories(
-            plan.tasks.map((task) => pushedById.get(task.id) ?? task),
-            categoryPlan.idRemap,
-            validCategoryIds
-        );
+        const tasks = repairLinks(plan.tasks.map((task) => pushedById.get(task.id) ?? task));
 
         useTaskStore.getState().applySyncResult({
             tasks,
             categories,
+            // Bayrak kapalıyken bu alanlar atlanır ve store'daki mevcut değer
+            // korunur; bayrak yeniden açılırsa kullanıcı verisini yerinde bulur.
+            ...(niche ? { clients, projects } : {}),
             syncedIds: [...plan.toPush.map((t) => t.id), ...plan.discardedIds],
             clearedTombstoneIds: [...plan.toDelete, ...plan.obsoleteTombstoneIds],
             syncedCategoryIds: [
@@ -123,14 +206,40 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
                 ...categoryPlan.toDelete,
                 ...categoryPlan.obsoleteTombstoneIds,
             ],
+            syncedClientIds: clientPlan
+                ? [...clientPlan.toPush.map((c) => c.id), ...clientPlan.discardedIds]
+                : [],
+            clearedClientTombstoneIds: clientPlan
+                ? [...clientPlan.toDelete, ...clientPlan.obsoleteTombstoneIds]
+                : [],
+            // Müşterisi kalmadığı için düşen projeler de temiz sayılır; aksi
+            // halde her turda var olmayan bir kayıt gönderilmeye çalışılırdı.
+            syncedProjectIds: projectPlan
+                ? [
+                    ...projectPlan.toPush.map((p) => p.id),
+                    ...projectPlan.discardedIds,
+                    ...localProjects.droppedIds,
+                ]
+                : [],
+            clearedProjectTombstoneIds: projectPlan
+                ? [...projectPlan.toDelete, ...projectPlan.obsoleteTombstoneIds]
+                : [],
             syncedAt: new Date().toISOString(),
         });
 
         return {
             status: 'ok',
-            pushed: plan.toPush.length + categoryPlan.toPush.length,
+            pushed:
+                plan.toPush.length
+                + categoryPlan.toPush.length
+                + (clientPlan?.toPush.length ?? 0)
+                + (projectPlan?.toPush.length ?? 0),
             pulled: remoteTasks.length,
-            deleted: plan.toDelete.length + categoryPlan.toDelete.length,
+            deleted:
+                plan.toDelete.length
+                + categoryPlan.toDelete.length
+                + (clientPlan?.toDelete.length ?? 0)
+                + (projectPlan?.toDelete.length ?? 0),
         };
     } catch (error) {
         if (error instanceof SyncUnavailableError) {

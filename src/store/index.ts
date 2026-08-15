@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Category, Task, FilterStatus } from '../lib/types';
+import type { Category, Client, Project, Task, FilterStatus } from '../lib/types';
 import { createId, nextPosition, normalizeTask, toPriority } from '../lib/tasks';
 import {
     categoryKey,
@@ -9,6 +9,8 @@ import {
     nextCategoryPosition,
     seedCategories,
 } from '../lib/categories';
+import { createClient, isClientNameTaken, nextClientPosition } from '../lib/clients';
+import { createProject, isProjectNameTaken, nextProjectPosition } from '../lib/projects';
 
 /** Silinen görevin izi; silmenin diğer cihazlara yayılabilmesi için tutulur. */
 export interface Tombstone {
@@ -29,6 +31,10 @@ const LEGACY_FILTERS: Record<string, FilterStatus> = {
 interface TaskState {
     tasks: Task[];
     categories: Category[];
+    /** Niş modül: kullanıcının müşterileri. */
+    clients: Client[];
+    /** Niş modül: müşterilere ait projeler. */
+    projects: Project[];
     searchQuery: string;
     filter: FilterStatus;
 
@@ -40,6 +46,14 @@ interface TaskState {
     dirtyCategoryIds: string[];
     /** Buluttan silinmeyi bekleyen kategoriler. */
     categoryTombstones: Tombstone[];
+    /** Buluta itilmeyi bekleyen müşteri id'leri. */
+    dirtyClientIds: string[];
+    /** Buluttan silinmeyi bekleyen müşteriler. */
+    clientTombstones: Tombstone[];
+    /** Buluta itilmeyi bekleyen proje id'leri. */
+    dirtyProjectIds: string[];
+    /** Buluttan silinmeyi bekleyen projeler. */
+    projectTombstones: Tombstone[];
     lastSyncedAt: string | null;
     /**
      * Cihazdaki görevlerin ait olduğu hesap. Misafir verisi için null.
@@ -62,6 +76,25 @@ interface TaskState {
     /** Kategoriyi siler; bağlı görevler silinmez, "Kategorisiz" olur. */
     deleteCategory: (id: string) => void;
 
+    /** Adı zaten kullanılıyorsa null döner; aksi halde yeni müşteriyi. */
+    addClient: (name: string) => Client | null;
+    updateClient: (id: string, updates: { name?: string; archived?: boolean }) => void;
+    /**
+     * Müşteriyi siler. Bağlı projeler veritabanındaki cascade ile aynı
+     * şekilde silinir (mezar taşı bırakılmadan — sunucu zaten kendi
+     * tarafında siliyor); bağlı görevlerin hem client hem project bağı
+     * boşalır ve dirty işaretlenmez (bkz. deleteCategory).
+     */
+    deleteClient: (id: string) => void;
+    reorderClients: (clients: Client[]) => void;
+
+    /** Adı aynı müşterinin başka projesinde kullanılıyorsa null döner. */
+    addProject: (clientId: string, name: string) => Project | null;
+    updateProject: (id: string, updates: { name?: string; archived?: boolean }) => void;
+    /** Projeyi siler; bağlı görevler silinmez, proje bağı boşalır. */
+    deleteProject: (id: string) => void;
+    reorderProjects: (projects: Project[]) => void;
+
     setSearchQuery: (query: string) => void;
     setFilter: (filter: FilterStatus) => void;
     importTasks: (tasks: unknown[]) => number;
@@ -70,10 +103,16 @@ interface TaskState {
     applySyncResult: (result: {
         tasks: Task[];
         categories: Category[];
+        clients?: Client[];
+        projects?: Project[];
         syncedIds: string[];
         clearedTombstoneIds: string[];
         syncedCategoryIds: string[];
         clearedCategoryTombstoneIds: string[];
+        syncedClientIds?: string[];
+        clearedClientTombstoneIds?: string[];
+        syncedProjectIds?: string[];
+        clearedProjectTombstoneIds?: string[];
         syncedAt: string;
     }) => void;
     prepareForSync: (userId: string) => void;
@@ -91,12 +130,18 @@ export const useTaskStore = create<TaskState>()(
             // varsayılanlar tohumlanır. Kaydedilmiş durum varsa persist bunun
             // üzerine yazar.
             categories: seedCategories(),
+            clients: [],
+            projects: [],
             searchQuery: '',
             filter: 'all',
             dirtyIds: [],
             tombstones: [],
             dirtyCategoryIds: [],
             categoryTombstones: [],
+            dirtyClientIds: [],
+            clientTombstones: [],
+            dirtyProjectIds: [],
+            projectTombstones: [],
             lastSyncedAt: null,
             ownerId: null,
 
@@ -258,6 +303,173 @@ export const useTaskStore = create<TaskState>()(
                 };
             }),
 
+            addClient: (name) => {
+                const trimmed = name.trim();
+                const state = get();
+                if (!trimmed) return null;
+
+                if (isClientNameTaken(state.clients, trimmed)) return null;
+
+                const client = createClient(trimmed, nextClientPosition(state.clients));
+
+                set((current) => ({
+                    clients: [...current.clients, client],
+                    dirtyClientIds: withDirty(current.dirtyClientIds, client.id),
+                }));
+
+                return client;
+            },
+
+            updateClient: (id, updates) => set((state) => {
+                const existing = state.clients.find((c) => c.id === id);
+                if (!existing) return state;
+
+                const name = updates.name?.trim();
+                if (name !== undefined && !name) return state;
+
+                if (name !== undefined && isClientNameTaken(state.clients, name, id)) {
+                    return state;
+                }
+
+                return {
+                    clients: state.clients.map((c) =>
+                        c.id === id
+                            ? {
+                                ...c,
+                                ...(name !== undefined ? { name } : {}),
+                                ...(updates.archived !== undefined ? { archived: updates.archived } : {}),
+                                updatedAt: new Date().toISOString(),
+                            }
+                            : c
+                    ),
+                    dirtyClientIds: withDirty(state.dirtyClientIds, id),
+                };
+            }),
+
+            deleteClient: (id) => set((state) => {
+                if (!state.clients.some((c) => c.id === id)) return state;
+
+                const removedProjectIds = new Set(
+                    state.projects.filter((p) => p.clientId === id).map((p) => p.id)
+                );
+
+                return {
+                    clients: state.clients.filter((c) => c.id !== id),
+                    // Sunucudaki cascade projeleri zaten siliyor; burada mezar
+                    // taşı bırakmıyoruz, aksi halde senkron turunda zaten var
+                    // olmayan bir kaydın silinmesi istenirdi.
+                    projects: state.projects.filter((p) => p.clientId !== id),
+                    dirtyProjectIds: state.dirtyProjectIds.filter(
+                        (dirtyId) => !removedProjectIds.has(dirtyId)
+                    ),
+                    // Sunucudaki tetikleyici bu müşteriye bağlı görevlerin hem
+                    // client hem project alanını boşaltıyor; dirty işaretlemiyoruz
+                    // (bkz. deleteCategory'deki aynı gerekçe).
+                    tasks: state.tasks.map((t) =>
+                        t.clientId === id ? { ...t, clientId: null, projectId: null } : t
+                    ),
+                    dirtyClientIds: state.dirtyClientIds.filter((dirtyId) => dirtyId !== id),
+                    clientTombstones: [
+                        ...state.clientTombstones.filter((t) => t.id !== id),
+                        { id, deletedAt: new Date().toISOString() },
+                    ],
+                };
+            }),
+
+            reorderClients: (newClients) => set((state) => {
+                const now = new Date().toISOString();
+                const changed: string[] = [];
+
+                const clients = newClients.map((client, index) => {
+                    if (client.position === index) return client;
+                    changed.push(client.id);
+                    return { ...client, position: index, updatedAt: now };
+                });
+
+                return { clients, dirtyClientIds: withDirty(state.dirtyClientIds, ...changed) };
+            }),
+
+            addProject: (clientId, name) => {
+                const trimmed = name.trim();
+                const state = get();
+                if (!trimmed) return null;
+
+                if (isProjectNameTaken(state.projects, clientId, trimmed)) return null;
+
+                const project = createProject(
+                    clientId,
+                    trimmed,
+                    nextProjectPosition(state.projects, clientId)
+                );
+
+                set((current) => ({
+                    projects: [...current.projects, project],
+                    dirtyProjectIds: withDirty(current.dirtyProjectIds, project.id),
+                }));
+
+                return project;
+            },
+
+            updateProject: (id, updates) => set((state) => {
+                const existing = state.projects.find((p) => p.id === id);
+                if (!existing) return state;
+
+                const name = updates.name?.trim();
+                if (name !== undefined && !name) return state;
+
+                if (
+                    name !== undefined
+                    && isProjectNameTaken(state.projects, existing.clientId, name, id)
+                ) {
+                    return state;
+                }
+
+                return {
+                    projects: state.projects.map((p) =>
+                        p.id === id
+                            ? {
+                                ...p,
+                                ...(name !== undefined ? { name } : {}),
+                                ...(updates.archived !== undefined ? { archived: updates.archived } : {}),
+                                updatedAt: new Date().toISOString(),
+                            }
+                            : p
+                    ),
+                    dirtyProjectIds: withDirty(state.dirtyProjectIds, id),
+                };
+            }),
+
+            deleteProject: (id) => set((state) => {
+                if (!state.projects.some((p) => p.id === id)) return state;
+
+                return {
+                    projects: state.projects.filter((p) => p.id !== id),
+                    // Sunucuda `on delete set null (project_id)`; client_id
+                    // dokunulmaz, dolayısıyla görevleri dirty işaretlemiyoruz.
+                    tasks: state.tasks.map((t) =>
+                        t.projectId === id ? { ...t, projectId: null } : t
+                    ),
+                    dirtyProjectIds: state.dirtyProjectIds.filter((dirtyId) => dirtyId !== id),
+                    projectTombstones: [
+                        ...state.projectTombstones.filter((t) => t.id !== id),
+                        { id, deletedAt: new Date().toISOString() },
+                    ],
+                };
+            }),
+
+            reorderProjects: (newProjects) => set((state) => {
+                const now = new Date().toISOString();
+                const changed: string[] = [];
+
+                const projects = newProjects.map((project, index) => {
+                    if (project.position === index) return project;
+                    changed.push(project.id);
+                    return { ...project, position: index, updatedAt: now };
+                });
+
+                return { projects, dirtyProjectIds: withDirty(state.dirtyProjectIds, ...changed) };
+            }),
+
             setSearchQuery: (query) => set({ searchQuery: query }),
 
             setFilter: (filter) => set({ filter }),
@@ -317,22 +529,34 @@ export const useTaskStore = create<TaskState>()(
             applySyncResult: ({
                 tasks,
                 categories,
+                clients,
+                projects,
                 syncedIds,
                 clearedTombstoneIds,
                 syncedCategoryIds,
                 clearedCategoryTombstoneIds,
+                syncedClientIds = [],
+                clearedClientTombstoneIds = [],
+                syncedProjectIds = [],
+                clearedProjectTombstoneIds = [],
                 syncedAt,
             }) => set((state) => {
                 const synced = new Set(syncedIds);
                 const cleared = new Set(clearedTombstoneIds);
                 const syncedCategories = new Set(syncedCategoryIds);
                 const clearedCategories = new Set(clearedCategoryTombstoneIds);
+                const syncedClients = new Set(syncedClientIds);
+                const clearedClients = new Set(clearedClientTombstoneIds);
+                const syncedProjects = new Set(syncedProjectIds);
+                const clearedProjects = new Set(clearedProjectTombstoneIds);
                 const cutoff = Date.now() - TOMBSTONE_TTL_MS;
                 const alive = (t: Tombstone) => new Date(t.deletedAt).getTime() > cutoff;
 
                 return {
                     tasks,
                     categories,
+                    clients: clients ?? state.clients,
+                    projects: projects ?? state.projects,
                     dirtyIds: state.dirtyIds.filter((id) => !synced.has(id)),
                     tombstones: state.tombstones.filter((t) => !cleared.has(t.id) && alive(t)),
                     dirtyCategoryIds: state.dirtyCategoryIds.filter(
@@ -340,6 +564,18 @@ export const useTaskStore = create<TaskState>()(
                     ),
                     categoryTombstones: state.categoryTombstones.filter(
                         (t) => !clearedCategories.has(t.id) && alive(t)
+                    ),
+                    dirtyClientIds: state.dirtyClientIds.filter(
+                        (id) => !syncedClients.has(id)
+                    ),
+                    clientTombstones: state.clientTombstones.filter(
+                        (t) => !clearedClients.has(t.id) && alive(t)
+                    ),
+                    dirtyProjectIds: state.dirtyProjectIds.filter(
+                        (id) => !syncedProjects.has(id)
+                    ),
+                    projectTombstones: state.projectTombstones.filter(
+                        (t) => !clearedProjects.has(t.id) && alive(t)
                     ),
                     lastSyncedAt: syncedAt,
                 };
@@ -368,6 +604,8 @@ export const useTaskStore = create<TaskState>()(
                         ownerId: userId,
                         dirtyIds: state.tasks.map((t) => t.id),
                         dirtyCategoryIds: state.categories.map((c) => c.id),
+                        dirtyClientIds: state.clients.map((c) => c.id),
+                        dirtyProjectIds: state.projects.map((p) => p.id),
                     };
                 }
 
@@ -375,25 +613,37 @@ export const useTaskStore = create<TaskState>()(
                     ownerId: userId,
                     tasks: [],
                     categories: [],
+                    clients: [],
+                    projects: [],
                     dirtyIds: [],
                     tombstones: [],
                     dirtyCategoryIds: [],
                     categoryTombstones: [],
+                    dirtyClientIds: [],
+                    clientTombstones: [],
+                    dirtyProjectIds: [],
+                    projectTombstones: [],
                     lastSyncedAt: null,
                 };
             }),
         }),
         {
             name: 'yapilacaklar-storage',
-            version: 4,
+            version: 5,
             partialize: (state) => ({
                 tasks: state.tasks,
                 categories: state.categories,
+                clients: state.clients,
+                projects: state.projects,
                 filter: state.filter,
                 dirtyIds: state.dirtyIds,
                 tombstones: state.tombstones,
                 dirtyCategoryIds: state.dirtyCategoryIds,
                 categoryTombstones: state.categoryTombstones,
+                dirtyClientIds: state.dirtyClientIds,
+                clientTombstones: state.clientTombstones,
+                dirtyProjectIds: state.dirtyProjectIds,
+                projectTombstones: state.projectTombstones,
                 lastSyncedAt: state.lastSyncedAt,
                 ownerId: state.ownerId,
             }) as unknown as TaskState,
@@ -406,6 +656,9 @@ export const useTaskStore = create<TaskState>()(
              * v2 -> v3: kategori sabit bir metindi ('İş'), artık kayda bağlı
              *           bir id. Varsayılan kategoriler oluşturulup görevlerin
              *           eski metni adına göre bunlara bağlanır.
+             * v4 -> v5: niş modül — clients/projects alanları ve görevlerdeki
+             *           clientId/projectId eklendi. Eski kayıtlarda bu alanlar
+             *           hiç yoktu; boş listeye ve null bağlara düşülür.
              */
             migrate: (persisted, version) => {
                 const state = persisted as Partial<TaskState> | undefined;
@@ -481,6 +734,23 @@ export const useTaskStore = create<TaskState>()(
                         priority: toPriority(task.priority),
                     }));
                     state.filter = LEGACY_FILTERS[state.filter as string] ?? 'all';
+                }
+
+                if (version < 5) {
+                    state.tasks = state.tasks.map((task) => {
+                        const t = task as Task & { clientId?: unknown; projectId?: unknown };
+                        return {
+                            ...t,
+                            clientId: typeof t.clientId === 'string' ? t.clientId : null,
+                            projectId: typeof t.projectId === 'string' ? t.projectId : null,
+                        };
+                    });
+                    state.clients = [];
+                    state.projects = [];
+                    state.dirtyClientIds = [];
+                    state.clientTombstones = [];
+                    state.dirtyProjectIds = [];
+                    state.projectTombstones = [];
                 }
 
                 return state as TaskState;

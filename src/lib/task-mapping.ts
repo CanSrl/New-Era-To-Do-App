@@ -1,6 +1,7 @@
 import type { Database } from './database.types';
 import type { Task } from './types';
 import { normalizeTask } from './tasks';
+import { features } from '../config/features';
 
 type TaskRow = Database['public']['Tables']['tasks']['Row'];
 export type TaskInsert = Database['public']['Tables']['tasks']['Insert'];
@@ -25,8 +26,14 @@ export function taskToRow(task: Task, userId: string): TaskInsert {
         due_date: task.dueDate ?? null,
         priority: task.priority,
         category_id: task.categoryId,
-        client_id: task.clientId,
-        project_id: task.projectId,
+        // Niş modül sütunları bayrağa bağlı: `tasks.client_id` ve
+        // `project_id` niş migration'ıyla geliyor. Modülü çıkarmış bir
+        // kurulumda bu sütunlar YOKTUR ve onları göndermek her görev
+        // yazmasını "column does not exist" ile düşürürdü — yani bayrak,
+        // gönderilmezse verdiği sözü tutmuş olmaz.
+        ...(features.nicheModule
+            ? { client_id: task.clientId, project_id: task.projectId }
+            : {}),
         completed: task.completed,
         position: task.position,
         created_at: task.createdAt,

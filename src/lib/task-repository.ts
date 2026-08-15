@@ -1,7 +1,8 @@
 import { supabase } from './supabase';
 import { rowToTask, taskToRow } from './task-mapping';
 import { categoryToRow, rowToCategory } from './category-mapping';
-import type { Category, Task } from './types';
+import { clientToRow, projectToRow, rowToClient, rowToProject } from './niche-mapping';
+import type { Category, Client, Project, Task } from './types';
 
 /** Supabase yapılandırılmamışken senkron çağrıldığında atılır. */
 export class SyncUnavailableError extends Error {
@@ -97,5 +98,96 @@ export async function deleteRemoteCategories(ids: readonly string[]): Promise<vo
     if (ids.length === 0) return;
 
     const { error } = await client().from('categories').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+}
+
+// ---------------------------------------------------------------------------
+// Niş modül: müşteriler ve projeler
+// ---------------------------------------------------------------------------
+//
+// Bu blok yalnızca `features.nicheModule` açıkken çağrılır. Kapalıyken hiç
+// çağrılmaması şart: modülü çıkarmış bir kurulumda `clients` tablosu yoktur ve
+// sorgu "relation does not exist" ile düşerek GÖREV senkronunu da götürürdü.
+
+/** Kullanıcının bulut üzerindeki tüm müşterilerini çeker. */
+export async function fetchRemoteClients(): Promise<Client[]> {
+    const { data, error } = await client().from('clients').select('*');
+    if (error) throw new Error(error.message);
+    return data.map(rowToClient);
+}
+
+/**
+ * Müşterileri buluta yazar ve sunucunun kaydettiği hâllerini döner.
+ *
+ * Yazma zincirinin EN BAŞINDA çağrılmalıdır: hem `projects.client_id` hem
+ * `tasks.client_id` buraya bileşik yabancı anahtarla bağlı.
+ */
+export async function pushRemoteClients(
+    clients: readonly Client[],
+    userId: string
+): Promise<Client[]> {
+    if (clients.length === 0) return [];
+
+    const { data, error } = await client()
+        .from('clients')
+        .upsert(clients.map((c) => clientToRow(c, userId)), { onConflict: 'id' })
+        .select();
+
+    if (error) throw new Error(error.message);
+    return data.map(rowToClient);
+}
+
+/**
+ * Müşterileri buluttan siler.
+ *
+ * Silme zincirinin EN SONUNDA çağrılmalıdır. Sunucuda bu silme iki şey
+ * tetikler: `clients_clear_tasks` bağlı görevlerin iki alanını da boşaltır,
+ * ardından cascade projeleri siler. Bu yüzden silinen müşterinin projeleri
+ * için ayrıca silme isteği gönderilmez — store da onlar için mezar taşı
+ * bırakmıyor.
+ */
+export async function deleteRemoteClients(ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const { error } = await client().from('clients').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+}
+
+/** Kullanıcının bulut üzerindeki tüm projelerini çeker. */
+export async function fetchRemoteProjects(): Promise<Project[]> {
+    const { data, error } = await client().from('projects').select('*');
+    if (error) throw new Error(error.message);
+    return data.map(rowToProject);
+}
+
+/**
+ * Projeleri buluta yazar. Müşterilerden SONRA, görevlerden ÖNCE çağrılmalıdır:
+ * projeler müşterilere, görevler de projelere yabancı anahtarla bağlı.
+ */
+export async function pushRemoteProjects(
+    projects: readonly Project[],
+    userId: string
+): Promise<Project[]> {
+    if (projects.length === 0) return [];
+
+    const { data, error } = await client()
+        .from('projects')
+        .upsert(projects.map((p) => projectToRow(p, userId)), { onConflict: 'id' })
+        .select();
+
+    if (error) throw new Error(error.message);
+    return data.map(rowToProject);
+}
+
+/**
+ * Projeleri buluttan siler.
+ *
+ * Görevler yazıldıktan SONRA çağrılmalıdır; bağlı görevler silinmez,
+ * `on delete set null (project_id)` yalnızca proje bağını koparır.
+ */
+export async function deleteRemoteProjects(ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const { error } = await client().from('projects').delete().in('id', ids);
     if (error) throw new Error(error.message);
 }

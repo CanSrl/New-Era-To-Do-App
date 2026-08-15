@@ -38,12 +38,20 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const tombstones = useTaskStore((state) => state.tombstones);
     const dirtyCategoryIds = useTaskStore((state) => state.dirtyCategoryIds);
     const categoryTombstones = useTaskStore((state) => state.categoryTombstones);
+    const dirtyClientIds = useTaskStore((state) => state.dirtyClientIds);
+    const clientTombstones = useTaskStore((state) => state.clientTombstones);
+    const dirtyProjectIds = useTaskStore((state) => state.dirtyProjectIds);
+    const projectTombstones = useTaskStore((state) => state.projectTombstones);
 
-    // Kategoriler de sayılmak zorunda: yalnızca bu sayı değişince senkron
-    // tetikleniyor. Sayılmazsa kategori ekleme/silme bir sonraki yoklamaya
-    // (dakikada bir) kadar buluta hiç gitmez.
+    // HER kayıt türü sayılmak zorunda: senkron yalnızca bu sayı değişince
+    // tetikleniyor. Bir tür sayılmazsa o türdeki ekleme/silme bir sonraki
+    // yoklamaya (dakikada bir) kadar buluta hiç gitmez — kategorilerde bir
+    // kez gerçekten yaşandı.
     const pendingCount =
-        dirtyIds.length + tombstones.length + dirtyCategoryIds.length + categoryTombstones.length;
+        dirtyIds.length + tombstones.length
+        + dirtyCategoryIds.length + categoryTombstones.length
+        + dirtyClientIds.length + clientTombstones.length
+        + dirtyProjectIds.length + projectTombstones.length;
 
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const userId = user?.id ?? null;

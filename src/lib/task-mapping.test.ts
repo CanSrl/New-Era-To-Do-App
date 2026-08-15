@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { rowToTask, taskToRow } from './task-mapping';
 import type { Task } from './types';
 import type { Database } from './database.types';
@@ -69,6 +69,38 @@ describe('taskToRow', () => {
 
     it('kategorisiz görevi null olarak yazar', () => {
         expect(taskToRow({ ...task, categoryId: null }, 'u1').category_id).toBeNull();
+    });
+
+    it('niş modül açıkken müşteri ve proje sütunlarını yazar', () => {
+        const result = taskToRow({ ...task, clientId: 'c1', projectId: 'p1' }, 'u1');
+
+        expect(result.client_id).toBe('c1');
+        expect(result.project_id).toBe('p1');
+    });
+});
+
+describe('taskToRow — niş modül kapalıyken', () => {
+    it('müşteri ve proje sütunlarını hiç göndermez', async () => {
+        // Bu sütunlar niş migration'ıyla geliyor. Modülü çıkarmış bir
+        // kurulumda YOKTURLAR; göndermek her görev yazmasını "column does
+        // not exist" ile düşürür ve bayrağın verdiği sözü boşa çıkarırdı.
+        vi.resetModules();
+        vi.doMock('../config/features', () => ({
+            features: { nicheModule: false, githubAuth: false },
+            isEnabled: () => false,
+            isEnabledByDefault: () => true,
+        }));
+
+        const { taskToRow: gated } = await import('./task-mapping');
+        const result = gated({ ...task, clientId: 'c1', projectId: 'p1' }, 'u1');
+
+        expect('client_id' in result).toBe(false);
+        expect('project_id' in result).toBe(false);
+        // Geri kalan alanlar etkilenmemeli.
+        expect(result.title).toBe('Rapor yaz');
+
+        vi.doUnmock('../config/features');
+        vi.resetModules();
     });
 });
 
