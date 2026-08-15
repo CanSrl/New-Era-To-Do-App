@@ -1,9 +1,10 @@
-import { createBrowserRouter, Navigate, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { RouteErrorBoundary } from './components/ErrorBoundary';
 import { TasksPage } from './pages/TasksPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ClientsPage } from './pages/ClientsPage';
+import { SaasTemplate } from './components/ui/saas-template';
 import { features } from './config/features';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
@@ -58,8 +59,20 @@ const nicheRoutes: RouteObject[] = features.nicheModule
 
 export const router = createBrowserRouter([
     {
+        /*
+         * Kök adres artık pazarlama sayfası; uygulama `/app` altında.
+         * Eskiden burası `/app`'e yönlendiriyordu — starter kit satılacak bir
+         * ürün olduğu için ziyaretçinin ilk gördüğü şey uygulama kabuğu değil
+         * ürünün ne olduğu olmalı.
+         *
+         * Bunun bir yan etkisi vardı: PWA manifest'inde `start_url`
+         * tanımlı değildi, yani varsayılan `/` idi ve kurulu uygulama artık
+         * tanıtım sayfasını açardı. `vite.config.ts` içine `start_url: '/app'`
+         * eklendi — biri değişirse diğeri de değişmeli.
+         */
         path: '/',
-        element: <Navigate to="/app" replace />,
+        element: <SaasTemplate />,
+        errorElement: <RouteErrorBoundary />,
     },
     {
         path: '/app',

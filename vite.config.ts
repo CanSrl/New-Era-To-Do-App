@@ -59,6 +59,14 @@ export default defineConfig({
         short_name: 'Yapılacaklar',
         description: 'Modern, hızlı ve çevrimdışı çalışabilen görev yöneticisi.',
         lang: 'tr',
+        /*
+         * Kurulu uygulama doğrudan uygulama kabuğunu açar.
+         *
+         * Tanımlanmazsa varsayılan `/` olur — kök adres pazarlama sayfası
+         * olduğundan, ana ekranına ikon eklemiş kullanıcı her açılışta
+         * görevlerini değil tanıtım sayfasını görürdü.
+         */
+        start_url: '/app',
         theme_color: '#0f172a',
         background_color: '#ffffff',
         display: 'standalone',

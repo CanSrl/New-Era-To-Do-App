@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { addTask, gotoApp, taskHeading } from './helpers'
 
-test('kök adres uygulamaya yönlendirir', async ({ page }) => {
+test('kök adres pazarlama sayfasını gösterir, uygulamaya yönlendirmez', async ({ page }) => {
+    // Eskiden `/` doğrudan `/app`'e yönlendiriyordu; artık landing orada.
     await page.goto('/')
-    await expect(page).toHaveURL(/\/app$/)
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 })
 
 test('ayarlar sayfasına gidip geri dönülebilir', async ({ page }) => {

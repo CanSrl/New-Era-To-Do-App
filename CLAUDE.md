@@ -45,7 +45,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 434 otomatik test — 305 birim (Vitest), 79 uçtan uca (Playwright, 9'u
+**Test:** 441 otomatik test — 305 birim (Vitest), 86 uçtan uca (Playwright, 9'u
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 50 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -284,9 +284,25 @@ motoru, `SyncProvider` + durum göstergesi. Zustand birincil kaldı.
 E2E). Hata durumunda Playwright raporu artefakt olarak yüklenir.
 
 ### ✅ Router ve ayarlar sayfası
-React Router v7. Rotalar: `/` (→ `/app`), `/app` (kabuk), `/app` index
+React Router v7. Rotalar: `/` (pazarlama sayfası), `/app` (kabuk), `/app` index
 (görevler), `/app/clients` (niş modül, bayrak kapılı), `/app/settings`,
-`/reset-password`, `/auth/callback`, `*` (bulunamadı). Yollar İngilizce: uygulama Türkçe olsa da starter kit
+`/reset-password`, `/auth/callback`, `*` (bulunamadı).
+
+**`/` artık `/app`'e yönlendirmiyor**, pazarlama sayfasını gösteriyor
+(`src/components/ui/saas-template.tsx`). ⚠️ Bunun görünmeyen bir yan etkisi
+vardı: PWA manifest'inde `start_url` tanımlı değildi, yani varsayılan `/` idi
+ve kurulu uygulama görevler yerine tanıtım sayfasını açardı. `vite.config.ts`
+içine `start_url: '/app'` eklendi — biri değişirse diğeri de değişmeli.
+
+Landing 21st.dev'deki bir şablondan uyarlandı ve üç şeyi bilinçli olarak
+atıyor: bileşene gömülü **global `* { font-family }` seçicisi ve Google Fonts
+`@import`'u** (mount olduğu anda bütün uygulamanın yazı tipini değiştiriyor ve
+her açılışta dış istek yapıyordu), **dış görseller** (`i.postimg.cc`; PWA
+çevrimdışı çalışıyor — parıltı CSS gradyanına, ekran görüntüsü kendi
+token'larımızla çizilen bir makete dönüştü) ve **sabit siyah/gri renkler**
+(hepsi token; sayfa açık/koyu temada da doğru). `e2e/landing.spec.ts` son iki
+maddeyi doğrudan sınıyor: yazı tipi `/` ile `/app` arasında aynı kalmalı ve
+sayfa `localhost` dışına **hiç** istek yapmamalı. Yollar İngilizce: uygulama Türkçe olsa da starter kit
 uluslararası satılacak ve i18n planlanıyor.
 
 `/app` altında **oturum koruması yoktur** — uygulama local-first, giriş
