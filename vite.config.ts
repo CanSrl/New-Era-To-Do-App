@@ -11,6 +11,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    // Varsayılan davranış 5173 doluyken sessizce bir sonraki porta kayar.
+    // Local-first mimaride LocalStorage origin'e (host+port) bağlıdır; bir
+    // önceki `npm run dev` süreci kapatılmadan yenisi başlatılırsa kullanıcı
+    // fark etmeden iki ayrı depoda çalışır ve "görevim kayboldu" sanır.
+    // strictPort, sessizce kaymak yerine açıkça hata vererek unutulmuş
+    // süreci fark ettirir.
+    strictPort: true,
+  },
   define: {
     // Sentry'nin kullanılmayan alt sistemlerini paketten eler. İzleme
     // yapılandırması performans izini ve hata ayıklama günlüklerini zaten
