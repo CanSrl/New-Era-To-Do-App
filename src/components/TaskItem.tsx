@@ -3,7 +3,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '../lib/types';
 import { useTaskStore } from '../store';
-import { GripVertical, Edit2, Trash2, Calendar, Tag, Check } from 'lucide-react';
+import { GripVertical, Edit2, Trash2, Calendar, Tag, Check, Briefcase } from 'lucide-react';
+import { features } from '../config/features';
 import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { dateLocaleFor } from '../i18n';
@@ -39,6 +40,18 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
         task.categoryId === null
             ? undefined
             : state.categories.find(c => c.id === task.categoryId)
+    );
+    // Bayrak kapalıyken bağlar hiç okunmaz: niş modülü kapatmış kurulumda
+    // eski yerel veride kalmış bir bağ ekranda görünmemeli.
+    const client = useTaskStore(state =>
+        !features.nicheModule || task.clientId === null
+            ? undefined
+            : state.clients.find(c => c.id === task.clientId)
+    );
+    const project = useTaskStore(state =>
+        !features.nicheModule || task.projectId === null
+            ? undefined
+            : state.projects.find(p => p.id === task.projectId)
     );
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -165,6 +178,19 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         >
                             <Tag size={12} />
                             {category.name}
+                        </span>
+                    )}
+
+                    {/*
+                      * Müşteri ve proje tek rozette birleşir: ikisi ayrı ayrı
+                      * basılsaydı rozet sırası zaten kalabalık olan satırı
+                      * ikiye bölerdi. Proje müşterisiz olamaz, dolayısıyla
+                      * rozetin varlığı müşteriye bağlıdır.
+                      */}
+                    {client && (
+                        <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md text-muted-foreground bg-muted">
+                            <Briefcase size={12} />
+                            {project ? `${client.name} · ${project.name}` : client.name}
                         </span>
                     )}
 

@@ -6,6 +6,7 @@ import {
     nextProjectPosition,
     normalizeProject,
     projectsByClient,
+    projectsForDisplay,
 } from './projects';
 
 describe('normalizeProject', () => {
@@ -77,5 +78,25 @@ describe('projectsByClient', () => {
 
     it('eşleşme yoksa boş dizi döner', () => {
         expect(projectsByClient([createProject('c1', 'A', 0)], 'c9')).toEqual([]);
+    });
+});
+
+describe('projectsForDisplay', () => {
+    it('arşivlileri listenin dibine indirir', () => {
+        const projects = [
+            { ...createProject('c1', 'Eski', 0), archived: true },
+            createProject('c1', 'Güncel', 1),
+        ];
+
+        expect(projectsForDisplay(projects, 'c1').map((p) => p.name)).toEqual([
+            'Güncel',
+            'Eski',
+        ]);
+    });
+
+    it('başka müşterinin projesini karıştırmaz', () => {
+        const projects = [createProject('c1', 'Bizim', 0), createProject('c2', 'Onların', 0)];
+
+        expect(projectsForDisplay(projects, 'c1').map((p) => p.name)).toEqual(['Bizim']);
     });
 });

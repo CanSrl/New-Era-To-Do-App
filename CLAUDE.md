@@ -45,7 +45,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 416 otomatik test — 299 birim (Vitest), 67 uçtan uca (Playwright, 9'u
+**Test:** 434 otomatik test — 305 birim (Vitest), 79 uçtan uca (Playwright, 9'u
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 50 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -285,8 +285,8 @@ E2E). Hata durumunda Playwright raporu artefakt olarak yüklenir.
 
 ### ✅ Router ve ayarlar sayfası
 React Router v7. Rotalar: `/` (→ `/app`), `/app` (kabuk), `/app` index
-(görevler), `/app/settings`, `/reset-password`, `/auth/callback`, `*`
-(bulunamadı). Yollar İngilizce: uygulama Türkçe olsa da starter kit
+(görevler), `/app/clients` (niş modül, bayrak kapılı), `/app/settings`,
+`/reset-password`, `/auth/callback`, `*` (bulunamadı). Yollar İngilizce: uygulama Türkçe olsa da starter kit
 uluslararası satılacak ve i18n planlanıyor.
 
 `/app` altında **oturum koruması yoktur** — uygulama local-first, giriş
@@ -313,9 +313,45 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 | 2 | `Client`/`Project` tipleri, saf yardımcılar (`clients.ts`, `projects.ts`) | ✅ |
 | 3 | Store alanları + 8 eylem, LocalStorage v4 → v5 göçü | ✅ |
 | 4 | Senkron motoru: eşleme, birleştirme, repository, sıra, bayrak kapısı | ✅ |
-| 5 | Arayüz: müşteri/proje yönetimi, TaskForm'a iki opsiyonel seçici | ⏳ |
+| 5 | Arayüz: müşteri/proje yönetimi, TaskForm'a iki opsiyonel seçici | ✅ |
 | 6 | Teslim odaklı görünüm (ayrı route), CSV export (`papaparse`) | ⏳ |
 | 7 | `time_logs` tablosu ve basit zaman kaydı | ⏳ |
+
+Görev 5'te gelen arayüz kararları:
+
+- **Rota bayrağın arkasında, gezinmeden gizlemek yetmez.** `/app/clients`
+  `router.tsx` içinde koşullu bir dizidir; `features.nicheModule` kapalıyken
+  rota hiç kaydedilmez ve adres "bulunamadı"ya düşer. Bu **çalışma zamanı**
+  kapısıdır — `devOnlyRoutes`'un aksine kod pakette kalır, çünkü bayrak
+  `import.meta.env.DEV` gibi derleme zamanı sabiti değil bir fonksiyon
+  çağrısının sonucudur (`VITE_NICHE_MODULE=false` derlemesi aynı boyutta
+  çıkıyor). Yalnızca kenar çubuğundaki bağlantı kaldırılsaydı adresi bilen
+  kullanıcı bayrağın kapattığı özelliği yine açabilirdi. Aynı bayrak
+  `TaskForm`'daki seçici bloğunu ve `TaskItem`'daki rozeti de kapatır — ikincisi
+  şart, çünkü `task-mapping.ts` o durumda `client_id`/`project_id` sütunlarını
+  hiç göndermiyor; seçici gösterilseydi kullanıcı hiçbir yere yazılmayan bir bağ
+  kurardı.
+- **Arşivli kayıt seçicide görünmez — tek istisna görevin mevcut bağı.**
+  `TaskForm`'daki `selectable()` bunu yapar. İstisna olmasaydı arşivli müşteriye
+  bağlı bir görevi düzenlemeye açmak, `select` eşleşen seçeneği bulamadığı için
+  değeri sessizce boşaltır ve kullanıcı yalnızca forma girip çıkarak bağı
+  koparmış olurdu.
+- **Müşteri değişince proje sıfırlanır.** Şemadaki
+  `tasks_project_id_client_id_user_id_fkey` üçlüsü projenin müşterisiyle görevin
+  müşterisinin aynı olmasını zorunlu tutuyor; eski proje seçili bırakılsaydı
+  gönderim 23503 ile düşer ve o turdaki bütün senkron onunla giderdi.
+- **Silme onay metinleri veritabanı davranışını birebir söyler** (müşteri →
+  projeler cascade ile gider + görevlerin İKİ bağı boşalır; proje → yalnızca
+  proje bağı). Bu metinler `sync-merge-niche.ts`'in taklit ettiği kuralların
+  kullanıcıya görünen yüzü; biri değişirse üçü birden değişmeli.
+- **Ad alanı her zaman gerçek bir `input`'tur** (`InlineName`), kenarlığı
+  yalnızca hover/odakta belirir. "Tıklayınca girdiye dönüşen metin" deseni
+  klavye kullanıcısını dışarıda bırakırdı. Kart başlığındaki genişletme de ayrı
+  bir `button`; satırın tamamına `onClick` vermek hem içindeki girdiyle iç içe
+  geçer hem klavyeyle hiç açılmazdı.
+- **Mobil alt gezinme artık `grid-cols-3` değil.** Öğeler ikiye bölünüp
+  ortadaki yüzen buton aralarına konur (`NAV_SPLIT`), yoksa üçüncü gezinme
+  öğesi merkezi kaydırırdı. Görev 6'nın teslim görünümü eklenince simetrik olur.
 
 Görev 3'te store `deleteClient`, veritabanındaki tetikleyici + cascade ile aynı
 sonucu üretecek biçimde yazıldı: bağlı projeler **mezar taşı bırakmadan** silinir

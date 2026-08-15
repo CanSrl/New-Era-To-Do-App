@@ -2,18 +2,50 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from './ThemeProvider';
-import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PlusCircle, Settings } from 'lucide-react';
+import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PlusCircle, Settings, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { features } from '../config/features';
+import type { TranslationKey } from '../i18n';
 import { useTaskStore } from '../store';
 import { useUiStore } from '../store/ui';
 import { AccountMenu } from './AccountMenu';
 import { AuthDialog } from './AuthDialog';
 import { TaskForm } from './TaskForm';
 
-const NAV_ITEMS = [
-    { to: '/app', labelKey: 'nav.tasks', icon: ListTodo, end: true },
-    { to: '/app/settings', labelKey: 'nav.settings', icon: Settings, end: false },
-] as const;
+interface NavItem {
+    to: string;
+    labelKey: TranslationKey;
+    /** Mobil alt gezinmede yer kısıtlı; orada bu kısa etiket kullanılır. */
+    shortLabelKey: TranslationKey;
+    icon: typeof ListTodo;
+    end: boolean;
+}
+
+/**
+ * Müşteriler öğesi `features.nicheModule` kapılıdır — rotanın kendisi de öyle
+ * (bkz. `router.tsx`). İkisi ayrışırsa gezinme var olmayan bir adrese
+ * götürürdü.
+ */
+const NAV_ITEMS: NavItem[] = [
+    { to: '/app', labelKey: 'nav.tasks', shortLabelKey: 'nav.tasksShort', icon: ListTodo, end: true },
+    ...(features.nicheModule
+        ? [{
+            to: '/app/clients',
+            labelKey: 'nav.clients' as TranslationKey,
+            shortLabelKey: 'nav.clientsShort' as TranslationKey,
+            icon: Users,
+            end: false,
+        }]
+        : []),
+    { to: '/app/settings', labelKey: 'nav.settings', shortLabelKey: 'nav.settings', icon: Settings, end: false },
+];
+
+/**
+ * Mobil alt gezinme: merkezdeki ekleme butonu iki grubun arasında durur.
+ * Öğeler ikiye bölünür ki buton her zaman ortada kalsın — sabit bir
+ * `grid-cols-3` olsaydı üçüncü gezinme öğesi merkezi kaydırırdı.
+ */
+const NAV_SPLIT = Math.ceil(NAV_ITEMS.length / 2);
 
 export function AppLayout() {
     const { t } = useTranslation();
@@ -146,20 +178,25 @@ export function AppLayout() {
 
             {/* Mobil alt gezinme */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/80 backdrop-blur-xl z-20 pb-safe">
-                <div className="grid grid-cols-3 items-center p-3">
-                    <NavLink
-                        to="/app"
-                        end
-                        className={({ isActive }) => cn(
-                            'flex flex-col items-center justify-center gap-1 transition-colors',
-                            isActive ? 'text-primary' : 'text-muted-foreground'
-                        )}
-                    >
-                        <ListTodo size={20} />
-                        <span className="text-[10px] font-medium">{t('nav.tasksShort')}</span>
-                    </NavLink>
+                <div className="flex items-center p-3">
+                    <div className="flex flex-1 items-center">
+                        {NAV_ITEMS.slice(0, NAV_SPLIT).map(({ to, shortLabelKey, icon: Icon, end }) => (
+                            <NavLink
+                                key={to}
+                                to={to}
+                                end={end}
+                                className={({ isActive }) => cn(
+                                    'flex flex-1 flex-col items-center justify-center gap-1 transition-colors',
+                                    isActive ? 'text-primary' : 'text-muted-foreground'
+                                )}
+                            >
+                                <Icon size={20} />
+                                <span className="text-[10px] font-medium">{t(shortLabelKey)}</span>
+                            </NavLink>
+                        ))}
+                    </div>
 
-                    <div className="flex justify-center">
+                    <div className="flex shrink-0 justify-center px-2">
                         <button
                             onClick={() => openTaskForm()}
                             className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform -translate-y-6"
@@ -169,16 +206,22 @@ export function AppLayout() {
                         </button>
                     </div>
 
-                    <NavLink
-                        to="/app/settings"
-                        className={({ isActive }) => cn(
-                            'flex flex-col items-center justify-center gap-1 transition-colors',
-                            isActive ? 'text-primary' : 'text-muted-foreground'
-                        )}
-                    >
-                        <Settings size={20} />
-                        <span className="text-[10px] font-medium">{t('nav.settings')}</span>
-                    </NavLink>
+                    <div className="flex flex-1 items-center">
+                        {NAV_ITEMS.slice(NAV_SPLIT).map(({ to, shortLabelKey, icon: Icon, end }) => (
+                            <NavLink
+                                key={to}
+                                to={to}
+                                end={end}
+                                className={({ isActive }) => cn(
+                                    'flex flex-1 flex-col items-center justify-center gap-1 transition-colors',
+                                    isActive ? 'text-primary' : 'text-muted-foreground'
+                                )}
+                            >
+                                <Icon size={20} />
+                                <span className="text-[10px] font-medium">{t(shortLabelKey)}</span>
+                            </NavLink>
+                        ))}
+                    </div>
                 </div>
             </nav>
 

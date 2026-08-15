@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
     CLIENT_NAME_MAX,
+    byArchivedThenPosition,
     byClientPosition,
+    clientsForDisplay,
     createClient,
     isClientNameTaken,
     nextClientPosition,
@@ -97,5 +99,42 @@ describe('byClientPosition', () => {
             'İlk',
             'İkinci',
         ]);
+    });
+});
+
+describe('byArchivedThenPosition', () => {
+    it('arşivlenmiş kaydı position\'ı küçük olsa bile sona atar', () => {
+        const archived = { ...createClient('Eski', 0), archived: true };
+        const active = createClient('Yeni', 9);
+
+        expect([archived, active].sort(byArchivedThenPosition).map((c) => c.name)).toEqual([
+            'Yeni',
+            'Eski',
+        ]);
+    });
+
+    it('aynı arşiv durumundakileri position\'a göre sıralar', () => {
+        const a = { ...createClient('A', 5), archived: true };
+        const b = { ...createClient('B', 1), archived: true };
+
+        expect([a, b].sort(byArchivedThenPosition).map((c) => c.name)).toEqual(['B', 'A']);
+    });
+});
+
+describe('clientsForDisplay', () => {
+    it('girdi dizisini değiştirmez', () => {
+        const list = [createClient('B', 2), createClient('A', 1)];
+        clientsForDisplay(list);
+
+        expect(list.map((c) => c.name)).toEqual(['B', 'A']);
+    });
+
+    it('aktifleri önce, arşivlileri sonra döner', () => {
+        const list = [
+            { ...createClient('Arşiv', 0), archived: true },
+            createClient('Aktif', 1),
+        ];
+
+        expect(clientsForDisplay(list).map((c) => c.name)).toEqual(['Aktif', 'Arşiv']);
     });
 });

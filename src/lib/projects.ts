@@ -1,6 +1,7 @@
 import type { Project } from './types';
 import { createId, toIsoTimestamp } from './tasks';
 import { categoryKey } from './categories';
+import { byArchivedThenPosition } from './clients';
 
 /** Veritabanı kısıtıyla aynı. */
 export const PROJECT_NAME_MAX = 80;
@@ -90,4 +91,19 @@ export function projectsByClient(
     clientId: string
 ): Project[] {
     return projects.filter((p) => p.clientId === clientId).sort(byProjectPosition);
+}
+
+/**
+ * Bir müşterinin projelerini ekran sırasına dizer: arşivliler dibe iner.
+ *
+ * `projectsByClient`'tan ayrı durur, çünkü o saf sıralama anahtarına bakar ve
+ * senkron/eşleme tarafında arşiv durumuna göre yer değiştirmemesi gerekir.
+ */
+export function projectsForDisplay(
+    projects: readonly Project[],
+    clientId: string
+): Project[] {
+    return projects
+        .filter((p) => p.clientId === clientId)
+        .sort(byArchivedThenPosition);
 }

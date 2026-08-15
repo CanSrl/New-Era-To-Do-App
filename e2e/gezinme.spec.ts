@@ -18,6 +18,17 @@ test('ayarlar sayfasına gidip geri dönülebilir', async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Merhaba! 👋' })).toBeVisible()
 })
 
+test('müşteriler sayfasına gezinmeden gidilebilir', async ({ page }) => {
+    await gotoApp(page)
+
+    await page.getByRole('link', { name: 'Müşteriler' }).click()
+    await expect(page).toHaveURL(/\/app\/clients$/)
+    await expect(page.getByRole('heading', { name: 'Müşteriler' })).toBeVisible()
+
+    await page.getByRole('link', { name: 'Görevlerim' }).click()
+    await expect(page).toHaveURL(/\/app$/)
+})
+
 test('ayarlar sayfası doğrudan adresle açılabilir', async ({ page }) => {
     // Derin bağlantı: sunucuda böyle bir dosya yok, index.html'e düşmeli.
     await gotoApp(page, '/app/settings')

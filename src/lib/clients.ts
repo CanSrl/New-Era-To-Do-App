@@ -56,6 +56,23 @@ export function byClientPosition(a: Client, b: Client): number {
     return a.createdAt.localeCompare(b.createdAt);
 }
 
+/**
+ * Ekran sırası: arşivlenmemişler önce, her grup kendi içinde `position`'a göre.
+ *
+ * `Project`, `Client`'ı genişlettiği için bu karşılaştırıcı iki tür için de
+ * geçerlidir. Arşivleme silme değildir — kayıt listenin dibine iner ama
+ * kaybolmaz, böylece geçmiş görevlerin bağı okunabilir kalır.
+ */
+export function byArchivedThenPosition(a: Client, b: Client): number {
+    if (a.archived !== b.archived) return a.archived ? 1 : -1;
+    return byClientPosition(a, b);
+}
+
+/** Müşterileri ekran sırasına dizer. Girdi dizisi değiştirilmez. */
+export function clientsForDisplay(clients: readonly Client[]): Client[] {
+    return [...clients].sort(byArchivedThenPosition);
+}
+
 /** Bir sonraki müşterinin alacağı sıralama anahtarı (listenin sonu). */
 export function nextClientPosition(clients: readonly Client[]): number {
     if (clients.length === 0) return 0;
