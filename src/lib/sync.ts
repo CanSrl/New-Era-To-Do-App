@@ -22,11 +22,17 @@ import {
     pushRemoteClients,
     pushRemoteProjects,
     pushRemoteTasks,
+    SyncTooLargeError,
     SyncUnavailableError,
 } from './task-repository';
 
 export type SyncOutcome =
-    | { status: 'ok'; pushed: number; pulled: number; deleted: number }
+    /**
+     * `discarded`: çakışmada kaybeden **yerel** değişikliklerin sayısı. Son
+     * yazan kazanır kuralı gereği bunlar sessizce atılıyordu; kullanıcı ne
+     * yazdığının kaybolduğunu hiç öğrenmiyordu. Arayüz bu sayıyı gösterir.
+     */
+    | { status: 'ok'; pushed: number; pulled: number; deleted: number; discarded: number }
     | { status: 'skipped'; reason: 'unavailable' | 'offline' | 'busy' }
     | { status: 'error'; messageKey: TranslationKey };
 
@@ -38,6 +44,10 @@ let inFlight = false;
 
 /** Ham hatayı çeviri anahtarına indirger; metin arayüz katmanında üretilir. */
 function errorKeyFor(error: unknown): TranslationKey {
+    // Veri tek turda çekilemeyecek kadar büyük. Metin arama yapılmadan önce
+    // sınanır: mesajın kendisi değil, tipin varlığı belirleyici.
+    if (error instanceof SyncTooLargeError) return 'sync.error.tooLarge';
+
     const message = error instanceof Error ? error.message : String(error);
     const lower = message.toLowerCase();
 
@@ -229,6 +239,14 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
 
         return {
             status: 'ok',
+            // Projelerin `droppedIds`'i bilinçli olarak SAYILMAZ: onlar
+            // çakışmada elenmedi, müşterisi silindiği için düştüler —
+            // kullanıcıya "değişikliğin kayboldu" demek yanıltıcı olurdu.
+            discarded:
+                plan.discardedIds.length
+                + categoryPlan.discardedIds.length
+                + (clientPlan?.discardedIds.length ?? 0)
+                + (projectPlan?.discardedIds.length ?? 0),
             pushed:
                 plan.toPush.length
                 + categoryPlan.toPush.length

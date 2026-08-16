@@ -44,8 +44,22 @@ vi.mock('./task-repository', () => {
         }
     }
 
+    // `runSync` bunu `instanceof` ile sınıyor, mesajla değil — taklit modül
+    // sınıfı dışa vermezse hata çevirisi testleri "export tanımlı değil" ile
+    // düşer.
+    class SyncTooLargeError extends Error {
+        readonly table: string;
+
+        constructor(table: string) {
+            super(`"${table}" tablosu tek turda çekme sınırını aştı.`);
+            this.name = 'SyncTooLargeError';
+            this.table = table;
+        }
+    }
+
     return {
         SyncUnavailableError,
+        SyncTooLargeError,
         fetchRemoteCategories: vi.fn(async () => {
             calls.push('fetchCategories');
             return [] as Category[];
@@ -304,6 +318,60 @@ describe('runSync — atlama koşulları', () => {
         // Yapılandırma eksikliği bir arıza değil: uygulama local-first çalışır
         // ve kullanıcıya hata gösterilmemeli.
         expect(await runSync('user-1')).toEqual({ status: 'skipped', reason: 'unavailable' });
+    });
+});
+
+describe('runSync — elenen değişikliklerin sayımı', () => {
+    /**
+     * Son yazan kazanır kuralı değişmiyor; değişen tek şey kaybedenin
+     * sayılması. Sayı olmadan kullanıcı yazdığı şeyin kaybolduğunu hiç
+     * öğrenemiyordu — arayüz bu değeri bildirime çeviriyor.
+     */
+    it('çakışmada elenen yerel görevi sayar', async () => {
+        seedStore({
+            tasks: [makeTask({ id: 'task-1', title: 'Yerel', updatedAt: ISO })],
+            dirtyIds: ['task-1'],
+        });
+        vi.mocked(repo.fetchRemoteTasks).mockResolvedValue([
+            makeTask({ id: 'task-1', title: 'Uzak kazanır', updatedAt: '2026-08-14T12:00:00.000Z' }),
+        ]);
+
+        const result = await runSync('user-1');
+
+        expect(result).toMatchObject({ status: 'ok', discarded: 1 });
+    });
+
+    it('çakışma yoksa sıfır döner', async () => {
+        seedStore({ tasks: [makeTask({ id: 'task-1' })], dirtyIds: ['task-1'] });
+
+        const result = await runSync('user-1');
+
+        expect(result).toMatchObject({ status: 'ok', discarded: 0 });
+    });
+
+    it('görev, kategori ve müşteri elemelerini birlikte toplar', async () => {
+        const newer = '2026-08-14T12:00:00.000Z';
+        seedStore({
+            tasks: [makeTask({ id: 'task-1', updatedAt: ISO })],
+            categories: [makeCategory({ id: 'cat-1', name: 'Yerel', updatedAt: ISO })],
+            clients: [makeClient({ id: 'client-1', name: 'Yerel', updatedAt: ISO })],
+            dirtyIds: ['task-1'],
+            dirtyCategoryIds: ['cat-1'],
+            dirtyClientIds: ['client-1'],
+        });
+        vi.mocked(repo.fetchRemoteTasks).mockResolvedValue([
+            makeTask({ id: 'task-1', updatedAt: newer }),
+        ]);
+        vi.mocked(repo.fetchRemoteCategories).mockResolvedValue([
+            makeCategory({ id: 'cat-1', name: 'Uzak', updatedAt: newer }),
+        ]);
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([
+            makeClient({ id: 'client-1', name: 'Uzak', updatedAt: newer }),
+        ]);
+
+        const result = await runSync('user-1');
+
+        expect(result).toMatchObject({ status: 'ok', discarded: 3 });
     });
 });
 

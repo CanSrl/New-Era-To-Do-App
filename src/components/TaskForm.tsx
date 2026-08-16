@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useTaskStore } from '../store';
 import { PRIORITIES, type Task, type Priority } from '../lib/types';
@@ -50,6 +50,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
 
     const sortedCategories = [...categories].sort(byCategoryPosition);
 
+    const titleRef = useRef<HTMLInputElement>(null);
     const [title, setTitle] = useState(taskToEdit?.title || '');
     const [description, setDescription] = useState(taskToEdit?.description || '');
     const [priority, setPriority] = useState<Priority>(taskToEdit?.priority || 'medium');
@@ -119,7 +120,24 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
 
     return (
         <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
-            <DialogContent>
+            {/*
+              * Odak başlık alanına Radix'in açılış kancasıyla veriliyor, `autoFocus`
+              * ile değil: `n` kısayoluyla açan kullanıcı hemen yazabilmeli, ama
+              * Radix varsayılanı içerideki İLK odaklanabilir öğeyi (kapatma
+              * butonu) seçerdi. `autoFocus` prop'u ise `jsx-a11y/no-autofocus`
+              * tarafından yasak — kural sayfa yüklenirken kayan odağı hedefliyor,
+              * kullanıcının bilerek açtığı diyaloğu değil.
+              */}
+            <DialogContent
+                onOpenAutoFocus={(event) => {
+                    // Ref boşsa varsayılan engellenmemeli: `preventDefault` çalışıp
+                    // odaklanacak alan da bulunamazsa odak diyaloğun tamamen
+                    // dışında kalır ve klavye kullanıcısı içeri hiç giremez.
+                    if (!titleRef.current) return;
+                    event.preventDefault();
+                    titleRef.current.focus();
+                }}
+            >
                 <DialogHeader>
                     <DialogTitle>
                         {taskToEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')}
@@ -134,7 +152,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                             </label>
                             <input
                                 id="title"
-                                autoFocus
+                                ref={titleRef}
                                 type="text"
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}

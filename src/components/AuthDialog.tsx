@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Github, Loader2, MailCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,7 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
     const fieldId = useId();
 
     const [mode, setMode] = useState<Mode>('signin');
+    const emailRef = useRef<HTMLInputElement>(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     /**
@@ -143,7 +144,20 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            {/*
+              * Odak e-posta alanına Radix'in açılış kancasıyla veriliyor;
+              * gerekçesi TaskForm'daki ile aynı (`jsx-a11y/no-autofocus`).
+              * `emailSent` ekranında alan render edilmiyor — ref boş kalır ve
+              * odak Radix'in varsayılanına düşer, ki o ekranda doğrusu da bu.
+              */}
+            <DialogContent
+                className="max-w-md"
+                onOpenAutoFocus={(event) => {
+                    if (!emailRef.current) return;
+                    event.preventDefault();
+                    emailRef.current.focus();
+                }}
+            >
                 <DialogHeader className="flex-col items-start gap-1">
                     <DialogTitle>{t(`auth.${mode}.title`)}</DialogTitle>
                     <DialogDescription>{t(`auth.${mode}.description`)}</DialogDescription>
@@ -211,11 +225,11 @@ export function AuthDialog({ open, onOpenChange }: AuthDialogProps) {
                                 </label>
                                 <input
                                     id={`${fieldId}-email`}
+                                    ref={emailRef}
                                     type="email"
                                     inputMode="email"
                                     autoComplete="email"
                                     required
-                                    autoFocus
                                     disabled={isBusy}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}

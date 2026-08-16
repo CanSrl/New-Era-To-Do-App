@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import globals from 'globals'
+import jsxA11y from 'eslint-plugin-jsx-a11y'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
@@ -16,6 +17,12 @@ export default defineConfig([
       tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
+      // Erişilebilirlik artık konvansiyon değil kapı: ihlal `npm run lint`i,
+      // dolayısıyla CI'ı düşürür. Modaller Radix'ten geliyor (odak tuzağı ve
+      // rol yönetimi orada), bu kural seti kendi yazdığımız işaretlemeyi
+      // koruyor — ikon-only butonların erişilebilir adı, etiketsiz form
+      // alanı, klavyeyle ulaşılamayan tıklama hedefi gibi.
+      jsxA11y.flatConfigs.recommended,
     ],
     languageOptions: {
       ecmaVersion: 2020,

@@ -1,0 +1,25 @@
+# HTTP güvenlik başlıkları (Netlify ve uyumlu servisler).
+#
+# ⚠️ Bu dosya `vercel.json` içindeki "headers" bloğunun ikizidir. Politikayı
+# değiştirirken İKİSİNİ birden değiştirin — biri güncellenip diğeri unutulursa
+# uygulama hangi servise dağıtıldığına göre farklı korunur ve fark yalnızca
+# üretimde, `curl -I` ile fark edilir.
+#
+# CSP notları:
+# - `script-src 'self'`: üretim çıktısında satır içi script YOK. Vite modülü de
+#   PWA'nın `registerSW.js`'i de ayrı dosya olarak yükleniyor (doğrulandı).
+# - `style-src 'unsafe-inline'`: Radix ve sonner konumlandırmayı çalışma
+#   zamanında `style` özniteliğiyle yapıyor; bu olmadan modaller ve bildirimler
+#   yanlış yerde çizilir. Tailwind'in kendisi derlenmiş CSS dosyası olarak gelir.
+# - `connect-src` içindeki `*.supabase.co` **barındırılan** Supabase projeleri
+#   içindir. Kendi sunucunuzda Supabase çalıştırıyorsanız kendi adresinizi
+#   ekleyin, yoksa tarayıcı bütün senkron isteklerini engeller.
+# - `frame-ancestors 'none'` clickjacking'i kapatır; `X-Frame-Options` onun
+#   eski tarayıcılardaki karşılığı olarak birlikte gönderilir.
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; manifest-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.ingest.sentry.io https://*.ingest.de.sentry.io; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains

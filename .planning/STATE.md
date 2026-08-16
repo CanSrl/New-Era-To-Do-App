@@ -20,17 +20,35 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 2 — Niş modül, müşteriler ve projeler (6 kriterin 4'ü karşılandı)
+**Current focus:** Phase 1 kapandı; sıradaki iş Phase 2'nin açık iki kriteri
 
 ## Current Position
 
-Phase: 2 of 5 (Niş modül — müşteriler ve projeler) — **kısmen tamamlandı**
-Plan: gsd planı yok; iş `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md`
+Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 **kısmen tamamlandı** (4/6)
+Plan: gsd planı yok; Phase 2 işi
+      `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md`
       görev listesine göre yürütüldü (10 görevin 5'i bitti)
-Status: Executing — Phase 1 atlanmış durumda (aşağıya bakınız)
-Last activity: 2026-08-15 — kök adrese pazarlama sayfası (`d7a7074`)
+Status: Executing
+Last activity: 2026-08-16 — Phase 1 (ürün sağlamlaştırma) tamamlandı
 
-Progress: Phase 2 → [███████░░░] 4/6 başarı kriteri
+Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [███████░░░] 4/6 kriter
+
+**Phase 1, teslim edilen:**
+
+| Gereksinim | Ne yapıldı |
+|---|---|
+| HARD-01 | `eslint-plugin-jsx-a11y` kuruldu (`recommended`); çıkan 3 `no-autofocus` ihlali düzeltildi. Diyaloglarda odak artık Radix'in `onOpenAutoFocus` kancasıyla veriliyor, `ResetPasswordPage`'de sayfa yükü odağı tamamen kaldırıldı |
+| HARD-02 | CSP + `frame-ancestors 'none'` + `nosniff` + `Referrer-Policy` + `Permissions-Policy` + HSTS; `vercel.json` ve `public/_headers` ikizi, `security-headers.test.ts` ayrışmayı engelliyor |
+| HARD-03 | Zaten karşılanmıştı (`888e6e5`) |
+| HARD-04 | `fetchAllRows` ile sayfalama (`order('id')` + `range`), `MAX_ROWS` tavanı ve `SyncTooLargeError`; dört çekme fonksiyonu da kullanıyor |
+| HARD-05 | `SyncOutcome.discarded` sayacı → `SyncProvider` bildirimi; son-yazan-kazanır kuralı değişmedi, yalnızca görünür oldu |
+| HARD-06 | Zaten karşılanmıştı (`isValidColor`) |
+
+**Yan olarak düzeltilen (Phase 1 kapsamında değildi):** depo `npm install`
+ile kurulamıyordu — `@tailwindcss/vite@4.2.1` ve `vite-plugin-pwa@1.2.0`
+vite 8'i peer olarak kabul etmiyordu ve CI bunu `--legacy-peer-deps` ile
+gizliyordu. İkisi de yükseltildi, bayrak CI'dan kaldırıldı. Starter kit
+alıcısı için bu bir teslim engeliydi (PKG-01).
 
 **Phase 2 başarı kriterleri, doğrulanmış durum:**
 
@@ -48,13 +66,17 @@ Progress: Phase 2 → [███████░░░] 4/6 başarı kriteri
 Aşağıdakiler bilerek ya da fiilen roadmap'ten saptı. Roadmap'i değiştirmeden
 önce okunmalı.
 
-1. **Phase sırası bozuldu.** ROADMAP, Phase 1'in (ürün sağlamlaştırma) Phase 2'den
-   önce bitmesini şart koşuyordu; gerekçe "senkron motoru bir sonraki fazda
-   ikiye katlanacak, yeni arayüz o kurallar altında yazılmalı" idi. Gerçekte
-   Phase 2'nin tamamı önce gönderildi. Motor gerçekten ikiye katlandı
-   (`sync-merge-niche.ts`), arayüz `eslint-plugin-jsx-a11y` olmadan yazıldı.
-   Sonuç: a11y linti kurulduğunda toplu düzeltme gerekecek — roadmap'in
-   önlemeye çalıştığı maliyet.
+1. **Phase sırası bozuldu — ama korkulan bedel çıkmadı.** ROADMAP, Phase 1'in
+   Phase 2'den önce bitmesini şart koşuyordu; gerekçe "senkron motoru bir
+   sonraki fazda ikiye katlanacak, yeni arayüz o kurallar altında yazılmalı"
+   idi. Gerçekte Phase 2'nin tamamı önce gönderildi.
+   **Sonuç (16 Ağu, ölçüldü):** `eslint-plugin-jsx-a11y` sonradan kurulduğunda
+   bütün kod tabanında yalnızca **3 ihlal** çıktı ve üçü de aynı kuraldı
+   (`no-autofocus`). Beklenen toplu düzeltme gerçekleşmedi — çünkü
+   erişilebilirlik zaten konvansiyon olarak uygulanıyordu (Radix modaller,
+   ikon-only butonlarda `aria-label`, `confirm()` yasağı). Yani roadmap'in
+   sıralama gerekçesi bu projede pratikte karşılığını bulmadı; kayıt, gelecekte
+   benzer bir sıralama tartışmasında veri olsun diye bırakılıyor.
 2. **Phase 1 kriter 4 farkında olmadan karşılandı.** "runSync sırasını bozan
    değişiklik birim testinde düşer" — `888e6e5` (14 Ağu 16:10) `runSync`
    orkestrasyon testlerini ekledi; roadmap 13:34'te yazılmıştı, yani bu commit
@@ -129,8 +151,14 @@ None yet.
   henüz seçilmedi; `subscriptions` şeması seçime bağlı
 - **Phase 3 tasarım açığı:** zaman kayıtlarının biriken senkron semantiği
   tasarlanmadı — mevcut son-yazan-kazanır motoru orada yanlış sonuç verir (CON-33)
-- **Phase 1 hâlâ atlanmış:** `eslint-plugin-jsx-a11y` ve HTTP güvenlik
-  başlıkları yok; Phase 2 arayüzü bu kapılar olmadan yazıldı
+- **HARD-02'nin canlı doğrulaması açık:** güvenlik başlıkları `vercel.json` ve
+  `public/_headers` içinde tanımlı ve `security-headers.test.ts` ikisini eşit
+  tutuyor, ama "yayındaki uygulama `curl -I` ile şu başlıkları döndürür"
+  ifadesi ancak gerçek bir dağıtımla doğrulanabilir — o da Phase 5'te.
+  Yapılandırma hazır, kanıt eksik
+- **`npm audit` 8 açık bildiriyor** (1 düşük, 7 yüksek). Phase 1 gereksinimleri
+  arasında değildi, incelenmedi. Ürün "sağlamlaştırma" başlığı altında
+  bakılması mantıklı olur
 - `.planning/config.json` yok — varsayılanlar kullanıldı (granularity: standard,
   sequential phase id)
 - **Gözlem (bloklayıcı değil):** `src/lib/sync-merge-niche.ts` proje anahtarı
@@ -150,9 +178,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-16 (`.planning/` gerçek koda göre senkronlandı)
-Stopped at: Phase 2'nin 6 kriterinden 4'ü kod tarafından karşılandı; açık
-  kalanlar teslim görünümü (kriter 3) ve bayrağın paketten çıkması (kriter 6)
+Last session: 2026-08-16 (`.planning/` senkronlandı, ardından Phase 1 bitirildi)
+Stopped at: Phase 1'in altı gereksinimi de karşılandı. Sırada Phase 2'nin açık
+  iki kriteri var: `/app/delivery` teslim görünümü (kriter 3) ve
+  `VITE_NICHE_MODULE=false` derlemesinin modülü gerçekten çıkarması (kriter 6)
 Resume file: None
 
 **Sonraki adım için not:** Bu senkron `git log` ve kod okunarak elle yapıldı,

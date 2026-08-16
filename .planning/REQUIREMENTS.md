@@ -29,12 +29,12 @@ Kalan sürüm kapsamı. Her gereksinim tam olarak bir faza eşlenir.
 
 ### Hardening (Ürün sağlamlaştırma)
 
-- [ ] **HARD-01**: `eslint-plugin-jsx-a11y` kurulu ve CI'da çalışıyor; erişilebilirlik ihlali derlemeyi düşürür
-- [ ] **HARD-02**: Üretim dağıtımı CSP, `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` ve `Referrer-Policy` başlıklarıyla servis edilir
-- [ ] **HARD-03**: `runSync` yazma/silme sırası ve `inFlight` kilidi doğrudan birim testiyle korunur (`src/lib/sync.test.ts`)
-- [ ] **HARD-04**: Bulut anlık görüntüsü PostgREST'in 1000 satır sınırında sessizce kırpılmaz — açık sayfalama ya da kırpılmada hata
-- [ ] **HARD-05**: Senkronda elenen yerel değişiklik kullanıcıya görünür bir bildirimle söylenir (`plan.discardedIds`)
-- [ ] **HARD-06**: Yerelde oluşturulan/geri yüklenen kategori rengi `#rrggbb` doğrulamasından geçer — istemci değişmezi veritabanı kısıtıyla aynı
+- [x] **HARD-01**: `eslint-plugin-jsx-a11y` kurulu ve CI'da çalışıyor; erişilebilirlik ihlali derlemeyi düşürür
+- [x] **HARD-02**: Üretim dağıtımı CSP, `frame-ancestors 'none'`, `X-Content-Type-Options: nosniff` ve `Referrer-Policy` başlıklarıyla servis edilir
+- [x] **HARD-03**: `runSync` yazma/silme sırası ve `inFlight` kilidi doğrudan birim testiyle korunur (`src/lib/sync.test.ts`)
+- [x] **HARD-04**: Bulut anlık görüntüsü PostgREST'in 1000 satır sınırında sessizce kırpılmaz — açık sayfalama ya da kırpılmada hata
+- [x] **HARD-05**: Senkronda elenen yerel değişiklik kullanıcıya görünür bir bildirimle söylenir (`plan.discardedIds`)
+- [x] **HARD-06**: Yerelde oluşturulan/geri yüklenen kategori rengi `#rrggbb` doğrulamasından geçer — istemci değişmezi veritabanı kısıtıyla aynı
 
 ### Niche Module — Slice 1 (Müşteriler ve projeler)
 
@@ -117,12 +117,12 @@ Kabul edilmiş ama ertelenmiş. Mevcut roadmap'te yer almaz.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HARD-01 | Phase 1 | Pending |
-| HARD-02 | Phase 1 | Pending |
-| HARD-03 | Phase 1 | Pending |
-| HARD-04 | Phase 1 | Pending |
-| HARD-05 | Phase 1 | Pending |
-| HARD-06 | Phase 1 | Pending |
+| HARD-01 | Phase 1 | ✅ Done — `eslint.config.js` → jsxA11y.flatConfigs.recommended; CI npm run lint ile kapı |
+| HARD-02 | Phase 1 | ✅ Done — `vercel.json` + `public/_headers`; security-headers.test.ts ikisini eşitler |
+| HARD-03 | Phase 1 | ✅ Done — sync.test.ts → sıra, inFlight kilidi, hata sonrası kilit bırakma |
+| HARD-04 | Phase 1 | ✅ Done — fetchAllRows sayfalama + SyncTooLargeError; task-repository.test.ts |
+| HARD-05 | Phase 1 | ✅ Done — SyncOutcome.discarded → SyncProvider bildirimi; sync.test.ts sayımı sınar |
+| HARD-06 | Phase 1 | ✅ Done — isValidColor DB kısıtının aynısı; categories.test.ts |
 | NICHE-01 | Phase 2 | Pending |
 | NICHE-02 | Phase 2 | Pending |
 | NICHE-03 | Phase 2 | Pending |

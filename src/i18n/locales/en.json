@@ -328,9 +328,12 @@
     "minutesAgo": "{{count}}m ago",
     "hoursAgo": "{{count}}h ago",
     "daysAgo": "{{count}}d ago",
+    "discarded_one": "{{count}} change from this device was replaced by a newer version from another device.",
+    "discarded_other": "{{count}} changes from this device were replaced by newer versions from another device.",
     "error": {
       "network": "Could not reach the server.",
       "expiredSession": "Your session has expired. Please sign in again.",
+      "tooLarge": "Your cloud data is too large to sync in one pass. Your data is safe on this device — please contact support.",
       "unknown": "Sync failed."
     }
   },

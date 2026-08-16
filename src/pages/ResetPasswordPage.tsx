@@ -105,11 +105,18 @@ export function ResetPasswordPage() {
                             <label htmlFor={`${fieldId}-password`} className="text-sm font-medium">
                                 {t('auth.resetPage.newPassword')}
                             </label>
+                            {/*
+                              * Burada bilinçli olarak `autoFocus` YOK. Diyaloglardan
+                              * farklı olarak burası e-postadaki bağlantıyla doğrudan
+                              * açılan bir sayfa: odak yüklenirken alana kaysaydı ekran
+                              * okuyucu kullanıcısı sayfanın ne olduğunu ("parolanı
+                              * sıfırla", hangi hesap için) duymadan form alanının
+                              * içinde bulurdu kendini. Bedeli tek bir Tab tuşu.
+                              */}
                             <input
                                 id={`${fieldId}-password`}
                                 type="password"
                                 autoComplete="new-password"
-                                autoFocus
                                 required
                                 minLength={6}
                                 disabled={isSubmitting}

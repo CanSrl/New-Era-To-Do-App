@@ -44,7 +44,7 @@ Ayrıntı: `CLAUDE.md` → Fazlar, `.planning/PROJECT.md` → Requirements → V
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması *(kriter 4 karşılandı — `888e6e5`; kalanlar açık)*
+- [x] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması *(6/6 gereksinim; kriter 2'nin canlı doğrulaması dağıtıma bağlı)*
 - [~] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(4/6 kriter ✅ — teslim görünümü ve bayrağın paketten çıkması açık)*
 - [ ] **Phase 3: Niş modül — zaman kaydı ve dışa aktarım** - Basit zaman kaydı (biriken senkron semantiği) ve müşteri/proje kırılımlı CSV dışa aktarım
 - [ ] **Phase 4: Ödeme ve Pro kapılama** - Stripe'sız abonelik akışı, imza doğrulamalı webhook, veritabanı seviyesinde Pro kapısı
@@ -57,11 +57,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Nothing (ilk faz — temel v0 zaten gönderilmiş durumda)
 **Requirements**: HARD-01, HARD-02, HARD-03, HARD-04, HARD-05, HARD-06
 **Success Criteria** (what must be TRUE):
-  1. Erişilebilirlik ihlali içeren bir değişiklik CI'da düşer — kural artık konvansiyon değil kapı
-  2. Yayındaki uygulama `curl -I` ile bakıldığında CSP, `frame-ancestors 'none'`, `nosniff` ve `Referrer-Policy` başlıklarını döndürür; sayfa bir iframe'e gömülemez
-  3. Kullanıcı, çakışma yüzünden yerel değişikliği elendiğinde bunu ekranda görür — değişiklik artık sessizce kaybolmaz
+  1. ✅ Erişilebilirlik ihlali içeren bir değişiklik CI'da düşer — kural artık konvansiyon değil kapı — `eslint.config.js`, CI'daki `npm run lint`
+  2. ⚠️ Yayındaki uygulama `curl -I` ile bakıldığında CSP, `frame-ancestors 'none'`, `nosniff` ve `Referrer-Policy` başlıklarını döndürür; sayfa bir iframe'e gömülemez — **yapılandırma hazır** (`vercel.json` + `public/_headers`, `security-headers.test.ts` ikisini eşit tutuyor) ama canlı doğrulama dağıtım gerektiriyor, o da Phase 5'te
+  3. ✅ Kullanıcı, çakışma yüzünden yerel değişikliği elendiğinde bunu ekranda görür — değişiklik artık sessizce kaybolmaz — `SyncOutcome.discarded` → `SyncProvider` bildirimi
   4. ✅ `runSync` yazma/silme sırasını bozan bir değişiklik E2E'ye kalmadan birim testinde düşer — `888e6e5`, `src/lib/sync.test.ts`
-  5. Bin satırın üzerinde veri olan bir hesapta senkron ya doğru çalışır ya da açıkça hata verir; sessizce "uzakta silinmiş" saymaz
+  5. ✅ Bin satırın üzerinde veri olan bir hesapta senkron ya doğru çalışır ya da açıkça hata verir; sessizce "uzakta silinmiş" saymaz — `fetchAllRows` sayfalama + `SyncTooLargeError`
 **Plans**: TBD
 
 **Notlar:**
@@ -195,7 +195,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Kriter | Status | Completed |
 |-------|--------|--------|-----------|
-| 1. Ürün sağlamlaştırma | 1/5 | **Atlandı** — Phase 2 öne alındı | - |
+| 1. Ürün sağlamlaştırma | 5/5 | **Tamamlandı** (kriter 2 canlı doğrulama bekliyor) | 2026-08-16 |
 | 2. Niş modül — müşteriler ve projeler | 4/6 | **In progress** | - |
 | 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | Not started | - |
 | 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |

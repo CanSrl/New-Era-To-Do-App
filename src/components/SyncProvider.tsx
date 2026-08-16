@@ -1,8 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
 import { useTaskStore } from '../store';
 import { runSync } from '../lib/sync';
-import type { TranslationKey } from '../i18n';
+// i18n doğrudan import ediliyor, `useTranslation` ile değil: `t` bir hook'tan
+// gelseydi dil değişiminde kimliği değişir, `sync` useCallback'i yenilenir ve
+// ona bağlı üç efekt yeniden çalışarak dil değiştirmeyi senkron tetikleyicisine
+// çevirirdi. Bildirim zaten anlık; o andaki dil doğru dildir.
+import i18n, { type TranslationKey } from '../i18n';
 
 export type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'disabled';
 
@@ -75,6 +80,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         if (result.status === 'ok') {
             setStatus('idle');
             setErrorMessageKey(null);
+
+            // Çakışmayı kaybeden yerel değişiklikler artık sessizce gitmiyor.
+            // Son yazan kazanır kuralı korunuyor — değişen tek şey, kullanıcının
+            // ne olduğunu öğrenmesi.
+            if (result.discarded > 0) {
+                toast.warning(i18n.t('sync.discarded', { count: result.discarded }));
+            }
         } else if (result.status === 'error') {
             setStatus('error');
             setErrorMessageKey(result.messageKey);

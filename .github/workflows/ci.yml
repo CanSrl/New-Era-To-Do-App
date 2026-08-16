@@ -26,7 +26,7 @@ jobs:
           cache: npm
 
       - name: Bağımlılıkları kur
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - name: Lint
         run: npm run lint
@@ -54,7 +54,7 @@ jobs:
           cache: npm
 
       - name: Bağımlılıkları kur
-        run: npm ci --legacy-peer-deps
+        run: npm ci
 
       - uses: supabase/setup-cli@v1
         with:
