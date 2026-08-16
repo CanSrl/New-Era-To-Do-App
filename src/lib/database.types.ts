@@ -68,6 +68,8 @@ export type Database = {
         Row: {
           archived: boolean
           created_at: string
+          currency: string
+          hourly_rate: number
           id: string
           name: string
           position: number
@@ -77,6 +79,8 @@ export type Database = {
         Insert: {
           archived?: boolean
           created_at?: string
+          currency?: string
+          hourly_rate?: number
           id?: string
           name: string
           position?: number
@@ -86,6 +90,8 @@ export type Database = {
         Update: {
           archived?: boolean
           created_at?: string
+          currency?: string
+          hourly_rate?: number
           id?: string
           name?: string
           position?: number
@@ -123,6 +129,7 @@ export type Database = {
           archived: boolean
           client_id: string
           created_at: string
+          hourly_rate: number | null
           id: string
           name: string
           position: number
@@ -133,6 +140,7 @@ export type Database = {
           archived?: boolean
           client_id: string
           created_at?: string
+          hourly_rate?: number | null
           id?: string
           name: string
           position?: number
@@ -143,6 +151,7 @@ export type Database = {
           archived?: boolean
           client_id?: string
           created_at?: string
+          hourly_rate?: number | null
           id?: string
           name?: string
           position?: number
@@ -229,6 +238,67 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id", "client_id", "user_id"]
+          },
+        ]
+      }
+      time_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          note: string | null
+          project_id: string | null
+          started_at: string
+          task_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          note?: string | null
+          project_id?: string | null
+          started_at: string
+          task_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          note?: string | null
+          project_id?: string | null
+          started_at?: string
+          task_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_logs_client_id_user_id_fkey"
+            columns: ["client_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id", "user_id"]
+          },
+          {
+            foreignKeyName: "time_logs_project_id_client_id_user_id_fkey"
+            columns: ["project_id", "client_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id", "client_id", "user_id"]
+          },
+          {
+            foreignKeyName: "time_logs_task_id_user_id_fkey"
+            columns: ["task_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }

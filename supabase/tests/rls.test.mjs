@@ -368,6 +368,171 @@ const nicheTask = await (async () => {
         error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
 }
 
+// --- Niş modül: zaman kaydı (time_logs) ------------------------------------
+//
+// nicheClient/nicheProject bu noktada zaten silinmiş (yukarıdaki "Müşteri
+// silinince..." bloğu), bu yüzden time_logs testleri kendi müşteri/proje/görev
+// kayıtlarını kurar.
+const tlClient = await (async () => {
+    const { data, error } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Zaman Müşterisi', position: 10 })
+        .select().single();
+    check('Zaman kaydı için müşteri oluşturulabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+const tlProject = await (async () => {
+    const { data, error } = await a.client.from('projects')
+        .insert({ user_id: a.userId, client_id: tlClient.id, name: 'Zaman Projesi', position: 10 })
+        .select().single();
+    check('Zaman kaydı için proje oluşturulabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+const tlTask = await (async () => {
+    const { data, error } = await a.client.from('tasks')
+        .insert({
+            user_id: a.userId, title: 'Zaman görevi', position: 30,
+            client_id: tlClient.id, project_id: tlProject.id,
+        }).select().single();
+    check('Zaman kaydı için görev oluşturulabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+const tlLog = await (async () => {
+    const { data, error } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId,
+            task_id: tlTask.id,
+            client_id: tlClient.id,
+            project_id: tlProject.id,
+            started_at: '2026-08-16T09:00:00Z',
+            duration_minutes: 90,
+        }).select().single();
+    check('Zaman kaydı oluşturulabiliyor', !error && !!data, error?.message ?? '');
+    return data;
+})();
+
+{
+    const { data, error } = await b.client.from('time_logs').select('id').eq('id', tlLog.id);
+    check('Başka kullanıcı zaman kaydını GÖREMİYOR', !error && data?.length === 0,
+        error?.message ?? `adet=${data?.length}`);
+}
+{
+    const { data, error } = await b.client.from('time_logs')
+        .update({ duration_minutes: 5 }).eq('id', tlLog.id).select();
+    check('Başka kullanıcı zaman kaydını güncelleyemiyor', !error && data?.length === 0,
+        error?.message ?? `etkilenen=${data?.length}`);
+    const { data: after } = await a.client.from('time_logs')
+        .select('duration_minutes').eq('id', tlLog.id).single();
+    check('Zaman kaydı süresi değişmeden kaldı', after?.duration_minutes === 90,
+        `duration_minutes=${after?.duration_minutes}`);
+}
+{
+    const { data, error } = await b.client.from('time_logs').delete().eq('id', tlLog.id).select();
+    check('Başka kullanıcı zaman kaydını silemiyor', !error && data?.length === 0,
+        error?.message ?? `etkilenen=${data?.length}`);
+    const { data: still } = await a.client.from('time_logs').select('id').eq('id', tlLog.id).maybeSingle();
+    check('Zaman kaydı hâlâ duruyor', !!still, `kayıt=${still?.id}`);
+}
+{
+    // (client_id, user_id) bileşik FK'nın asıl işi: tek sütunlu referans
+    // olsaydı B, A'nın müşteri id'sini bilerek kendi adına kayıt açabilirdi.
+    const { error } = await b.client.from('time_logs')
+        .insert({
+            user_id: b.userId, client_id: tlClient.id,
+            started_at: '2026-08-16T10:00:00Z', duration_minutes: 30,
+        });
+    check('Başkasının müşterisine zaman kaydı yazılamıyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    // Görevin müşterisiyle projenin müşterisi ayrışamaz — tasks'taki üçlü
+    // FK'nın aynısı burada da geçerli.
+    const { data: otherClient } = await a.client.from('clients')
+        .insert({ user_id: a.userId, name: 'Diğer Zaman Müşterisi', position: 11 }).select().single();
+    const { error } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId, client_id: otherClient.id, project_id: tlProject.id,
+            started_at: '2026-08-16T11:00:00Z', duration_minutes: 30,
+        });
+    check('Tutarsız (project_id, client_id) çifti reddediliyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+    await a.client.from('clients').delete().eq('id', otherClient.id);
+}
+{
+    // MATCH SIMPLE yüzünden client_id null iken üçlü FK hiç değerlendirilmez;
+    // time_logs_project_requires_client check'i bunu kapatıyor.
+    const { error } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId, project_id: tlProject.id,
+            started_at: '2026-08-16T11:00:00Z', duration_minutes: 30,
+        });
+    check('project_id dolu / client_id boş satır reddediliyor', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    const { error: zero } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId, client_id: tlClient.id,
+            started_at: '2026-08-16T12:00:00Z', duration_minutes: 0,
+        });
+    check('duration_minutes 0 reddediliyor', !!zero,
+        zero ? `reddedildi: ${zero.code}` : 'İZİN VERİLDİ!');
+
+    const { error: negative } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId, client_id: tlClient.id,
+            started_at: '2026-08-16T12:00:00Z', duration_minutes: -5,
+        });
+    check('duration_minutes negatif reddediliyor', !!negative,
+        negative ? `reddedildi: ${negative.code}` : 'İZİN VERİLDİ!');
+
+    const { error: tooLong } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId, client_id: tlClient.id,
+            started_at: '2026-08-16T12:00:00Z', duration_minutes: 1441,
+        });
+    check('duration_minutes 1441 reddediliyor', !!tooLong,
+        tooLong ? `reddedildi: ${tooLong.code}` : 'İZİN VERİLDİ!');
+
+    const { data: maxLog, error: max } = await a.client.from('time_logs')
+        .insert({
+            user_id: a.userId, client_id: tlClient.id,
+            started_at: '2026-08-16T12:00:00Z', duration_minutes: 1440,
+        }).select().single();
+    check('duration_minutes 1440 kabul ediliyor', !max && !!maxLog, max?.message ?? '');
+    if (maxLog) await a.client.from('time_logs').delete().eq('id', maxLog.id);
+}
+{
+    // Görev silinince kayıt DURUR, yalnızca bağı kopar.
+    await a.client.from('tasks').delete().eq('id', tlTask.id);
+    const { data: afterTask } = await a.client.from('time_logs')
+        .select('*').eq('id', tlLog.id).maybeSingle();
+    check('Görev silinince zaman kaydı silinmiyor', !!afterTask, `kayıt=${afterTask?.id}`);
+    check('Görev silinince task_id boşalıyor', afterTask?.task_id === null,
+        `task_id=${afterTask?.task_id}`);
+}
+{
+    // Proje silmek kaydı silmemeli; yalnızca proje bağı kopar, müşteri kalır.
+    await a.client.from('projects').delete().eq('id', tlProject.id);
+    const { data: afterProject } = await a.client.from('time_logs')
+        .select('*').eq('id', tlLog.id).maybeSingle();
+    check('Proje silinince zaman kaydı silinmiyor', !!afterProject, `kayıt=${afterProject?.id}`);
+    check('Proje silinince yalnızca project_id boşalıyor',
+        afterProject?.project_id === null && afterProject?.client_id === tlClient.id,
+        `project_id=${afterProject?.project_id} client_id=${afterProject?.client_id}`);
+}
+{
+    // client_id not null olduğu için boşaltılamaz: müşteri silinince kayıt gider.
+    const { error } = await a.client.from('clients').delete().eq('id', tlClient.id);
+    check('Zaman kaydının müşterisi silinebiliyor', !error, error?.message ?? '');
+    const { data: afterClient } = await a.client.from('time_logs')
+        .select('id').eq('id', tlLog.id).maybeSingle();
+    check('Müşteri silinince zaman kaydı da siliniyor', afterClient === null,
+        `kayıt=${afterClient?.id}`);
+}
+
 const failed = results.filter((r) => !r.passed);
 console.log(`\n${results.length - failed.length}/${results.length} kontrol geçti`);
 process.exit(failed.length ? 1 : 0);
