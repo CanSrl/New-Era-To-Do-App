@@ -86,7 +86,8 @@ describe('taskToRow — niş modül kapalıyken', () => {
         // not exist" ile düşürür ve bayrağın verdiği sözü boşa çıkarırdı.
         vi.resetModules();
         vi.doMock('../config/features', () => ({
-            features: { nicheModule: false, githubAuth: false },
+            NICHE_MODULE: false,
+            features: { githubAuth: false },
             isEnabled: () => false,
             isEnabledByDefault: () => true,
         }));

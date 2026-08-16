@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '../lib/types';
 import { useTaskStore } from '../store';
 import { GripVertical, Edit2, Trash2, Calendar, Tag, Check, Briefcase } from 'lucide-react';
-import { features } from '../config/features';
+import { NICHE_MODULE } from '../config/features';
 import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
 import { dateLocaleFor } from '../i18n';
@@ -44,12 +44,12 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
     // Bayrak kapalıyken bağlar hiç okunmaz: niş modülü kapatmış kurulumda
     // eski yerel veride kalmış bir bağ ekranda görünmemeli.
     const client = useTaskStore(state =>
-        !features.nicheModule || task.clientId === null
+        !NICHE_MODULE || task.clientId === null
             ? undefined
             : state.clients.find(c => c.id === task.clientId)
     );
     const project = useTaskStore(state =>
-        !features.nicheModule || task.projectId === null
+        !NICHE_MODULE || task.projectId === null
             ? undefined
             : state.projects.find(p => p.id === task.projectId)
     );

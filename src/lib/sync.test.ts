@@ -31,7 +31,17 @@ const calls = vi.hoisted(() => [] as string[]);
 const flags = vi.hoisted(() => ({ nicheModule: true }));
 
 vi.mock('../config/features', () => ({
-    features: flags,
+    /**
+     * `NICHE_MODULE` gerçekte derleme zamanı sabitidir (Vite `define` ile
+     * enjekte edilir) — modülün paketten elenebilmesi buna bağlı. Testin onu
+     * tur ortasında çevirebilmesi için burada **getter** olarak veriliyor:
+     * `import { NICHE_MODULE }` her okumada bu fonksiyonu çalıştırır, böylece
+     * `flags.nicheModule = false` ataması anında etkili olur.
+     */
+    get NICHE_MODULE() {
+        return flags.nicheModule;
+    },
+    features: { githubAuth: false },
     isEnabled: () => false,
     isEnabledByDefault: () => true,
 }));

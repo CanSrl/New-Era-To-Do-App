@@ -1,6 +1,15 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/client" />
 
+/**
+ * Niş modül bayrağının derleme zamanında enjekte edilen hâli.
+ *
+ * `vite.config.ts` içindeki `define` bunu ham `true`/`false` ile değiştirir;
+ * çalışma zamanında böyle bir değişken YOKTUR. Sabit olması şart: modülün
+ * `VITE_NICHE_MODULE=false` derlemesinde paketten tamamen elenmesi buna bağlı.
+ */
+declare const __NICHE_MODULE__: boolean;
+
 interface ImportMetaEnv {
   /** Supabase proje URL'i. Tanımlı değilse uygulama yalnızca yerel modda çalışır. */
   readonly VITE_SUPABASE_URL?: string;

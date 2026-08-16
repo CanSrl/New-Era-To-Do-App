@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 import i18n, { dateLocaleFor, SUPPORTED_LANGUAGES, toSupported } from './index';
 import tr from './locales/tr.json';
 import en from './locales/en.json';
+import trNiche from './locales/tr.niche.json';
+import enNiche from './locales/en.niche.json';
 
 type Json = { [key: string]: string | Json };
 
@@ -21,8 +23,17 @@ function placeholders(value: string): string[] {
     return [...value.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]).sort();
 }
 
-const flatTr = flatten(tr as Json);
-const flatEn = flatten(en as Json);
+/**
+ * Taban ve niş dosyalar BİRLİKTE denetlenir.
+ *
+ * Niş anahtarlar (`client.*`, `project.*`, `nav.clients*`) ayrı dosyalara
+ * alındı ki `VITE_NICHE_MODULE=false` derlemesinde metinleri de pakete
+ * girmesin. Ayrılık burada kapsam kaybına dönüşmemeli: aşağıdaki kontroller
+ * (anahtar eşliği, yer tutucu, çoğul, çevrilmemiş kalıntı) niş dosyalar için
+ * de aynen geçerli — onlar da kullanıcıya görünen metin.
+ */
+const flatTr = { ...flatten(tr as Json), ...flatten(trNiche as Json) };
+const flatEn = { ...flatten(en as Json), ...flatten(enNiche as Json) };
 
 describe('çeviri dosyaları', () => {
     it('iki dilde de aynı anahtarları taşır', () => {

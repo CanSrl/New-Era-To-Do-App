@@ -40,6 +40,14 @@ jobs:
       - name: Üretim derlemesi
         run: npm run build
 
+      # Modülün bayrak kapalıyken paketten izsiz çıktığını ölçer. Bu, starter
+      # kit satış argümanının kanıtı ve daha önce sessizce bozuktu: bayrak bir
+      # nesne özelliği olduğu için dallar katlanmıyor, kapalı derleme açık
+      # olanla aynı boyutta çıkıyordu. Script iki yönü de sınar (kapalıyken
+      # yok, açıkken var), o yüzden iki derleme çalıştırır.
+      - name: Niş modül eleme doğrulaması
+        run: npm run verify:niche
+
   entegrasyon:
     name: Şema ve uçtan uca testler
     runs-on: ubuntu-latest

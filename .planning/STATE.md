@@ -20,18 +20,18 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 1 kapandı; sıradaki iş Phase 2'nin açık iki kriteri
+**Current focus:** Phase 2'nin tek açık kriteri — `/app/delivery` teslim görünümü
 
 ## Current Position
 
-Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 **kısmen tamamlandı** (4/6)
+Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 **kısmen tamamlandı** (5/6)
 Plan: gsd planı yok; Phase 2 işi
       `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md`
       görev listesine göre yürütüldü (10 görevin 5'i bitti)
 Status: Executing
 Last activity: 2026-08-16 — Phase 1 (ürün sağlamlaştırma) tamamlandı
 
-Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [███████░░░] 4/6 kriter
+Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [████████░░] 5/6 kriter
 
 **Phase 1, teslim edilen:**
 
@@ -56,10 +56,10 @@ alıcısı için bu bir teslim engeliydi (PKG-01).
 |---|--------|-------|-------|
 | 1 | Müşteri/proje CRUD + etkiyi sayıyla söyleyen silme diyaloğu | ✅ | `ClientCard.tsx:201-205`, `tr.json` → `client.deleteConfirmProjects/Tasks` (çoğul + count) |
 | 2 | Görev müşteri/projeye bağlanır, müşteri değişince proje sıfırlanır | ✅ | `TaskForm.tsx`, commit `5ef4994` |
-| 3 | `/app/delivery` teslim görünümü | ❌ | Rota yok — plan görev 6, henüz yapılmadı |
+| 3 | `/app/delivery` teslim görünümü | ❌ | Rota yok — plan dokümanında **Görev 9**, henüz yapılmadı |
 | 4 | İki cihaz aynı müşteriyi oluşturursa tek kayıt kalır | ✅ | `sync-merge-niche.ts` → `idRemap`, `sync-merge-niche.test.ts` |
 | 5 | Başkasının müşterisine bağlı görev DB tarafından reddedilir | ✅ | Bileşik FK + RLS; 50 şema testi |
-| 6 | `VITE_NICHE_MODULE=false` sonrası `dist/` içinde iz kalmaz | ❌ | **Karşılanmıyor** — bayrak çalışma zamanı kapısı; CLAUDE.md: "aynı boyutta çıkıyor" |
+| 6 | `VITE_NICHE_MODULE=false` sonrası `dist/` içinde iz kalmaz | ✅ | 995.40 → 973.78 kB; `npm run verify:niche`, CI adımı |
 
 ## Deviations from Roadmap
 
@@ -81,13 +81,20 @@ Aşağıdakiler bilerek ya da fiilen roadmap'ten saptı. Roadmap'i değiştirmed
    değişiklik birim testinde düşer" — `888e6e5` (14 Ağu 16:10) `runSync`
    orkestrasyon testlerini ekledi; roadmap 13:34'te yazılmıştı, yani bu commit
    roadmap'ten 2,5 saat sonra geldi ve hiç işaretlenmedi.
-3. **DEC-NICHE-01 fiilen karşılanmıyor.** Kilitli karar "bayrak koşulu rota
-   kaydı seviyesinde olur" diyordu ve bu uygulandı — ama beklenen sonuç
-   (üretim paketinden izsiz çıkma) gerçekleşmiyor: `features.nicheModule` bir
-   fonksiyon çağrısı, `import.meta.env.DEV` gibi derleme zamanı sabiti değil,
-   dolayısıyla Vite kodu eleyemiyor. Ölçüldü: `VITE_NICHE_MODULE=false`
-   derlemesi aynı boyutta. Bu, hem Phase 2 kriter 6'yı hem "modül izsiz çıkar"
-   satış argümanını açıkta bırakıyor.
+3. **DEC-NICHE-01 çözüldü (16 Ağu).** Kilitli karar "bayrak koşulu rota kaydı
+   seviyesinde olur" diyordu ve uygulanmıştı, ama beklenen sonuç (paketten
+   izsiz çıkma) gerçekleşmiyordu. İki ayrı sebep bulundu, ikisi de sessizdi:
+   - `features.nicheModule` bir **nesne özelliğiydi**; `as const` olsa bile
+     özellik erişimi derleme zamanında katlanmıyor. Bayrak `features`
+     nesnesinden çıkarılıp çıplak `NICHE_MODULE` sabitine dönüştürüldü
+     (`vite.config.ts` → `define` ile ham boolean enjekte ediliyor).
+   - Çeviri metinleri kod elense bile pakette kalıyordu. Niş anahtarlar
+     `*.niche.json` dosyalarına alındı; **koşul çağrı yerinde** olmak zorunda
+     çıktı — `withNiche(tr, trNiche)` biçiminde yazıldığında `trNiche`
+     argüman olarak referans edildiği için JSON yine paketleniyordu.
+
+   Sonuç: 995.40 kB → 973.78 kB, üç iz de sıfır. `npm run verify:niche`
+   iki yönlü ölçüyor (kapalıyken yok, **açıkken var**) ve CI'da koşuyor.
 4. **DEC-SYNC-01 (CON-35b) uygulanmadı.** Karar "tek jenerik `mergeNamed`
    çekirdeği, `mergeCategories` ince bir sarmalayıcıya döner" idi.
    Kod tabanında `mergeNamed` diye bir şey yok; `sync-merge-niche.ts`
@@ -136,11 +143,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- **Phase 2 kriter 6 açık:** `VITE_NICHE_MODULE=false` modülü paketten
-  çıkarmıyor (yukarıda sapma 3). Kapatılması için bayrağın derleme zamanı
-  sabitine dönmesi gerekir (`import.meta.env.VITE_NICHE_MODULE === 'false'`
-  gibi doğrudan bir karşılaştırma, fonksiyon çağrısı değil) — bu, `features.ts`
-  sözleşmesini değiştirir, yani karar niteliğinde
 - **Phase 2 kriter 3 açık:** `/app/delivery` teslim görünümü yapılmadı; ayrıca
   `AppLayout` içindeki `NAV_SPLIT` mobil gezinmesi bu üçüncü öğe geldiğinde
   simetrik olacak biçimde yazılmış — yani eksiklik arayüzde de duruyor
@@ -178,10 +180,10 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-08-16 (`.planning/` senkronlandı, ardından Phase 1 bitirildi)
-Stopped at: Phase 1'in altı gereksinimi de karşılandı. Sırada Phase 2'nin açık
-  iki kriteri var: `/app/delivery` teslim görünümü (kriter 3) ve
-  `VITE_NICHE_MODULE=false` derlemesinin modülü gerçekten çıkarması (kriter 6)
+Last session: 2026-08-16 (Phase 1 bitirildi, ardından Phase 2 kriter 6 kapatıldı)
+Stopped at: Phase 2'de yalnızca teslim görünümü (kriter 3) kaldı. Plan
+  dokümanındaki Görev 9 doğrudan uygulanabilir durumda: dosyalar, testler,
+  rota kaydı ve `AppLayout`'taki üçüncü gezinme öğesi orada yazılı
 Resume file: None
 
 **Sonraki adım için not:** Bu senkron `git log` ve kod okunarak elle yapıldı,

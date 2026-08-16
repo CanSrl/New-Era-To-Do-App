@@ -5,7 +5,7 @@ import { TasksPage } from './pages/TasksPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { SaasTemplate } from './components/ui/saas-template';
-import { features } from './config/features';
+import { NICHE_MODULE } from './config/features';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { NotFoundPage } from './pages/NotFoundPage';
@@ -48,12 +48,12 @@ const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
  *
  * ⚠️ `devOnlyRoutes`'un aksine bu bir **çalışma zamanı** kapısıdır: kod
  * pakette kalır. `import.meta.env.DEV` derleme zamanı sabiti olduğu için orada
- * dal tümüyle eleniyor; `features.nicheModule` ise bir fonksiyon çağrısının
+ * dal tümüyle eleniyor; `NICHE_MODULE` ise bir fonksiyon çağrısının
  * sonucu, dolayısıyla Vite `ClientsPage`'i ayıklayamaz (doğrulandı:
  * `VITE_NICHE_MODULE=false` derlemesi aynı boyutta çıkıyor). Güvence
  * davranışsaldır, boyutsal değil.
  */
-const nicheRoutes: RouteObject[] = features.nicheModule
+const nicheRoutes: RouteObject[] = NICHE_MODULE
     ? [{ path: 'clients', element: <ClientsPage /> }]
     : [];
 

@@ -1,7 +1,7 @@
 import type { TranslationKey } from '../i18n';
 import type { Task } from './types';
 import { useTaskStore } from '../store';
-import { features } from '../config/features';
+import { NICHE_MODULE } from '../config/features';
 import { mergeCategories, mergeTasks, remapTaskCategories } from './sync-merge';
 import {
     mergeClients,
@@ -91,7 +91,7 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
         // Bayrak kapalıyken bu tablolar sorgulanmaz: modülü çıkarmış bir
         // kurulumda mevcut değiller ve tek bir "relation does not exist"
         // hatası GÖREV senkronunu da beraberinde düşürürdü.
-        const niche = features.nicheModule;
+        const niche = NICHE_MODULE;
 
         const [remoteCategories, remoteClients, remoteProjects, remoteTasks] = await Promise.all([
             fetchRemoteCategories(),

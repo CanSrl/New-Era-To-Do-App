@@ -4,8 +4,11 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import { enUS, tr as trDate } from 'date-fns/locale';
 import type { Locale } from 'date-fns';
+import { NICHE_MODULE } from '../config/features';
 import tr from './locales/tr.json';
 import en from './locales/en.json';
+import trNiche from './locales/tr.niche.json';
+import enNiche from './locales/en.niche.json';
 
 export const SUPPORTED_LANGUAGES = ['tr', 'en'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
@@ -23,9 +26,35 @@ export type TranslationKey = ParseKeys<'translation'>;
 /** Dil tercihinin saklandığı anahtar; tema ve store ile aynı ön eki taşır. */
 export const LANGUAGE_STORAGE_KEY = 'yapilacaklar-language';
 
+/**
+ * Niş modülün çeviri anahtarları ayrı dosyalarda durur ve yalnızca bayrak
+ * açıkken kaynaklara katılır.
+ *
+ * Sebep paketleme: kod dalları elense bile çeviri metinleri JSON olarak
+ * pakete girmeye devam ediyordu, yani `VITE_NICHE_MODULE=false` derlemesinde
+ * "Bu müşterinin {{count}} projesi de silinir." gibi satırlar kalıyordu ve
+ * "modül izsiz çıkar" sözü tutulmuyordu. `NICHE_MODULE` derleme zamanı sabiti
+ * olduğu için bu koşul katlanır ve JSON içe aktarımları da elenir.
+ *
+ * Birleştirme iki seviyeli: `nav` her iki dosyada da var (tabanda görevler ve
+ * ayarlar, niş tarafta müşteriler), üzerine yazmak yerine birleştirilmeli.
+ *
+ * ⚠️ Koşul **çağrı yerinde** olmak zorunda. Kontrol `withNiche`'in içine
+ * konsaydı `trNiche` argüman olarak hâlâ referans edilirdi ve JSON paketten
+ * çıkmazdı — ölçülerek görüldü: kod eleniyordu ama "Bu müşterinin {{count}}
+ * projesi de silinir." metni kalıyordu. Aşağıdaki biçimde niş dosyalar
+ * yalnızca katlanan dalın içinde geçer.
+ */
+function withNiche<Base extends { nav: object }, Niche extends { nav: object }>(
+    base: Base,
+    niche: Niche
+) {
+    return { ...base, ...niche, nav: { ...base.nav, ...niche.nav } };
+}
+
 export const resources = {
-    tr: { translation: tr },
-    en: { translation: en },
+    tr: { translation: NICHE_MODULE ? withNiche(tr, trNiche) : tr },
+    en: { translation: NICHE_MODULE ? withNiche(en, enNiche) : en },
 } as const;
 
 /**

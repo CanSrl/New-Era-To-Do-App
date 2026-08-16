@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useTheme } from './ThemeProvider';
 import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PlusCircle, Settings, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { features } from '../config/features';
+import { NICHE_MODULE } from '../config/features';
 import type { TranslationKey } from '../i18n';
 import { useTaskStore } from '../store';
 import { useUiStore } from '../store/ui';
@@ -22,13 +22,13 @@ interface NavItem {
 }
 
 /**
- * Müşteriler öğesi `features.nicheModule` kapılıdır — rotanın kendisi de öyle
+ * Müşteriler öğesi `NICHE_MODULE` kapılıdır — rotanın kendisi de öyle
  * (bkz. `router.tsx`). İkisi ayrışırsa gezinme var olmayan bir adrese
  * götürürdü.
  */
 const NAV_ITEMS: NavItem[] = [
     { to: '/app', labelKey: 'nav.tasks', shortLabelKey: 'nav.tasksShort', icon: ListTodo, end: true },
-    ...(features.nicheModule
+    ...(NICHE_MODULE
         ? [{
             to: '/app/clients',
             labelKey: 'nav.clients' as TranslationKey,

@@ -5,7 +5,7 @@ import { PRIORITIES, type Task, type Priority } from '../lib/types';
 import { byCategoryPosition } from '../lib/categories';
 import { clientsForDisplay } from '../lib/clients';
 import { projectsForDisplay } from '../lib/projects';
-import { features } from '../config/features';
+import { NICHE_MODULE } from '../config/features';
 import { Briefcase, Calendar as CalendarIcon, FolderKanban, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -217,7 +217,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                           * sütunlarını göndermiyor, yani seçici gösterilseydi
                           * kullanıcı hiçbir yere yazılmayan bir bağ kurardı.
                           */}
-                        {features.nicheModule && (
+                        {NICHE_MODULE && (
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
                                     <label htmlFor="client" className="text-sm font-medium flex items-center gap-1.5">

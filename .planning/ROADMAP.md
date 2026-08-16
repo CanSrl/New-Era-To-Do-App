@@ -45,7 +45,7 @@ Ayrıntı: `CLAUDE.md` → Fazlar, `.planning/PROJECT.md` → Requirements → V
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması *(6/6 gereksinim; kriter 2'nin canlı doğrulaması dağıtıma bağlı)*
-- [~] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(4/6 kriter ✅ — teslim görünümü ve bayrağın paketten çıkması açık)*
+- [~] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(5/6 kriter ✅ — yalnızca teslim görünümü açık)*
 - [ ] **Phase 3: Niş modül — zaman kaydı ve dışa aktarım** - Basit zaman kaydı (biriken senkron semantiği) ve müşteri/proje kırılımlı CSV dışa aktarım
 - [ ] **Phase 4: Ödeme ve Pro kapılama** - Stripe'sız abonelik akışı, imza doğrulamalı webhook, veritabanı seviyesinde Pro kapısı
 - [ ] **Phase 5: Paketleme ve yayın** - Demo veri, İngilizce dokümantasyon ve README, dağıtım, semver + CHANGELOG
@@ -86,10 +86,10 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Success Criteria** (what must be TRUE):
   1. ✅ Kullanıcı müşteri ve proje oluşturup yönetebilir; silme diyaloğu etkiyi sayıyla söyler ("2 projesi silinecek, 5 görevin bağı kopacak, görevler silinmez") — `ClientCard.tsx`, `client.deleteConfirm*` (çoğullu, count'lu)
   2. ✅ Kullanıcı bir görevi müşteriye ve o müşterinin projesine bağlayabilir; müşteriyi değiştirdiğinde proje seçimi temizlenir — `TaskForm.tsx` (`5ef4994`)
-  3. ❌ Kullanıcı `/app/delivery` ekranında görevlerini müşteri → proje kırılımında, teslim tarihine göre sıralı görür; filtre ve arama çalışır — **rota yok**, plan görev 6
+  3. ❌ Kullanıcı `/app/delivery` ekranında görevlerini müşteri → proje kırılımında, teslim tarihine göre sıralı görür; filtre ve arama çalışır — **rota yok**; plan dokümanında Görev 9 olarak yazılı
   4. ✅ Aynı hesabın iki cihazı çevrimdışıyken aynı müşteriyi oluşturursa senkron sonrası tek kayıt kalır ve görev bağları doğru kayda işaret eder — `idRemap` + `remapTaskLinks`, birim testli
   5. ✅ Başka bir kullanıcının müşterisine ya da tutarsız bir projeye bağlı görev veritabanı tarafından reddedilir — arayüzü atlayan doğrudan çağrıyla bile — bileşik FK üçlüsü + RLS, 50 şema testi
-  6. ❌ `VITE_NICHE_MODULE=false npm run build` sonrası `dist/assets` içinde modülden hiçbir iz bulunmaz — **karşılanmıyor**; bayrak çalışma zamanı kapısı olduğu için derleme aynı boyutta çıkıyor
+  6. ✅ `VITE_NICHE_MODULE=false npm run build` sonrası `dist/assets` içinde modülden hiçbir iz bulunmaz — 995.40 kB → 973.78 kB; `npm run verify:niche` CI'da iki yönlü ölçüyor
 **Plans**: TBD (iş gsd döngüsü dışında, doğrudan commit'lerle yürütüldü — `58526f2` → `d7a7074`)
 **UI hint**: yes
 
@@ -196,7 +196,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Kriter | Status | Completed |
 |-------|--------|--------|-----------|
 | 1. Ürün sağlamlaştırma | 5/5 | **Tamamlandı** (kriter 2 canlı doğrulama bekliyor) | 2026-08-16 |
-| 2. Niş modül — müşteriler ve projeler | 4/6 | **In progress** | - |
+| 2. Niş modül — müşteriler ve projeler | 5/6 | **In progress** — teslim görünümü kaldı | - |
 | 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | Not started | - |
 | 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |
 | 5. Paketleme ve yayın | 0/5 | Not started | - |
