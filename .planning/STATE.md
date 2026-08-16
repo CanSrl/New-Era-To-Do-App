@@ -20,18 +20,36 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 2 kapandı; sıradaki faz zaman kaydı ve dışa aktarım (Phase 3)
+**Current focus:** Phase 3 — zaman kaydı ve dışa aktarım; tasarım onaylandı,
+uygulama planı yazılıyor
 
 ## Current Position
 
-Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 ✅ **tamamlandı** (16 Ağu)
+Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 ✅ **tamamlandı** (16 Ağu) ·
+       Phase 3 🔵 **tasarım onaylandı** (16 Ağu), uygulama başlamadı
 Plan: gsd planı yok; Phase 2 işi
       `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md`
-      görev listesine göre yürütüldü (tamamlandı)
+      görev listesine göre yürütüldü (tamamlandı).
+      Phase 3 tasarımı: `docs/superpowers/specs/2026-08-16-nis-modul-zaman-kaydi-design.md`
+      (`745b84d`) — uygulama planı aynı desende yazılacak
 Status: Executing
-Last activity: 2026-08-16 — Phase 2 teslim görünümüyle kapandı
+Last activity: 2026-08-16 — Phase 3 tasarım dokümanı onaylandı ve commit'lendi
 
-Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [██████████] 6/6 kriter
+Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [██████████] 6/6 kriter ·
+          Phase 3 → [░░░░░░░░░░] 0/6 kriter (tasarım hazır)
+
+**Phase 3, kilitlenen tasarım kararları** (spec'ten; değişirse spec önce
+güncellenir):
+
+| Konu | Karar |
+|---|---|
+| Amaç | Faturalanabilir saat — ücret ve tutar taşınır, CSV'nin varlık sebebi fatura |
+| Ücret | `clients.hourly_rate` zorunlu, `projects.hourly_rate` opsiyonel override; `null` = miras, `0` = ücretsiz (ikisi farklı, `??` kullanılır `||` değil) |
+| Sayaç | Cihaza özel, **tek**, senkronlanmaz; `startedAt` damgasından türetilir |
+| Kayıt bağı | `task_id` opsiyonel, `client_id` **zorunlu**, `project_id` opsiyonel |
+| Müşteri silme | Zaman kayıtlarını da **siler** (`client_id` not null, boşaltılamaz); diyalog sayıyla söyler |
+| Birleştirme | `mergeTasks` kalıbı — ad yok, `idRemap` yok |
+| CSV | Kayıt satırları + özet satırları; UTF-8 BOM, `;` ayracı (Excel TR) |
 
 **Phase 1, teslim edilen:**
 
@@ -144,12 +162,24 @@ None yet.
 ### Blockers/Concerns
 
 - **DEC-SYNC-01 borcu:** `mergeNamed` çekirdeği yazılmadı (yukarıda sapma 4).
-  Phase 3'te `time_logs` dördüncü varlık olarak gelecek; üçüncü kopya
-  yazılmadan önce karar ya uygulanmalı ya da resmen geri alınmalı
+  ~~Phase 3'te `time_logs` dördüncü varlık olarak gelecek; üçüncü kopya
+  yazılmadan önce karar ya uygulanmalı ya da resmen geri alınmalı~~
+  **Bu değerlendirme 16 Ağu'da düzeltildi ve borç bloklayıcı olmaktan çıktı.**
+  `mergeNamed` **adlı, düzenlenebilir, son-yazan-kazanır** kayıtlar için
+  tasarlanmıştı (`NamedRecord { id, name, updatedAt }`). `time_logs`'un adı yok
+  ve ada göre tekilleştirmeye ihtiyacı yok — `mergeCategories` ailesinin değil
+  `mergeTasks`'ın kalıbını izliyor. Yani Phase 3 üçüncü kopyayı **yazmıyor** ve
+  kararı zorlamıyor. Borç açık kalır, bağımsız bir refactor olarak ele alınır
+  (v2 → SYNC-03). Gerekçe: Faz 3 spec'i §Kapsam.
 - **Phase 4 girdisi eksik:** ödeme sağlayıcısı (iyzico vs LemonSqueezy/Paddle)
   henüz seçilmedi; `subscriptions` şeması seçime bağlı
-- **Phase 3 tasarım açığı:** zaman kayıtlarının biriken senkron semantiği
-  tasarlanmadı — mevcut son-yazan-kazanır motoru orada yanlış sonuç verir (CON-33)
+- ~~**Phase 3 tasarım açığı:** zaman kayıtlarının biriken senkron semantiği
+  tasarlanmadı~~ — **kapandı (16 Ağu).** CON-33'ün "son-yazan-kazanır burada
+  yanlış sonuç verir" uyarısı bir **modelleme** uyarısıydı, yeni bir birleştirme
+  motoru ihtiyacı değil: zaman `(görev, gün) → toplam süre` biçiminde tek
+  değiştirilebilir satır olarak tutulsaydı LWW veri yerdi; her kayıt **kendi
+  UUID'si olan ayrı bir giriş** olduğu için iki cihazın kayıtları birleşmede
+  zaten toplanır. TIME-04 tasarımla karşılanıyor. Ayrıntı: Faz 3 spec'i §3.3
 - **HARD-02'nin canlı doğrulaması açık:** güvenlik başlıkları `vercel.json` ve
   `public/_headers` içinde tanımlı ve `security-headers.test.ts` ikisini eşit
   tutuyor, ama "yayındaki uygulama `curl -I` ile şu başlıkları döndürür"

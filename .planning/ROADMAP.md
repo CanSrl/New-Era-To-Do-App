@@ -127,19 +127,35 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. İki cihazda aynı gün girilen zaman kayıtları senkron sonrası **toplanır**, biri diğerini ezmez
   5. Kullanıcı seçtiği müşteri/proje ve tarih aralığı için CSV dosyası indirebilir
   6. `VITE_NICHE_MODULE=false` ile zaman kaydı da tamamen çıkar; `dist/` içinde iz kalmaz
-**Plans**: TBD
+**Plans**: Tasarım hazır — `docs/superpowers/specs/2026-08-16-nis-modul-zaman-kaydi-design.md` (`745b84d`); uygulama planı yazılıyor
 **UI hint**: yes
 
 **Notlar:**
-- Zaman kaydı bilinçli olarak ayrı bir dilim: kategori/müşteri/proje deseni
-  "düzenlenebilir kayıt + son-yazan-kazanır" iken zaman kaydı "biriken,
-  düzenlenmeyen kayıt". Son-yazan-kazanır burada **yanlış sonuç verir** (CON-33).
-  Birleştirme semantiği bu faz için ayrıca tasarlanmalı.
-- CON-32'de kayıtlı borç — senkron motorunun varlık tanımı üzerinden
-  genelleştirilmesi — bu fazda ele alınabilir; üçüncü ve dördüncü varlık burada
-  netleşir. Zorunlu değil, karar planlama sırasında verilir.
+- **Tasarım onaylandı (16 Ağu).** Kilitlenen kararlar `.planning/STATE.md` →
+  Current Position tablosunda özet, gerekçeleriyle spec'te.
+- ~~Zaman kaydı bilinçli olarak ayrı bir dilim: ... Birleştirme semantiği bu faz
+  için ayrıca tasarlanmalı.~~ **CON-33 yeniden okundu ve kapatıldı.** "Biriken,
+  düzenlenmeyen kayıt" ve "son-yazan-kazanır burada yanlış sonuç verir" ifadeleri
+  bir **modelleme** uyarısıdır, yeni bir birleştirme motoru ihtiyacı değil. Zaman
+  `(görev, gün) → toplam süre` biçiminde tek değiştirilebilir satır olarak
+  tutulsaydı LWW veri yerdi; her kayıt **kendi UUID'si olan ayrı bir giriş**
+  olduğu için iki cihazın kayıtları birleşmede zaten toplanır. Kriter 4 tasarımla
+  karşılanıyor; `mergeTimeLogs`, `mergeCategories` ailesinin değil `mergeTasks`'ın
+  kalıbını izler (ad yok → `idRemap` yok).
+- ~~CON-32'de kayıtlı borç ... bu fazda ele alınabilir~~ — **bu fazın dışında.**
+  `mergeNamed` (DEC-SYNC-01) adlı kayıtlar için tasarlandı ve `time_logs` onun
+  tüketicisi olmayacak; yani faz üçüncü kopyayı yazmıyor ve kararı zorlamıyor.
+  Borç bağımsız refactor olarak açık kalır (v2 → SYNC-03). Gerekçe: CON-32'nin
+  kendi mantığı — çalışan bir motoru yeni özellik eklerken yeniden yazmak iki
+  riski üst üste bindirir.
 - CSV dışa aktarım (`papaparse`) asıl anlamını zaman kayıtlarıyla kazanır;
-  bu yüzden Phase 2'ye değil buraya bağlandı.
+  bu yüzden Phase 2'ye değil buraya bağlandı. `papaparse`'ın bayrak kapalıyken
+  pakete hiç girmemesi bu fazın en somut ölçütü — kod elenip bağımlılık kalsaydı
+  bayrak sözünü tutmazdı.
+- ⚠️ Niş modül artık **iki** migration dosyası ve `tasks` tablosuna dokunan tek
+  bir kısıt (`tasks_id_user_id_key`, bileşik FK'nın hedefi olarak zorunlu).
+  Modülü çıkarma yordamı ikisini birden ve `drop constraint`'i söylemeli;
+  `CLAUDE.md`'deki "tek migration dosyası" ifadesi bu fazda güncellenir.
 
 ### Phase 4: Ödeme ve Pro kapılama
 **Goal**: Ürün para kazanabilir hâle gelir ve Pro sınırı arayüzden değil veritabanından uygulanır
@@ -196,12 +212,12 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|--------|--------|-----------|
 | 1. Ürün sağlamlaştırma | 5/5 | **Tamamlandı** (kriter 2 canlı doğrulama bekliyor) | 2026-08-16 |
 | 2. Niş modül — müşteriler ve projeler | 6/6 | **Tamamlandı** | 2026-08-16 |
-| 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | Not started | - |
+| 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | **Tasarım onaylandı**, uygulama başlamadı | - |
 | 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |
 | 5. Paketleme ve yayın | 0/5 | Not started | - |
 
 **Not:** İlerleme plan/summary sayısıyla değil **başarı kriteriyle** ölçülüyor;
 Phase 1 ve 2 işi gsd plan→execute döngüsü dışında yürütüldüğü için
 `.planning/phases/` altında artefakt yok ve `gsd query progress` %0 gösterir.
-Sayaçlara değil bu tabloya bakın. Son senkron: 2026-08-16, `d7a7074` esas
+Sayaçlara değil bu tabloya bakın. Son senkron: 2026-08-16, `bf5cea1` esas
 alınarak.
