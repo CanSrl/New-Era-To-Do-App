@@ -58,6 +58,19 @@
   },
   "nav": {
     "clients": "Clients",
-    "clientsShort": "Clients"
+    "clientsShort": "Clients",
+    "delivery": "Delivery",
+    "deliveryShort": "Delivery"
+  },
+  "delivery": {
+    "title": "Delivery",
+    "subtitle": "Your work by client and project, ordered by how soon it is due.",
+    "noClient": "No client",
+    "emptyTitle": "Nothing to show yet",
+    "emptyBody": "Once you link tasks to a client they show up here in delivery order.",
+    "noResultsTitle": "No matching work",
+    "noResultsBody": "No tasks match your search and filter.",
+    "taskCount_one": "{{count}} task",
+    "taskCount_other": "{{count}} tasks"
   }
 }

@@ -58,6 +58,19 @@
   },
   "nav": {
     "clients": "Müşteriler",
-    "clientsShort": "Müşteri"
+    "clientsShort": "Müşteri",
+    "delivery": "Teslim",
+    "deliveryShort": "Teslim"
+  },
+  "delivery": {
+    "title": "Teslim",
+    "subtitle": "İşlerin müşteri ve projeye göre, teslim tarihine yakınlığına göre sıralı.",
+    "noClient": "Müşterisiz",
+    "emptyTitle": "Gösterilecek iş yok",
+    "emptyBody": "Görevlerini bir müşteriye bağladığında burada teslim sırasına göre görünürler.",
+    "noResultsTitle": "Eşleşen iş yok",
+    "noResultsBody": "Arama ve filtreye uyan görev bulunamadı.",
+    "taskCount_one": "{{count}} görev",
+    "taskCount_other": "{{count}} görev"
   }
 }

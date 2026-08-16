@@ -38,14 +38,14 @@ Kalan sürüm kapsamı. Her gereksinim tam olarak bir faza eşlenir.
 
 ### Niche Module — Slice 1 (Müşteriler ve projeler)
 
-- [ ] **NICHE-01**: Kullanıcı `/app/clients` ekranında müşteri oluşturabilir, yeniden adlandırabilir, arşivleyebilir ve silebilir
-- [ ] **NICHE-02**: Kullanıcı bir müşteriye bağlı proje oluşturabilir, yeniden adlandırabilir, arşivleyebilir ve silebilir
-- [ ] **NICHE-03**: Kullanıcı bir görevi opsiyonel olarak bir müşteriye ve o müşterinin bir projesine bağlayabilir; müşteri değişince proje seçimi temizlenir
-- [ ] **NICHE-04**: `/app/delivery` teslim görünümü görevleri müşteri ve proje kırılımında gruplar, her grupta teslim tarihine göre sıralar; mevcut filtre ve arama çalışmaya devam eder
-- [ ] **NICHE-05**: Müşteri ve proje verisi cihazlar arasında senkronlanır — aynı adlı kayıtlar tekilleştirilir, görev bağları zincirleme yeniden eşlenir, yalnızca müşteri/proje değişince de senkron tetiklenir
-- [ ] **NICHE-06**: Müşteri silmek projelerini siler, görevlerini **silmez**, görevlerin iki bağını da boşaltır — istemci ve veritabanı aynı sonucu üretir
-- [ ] **NICHE-07**: Tutarsız bağ veritabanı seviyesinde reddedilir: başkasının müşterisine/projesine bağlanma, projesi başka müşteriye ait görev, `project_id` dolu / `client_id` boş satır
-- [ ] **NICHE-08**: `VITE_NICHE_MODULE=false` ile modül tamamen çıkar — rota kaydedilmez, seçiciler render edilmez, `runSync` adımları atlanır ve `dist/` içinde iz kalmaz
+- [x] **NICHE-01**: Kullanıcı `/app/clients` ekranında müşteri oluşturabilir, yeniden adlandırabilir, arşivleyebilir ve silebilir
+- [x] **NICHE-02**: Kullanıcı bir müşteriye bağlı proje oluşturabilir, yeniden adlandırabilir, arşivleyebilir ve silebilir
+- [x] **NICHE-03**: Kullanıcı bir görevi opsiyonel olarak bir müşteriye ve o müşterinin bir projesine bağlayabilir; müşteri değişince proje seçimi temizlenir
+- [x] **NICHE-04**: `/app/delivery` teslim görünümü görevleri müşteri ve proje kırılımında gruplar, her grupta teslim tarihine göre sıralar; mevcut filtre ve arama çalışmaya devam eder
+- [x] **NICHE-05**: Müşteri ve proje verisi cihazlar arasında senkronlanır — aynı adlı kayıtlar tekilleştirilir, görev bağları zincirleme yeniden eşlenir, yalnızca müşteri/proje değişince de senkron tetiklenir
+- [x] **NICHE-06**: Müşteri silmek projelerini siler, görevlerini **silmez**, görevlerin iki bağını da boşaltır — istemci ve veritabanı aynı sonucu üretir
+- [x] **NICHE-07**: Tutarsız bağ veritabanı seviyesinde reddedilir: başkasının müşterisine/projesine bağlanma, projesi başka müşteriye ait görev, `project_id` dolu / `client_id` boş satır
+- [x] **NICHE-08**: `VITE_NICHE_MODULE=false` ile modül tamamen çıkar — rota kaydedilmez, seçiciler render edilmez, `runSync` adımları atlanır ve `dist/` içinde iz kalmaz
 
 ### Niche Module — Slice 2 (Zaman kaydı ve dışa aktarım)
 
@@ -123,14 +123,14 @@ Kabul edilmiş ama ertelenmiş. Mevcut roadmap'te yer almaz.
 | HARD-04 | Phase 1 | ✅ Done — fetchAllRows sayfalama + SyncTooLargeError; task-repository.test.ts |
 | HARD-05 | Phase 1 | ✅ Done — SyncOutcome.discarded → SyncProvider bildirimi; sync.test.ts sayımı sınar |
 | HARD-06 | Phase 1 | ✅ Done — isValidColor DB kısıtının aynısı; categories.test.ts |
-| NICHE-01 | Phase 2 | Pending |
-| NICHE-02 | Phase 2 | Pending |
-| NICHE-03 | Phase 2 | Pending |
-| NICHE-04 | Phase 2 | Pending |
-| NICHE-05 | Phase 2 | Pending |
-| NICHE-06 | Phase 2 | Pending |
-| NICHE-07 | Phase 2 | Pending |
-| NICHE-08 | Phase 2 | Pending |
+| NICHE-01 | Phase 2 | ✅ Done |
+| NICHE-02 | Phase 2 | ✅ Done |
+| NICHE-03 | Phase 2 | ✅ Done |
+| NICHE-04 | Phase 2 | ✅ Done |
+| NICHE-05 | Phase 2 | ✅ Done |
+| NICHE-06 | Phase 2 | ✅ Done |
+| NICHE-07 | Phase 2 | ✅ Done |
+| NICHE-08 | Phase 2 | ✅ Done |
 | TIME-01 | Phase 3 | Pending |
 | TIME-02 | Phase 3 | Pending |
 | TIME-03 | Phase 3 | Pending |

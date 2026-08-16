@@ -20,18 +20,18 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 2'nin tek açık kriteri — `/app/delivery` teslim görünümü
+**Current focus:** Phase 2 kapandı; sıradaki faz zaman kaydı ve dışa aktarım (Phase 3)
 
 ## Current Position
 
-Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 **kısmen tamamlandı** (5/6)
+Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 ✅ **tamamlandı** (16 Ağu)
 Plan: gsd planı yok; Phase 2 işi
       `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md`
-      görev listesine göre yürütüldü (10 görevin 5'i bitti)
+      görev listesine göre yürütüldü (tamamlandı)
 Status: Executing
-Last activity: 2026-08-16 — Phase 1 (ürün sağlamlaştırma) tamamlandı
+Last activity: 2026-08-16 — Phase 2 teslim görünümüyle kapandı
 
-Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [████████░░] 5/6 kriter
+Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [██████████] 6/6 kriter
 
 **Phase 1, teslim edilen:**
 
@@ -56,7 +56,7 @@ alıcısı için bu bir teslim engeliydi (PKG-01).
 |---|--------|-------|-------|
 | 1 | Müşteri/proje CRUD + etkiyi sayıyla söyleyen silme diyaloğu | ✅ | `ClientCard.tsx:201-205`, `tr.json` → `client.deleteConfirmProjects/Tasks` (çoğul + count) |
 | 2 | Görev müşteri/projeye bağlanır, müşteri değişince proje sıfırlanır | ✅ | `TaskForm.tsx`, commit `5ef4994` |
-| 3 | `/app/delivery` teslim görünümü | ❌ | Rota yok — plan dokümanında **Görev 9**, henüz yapılmadı |
+| 3 | `/app/delivery` teslim görünümü | ✅ | `grouping.ts` (18 birim testi) + `e2e/teslim.spec.ts` (7 test) |
 | 4 | İki cihaz aynı müşteriyi oluşturursa tek kayıt kalır | ✅ | `sync-merge-niche.ts` → `idRemap`, `sync-merge-niche.test.ts` |
 | 5 | Başkasının müşterisine bağlı görev DB tarafından reddedilir | ✅ | Bileşik FK + RLS; 50 şema testi |
 | 6 | `VITE_NICHE_MODULE=false` sonrası `dist/` içinde iz kalmaz | ✅ | 995.40 → 973.78 kB; `npm run verify:niche`, CI adımı |
@@ -143,9 +143,6 @@ None yet.
 
 ### Blockers/Concerns
 
-- **Phase 2 kriter 3 açık:** `/app/delivery` teslim görünümü yapılmadı; ayrıca
-  `AppLayout` içindeki `NAV_SPLIT` mobil gezinmesi bu üçüncü öğe geldiğinde
-  simetrik olacak biçimde yazılmış — yani eksiklik arayüzde de duruyor
 - **DEC-SYNC-01 borcu:** `mergeNamed` çekirdeği yazılmadı (yukarıda sapma 4).
   Phase 3'te `time_logs` dördüncü varlık olarak gelecek; üçüncü kopya
   yazılmadan önce karar ya uygulanmalı ya da resmen geri alınmalı

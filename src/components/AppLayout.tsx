@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from './ThemeProvider';
-import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PlusCircle, Settings, Users } from 'lucide-react';
+import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PackageOpen, PlusCircle, Settings, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { NICHE_MODULE } from '../config/features';
 import type { TranslationKey } from '../i18n';
@@ -22,20 +22,32 @@ interface NavItem {
 }
 
 /**
- * Müşteriler öğesi `NICHE_MODULE` kapılıdır — rotanın kendisi de öyle
- * (bkz. `router.tsx`). İkisi ayrışırsa gezinme var olmayan bir adrese
- * götürürdü.
+ * Niş öğeler (Teslim, Müşteriler) `NICHE_MODULE` kapılıdır — rotaların
+ * kendisi de öyle (bkz. `router.tsx`). İkisi ayrışırsa gezinme var olmayan
+ * bir adrese götürürdü.
+ *
+ * Teslim, Müşteriler'den önce geliyor: günlük kullanımda okunan ekran o,
+ * müşteri/proje yönetimi ise ara sıra girilen bir kurulum ekranı.
  */
 const NAV_ITEMS: NavItem[] = [
     { to: '/app', labelKey: 'nav.tasks', shortLabelKey: 'nav.tasksShort', icon: ListTodo, end: true },
     ...(NICHE_MODULE
-        ? [{
-            to: '/app/clients',
-            labelKey: 'nav.clients' as TranslationKey,
-            shortLabelKey: 'nav.clientsShort' as TranslationKey,
-            icon: Users,
-            end: false,
-        }]
+        ? [
+            {
+                to: '/app/delivery',
+                labelKey: 'nav.delivery' as TranslationKey,
+                shortLabelKey: 'nav.deliveryShort' as TranslationKey,
+                icon: PackageOpen,
+                end: false,
+            },
+            {
+                to: '/app/clients',
+                labelKey: 'nav.clients' as TranslationKey,
+                shortLabelKey: 'nav.clientsShort' as TranslationKey,
+                icon: Users,
+                end: false,
+            },
+        ]
         : []),
     { to: '/app/settings', labelKey: 'nav.settings', shortLabelKey: 'nav.settings', icon: Settings, end: false },
 ];

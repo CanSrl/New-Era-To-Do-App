@@ -45,7 +45,7 @@ Ayrıntı: `CLAUDE.md` → Fazlar, `.planning/PROJECT.md` → Requirements → V
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması *(6/6 gereksinim; kriter 2'nin canlı doğrulaması dağıtıma bağlı)*
-- [~] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(5/6 kriter ✅ — yalnızca teslim görünümü açık)*
+- [x] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(6/6 kriter ✅)*
 - [ ] **Phase 3: Niş modül — zaman kaydı ve dışa aktarım** - Basit zaman kaydı (biriken senkron semantiği) ve müşteri/proje kırılımlı CSV dışa aktarım
 - [ ] **Phase 4: Ödeme ve Pro kapılama** - Stripe'sız abonelik akışı, imza doğrulamalı webhook, veritabanı seviyesinde Pro kapısı
 - [ ] **Phase 5: Paketleme ve yayın** - Demo veri, İngilizce dokümantasyon ve README, dağıtım, semver + CHANGELOG
@@ -65,12 +65,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 **Notlar:**
-- ⚠️ **Bu faz atlandı.** Aşağıdaki gerekçe geçerliliğini korumakla birlikte
-  fiilen uygulanmadı: Phase 2'nin tamamı (14-15 Ağustos) bu fazdan önce
-  gönderildi. Senkron motoru ikiye katlandı ve niş modül arayüzü
-  `eslint-plugin-jsx-a11y` kurulmadan yazıldı — yani lint kurulduğunda
-  bu fazın önlemeyi amaçladığı toplu düzeltme borcu artık mevcut.
-  Ayrıntı: `.planning/STATE.md` → Deviations from Roadmap.
+- ⚠️ **Bu faz sırası dışında yapıldı** (16 Ağustos, Phase 2'nin büyük kısmı
+  gönderildikten sonra). Aşağıdaki sıralama gerekçesi pratikte karşılığını
+  bulmadı: `eslint-plugin-jsx-a11y` sonradan kurulduğunda bütün kod tabanında
+  yalnızca **3 ihlal** çıktı ve üçü de aynı kuraldı (`no-autofocus`).
+  Beklenen toplu düzeltme borcu doğmadı — erişilebilirlik zaten konvansiyon
+  olarak uygulanıyordu. Ayrıntı: `.planning/STATE.md` → Deviations.
 - Bu faz bilinçli olarak Phase 2'den önce durur: `eslint-plugin-jsx-a11y` yeni
   ekranlar yazılmadan kurulmalı (sonra kurmak toplu düzeltme demek) ve
   `sync.test.ts`, senkron motoru ikiye katlanmadan önce yeşil olmalı —
@@ -86,7 +86,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Success Criteria** (what must be TRUE):
   1. ✅ Kullanıcı müşteri ve proje oluşturup yönetebilir; silme diyaloğu etkiyi sayıyla söyler ("2 projesi silinecek, 5 görevin bağı kopacak, görevler silinmez") — `ClientCard.tsx`, `client.deleteConfirm*` (çoğullu, count'lu)
   2. ✅ Kullanıcı bir görevi müşteriye ve o müşterinin projesine bağlayabilir; müşteriyi değiştirdiğinde proje seçimi temizlenir — `TaskForm.tsx` (`5ef4994`)
-  3. ❌ Kullanıcı `/app/delivery` ekranında görevlerini müşteri → proje kırılımında, teslim tarihine göre sıralı görür; filtre ve arama çalışır — **rota yok**; plan dokümanında Görev 9 olarak yazılı
+  3. ✅ Kullanıcı `/app/delivery` ekranında görevlerini müşteri → proje kırılımında, teslim tarihine göre sıralı görür; filtre ve arama çalışır — `groupForDelivery`/`filterForDelivery` (18 birim testi) + `e2e/teslim.spec.ts` (7 test)
   4. ✅ Aynı hesabın iki cihazı çevrimdışıyken aynı müşteriyi oluşturursa senkron sonrası tek kayıt kalır ve görev bağları doğru kayda işaret eder — `idRemap` + `remapTaskLinks`, birim testli
   5. ✅ Başka bir kullanıcının müşterisine ya da tutarsız bir projeye bağlı görev veritabanı tarafından reddedilir — arayüzü atlayan doğrudan çağrıyla bile — bileşik FK üçlüsü + RLS, 50 şema testi
   6. ✅ `VITE_NICHE_MODULE=false npm run build` sonrası `dist/assets` içinde modülden hiçbir iz bulunmaz — 995.40 kB → 973.78 kB; `npm run verify:niche` CI'da iki yönlü ölçüyor
@@ -94,15 +94,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 **UI hint**: yes
 
 **Notlar:**
-- **Durum (16 Ağu):** plan dokümanındaki 10 görevin 1-5'i bitti (şema+RLS,
-  tipler+saf yardımcılar, store+v4→v5 göçü, senkron motoru, yönetim arayüzü).
-  Açık kalan iki kriter yukarıda ❌ ile işaretli.
-- ⚠️ **Kriter 6 ile DEC-NICHE-01 arasında açık var.** Kararın harfi uygulandı
-  (bayrak koşulu rota kaydı seviyesinde, render içinde değil) ama amacı
-  gerçekleşmedi: `features.nicheModule` bir fonksiyon çağrısıdır, derleme
-  zamanı sabiti değil, dolayısıyla Vite ölü kod elemesi yapamıyor. Kriteri
-  karşılamak `features.ts` sözleşmesini değiştirmeyi gerektirir; bu bir
-  planlama kararıdır, kodlama detayı değil.
+- **Durum (16 Ağu): faz kapandı.** Plan dokümanındaki görevlerin tamamı
+  karşılandı; teslim görünümü (Görev 9) bugün eklendi.
+- **DEC-NICHE-01 nihayet gerçek anlamda karşılandı.** Kararın harfi baştan
+  uygulanmıştı (bayrak koşulu rota kaydı seviyesinde) ama amacı — paketten
+  izsiz çıkma — gerçekleşmiyordu. İki sessiz sebep vardı: bayrak bir nesne
+  özelliğiydi (özellik erişimi derleme zamanında katlanmıyor) ve çeviri
+  metinleri kod elense bile JSON olarak pakete giriyordu. İkisi de çözüldü;
+  `npm run verify:niche` beş izi iki yönlü ölçüyor ve CI'da koşuyor.
 - **Bu fazın görev kırılımı zaten yazılmış durumda** — burada tekrarlanmaz:
   `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md` (10 görev),
   teknik tasarım `docs/superpowers/specs/2026-08-14-nis-modul-musteri-proje-design.md`.
@@ -196,7 +195,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Kriter | Status | Completed |
 |-------|--------|--------|-----------|
 | 1. Ürün sağlamlaştırma | 5/5 | **Tamamlandı** (kriter 2 canlı doğrulama bekliyor) | 2026-08-16 |
-| 2. Niş modül — müşteriler ve projeler | 5/6 | **In progress** — teslim görünümü kaldı | - |
+| 2. Niş modül — müşteriler ve projeler | 6/6 | **Tamamlandı** | 2026-08-16 |
 | 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | Not started | - |
 | 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |
 | 5. Paketleme ve yayın | 0/5 | Not started | - |

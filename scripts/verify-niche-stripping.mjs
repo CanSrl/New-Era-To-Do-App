@@ -32,8 +32,10 @@ const DIST_ASSETS = 'dist/assets';
  */
 const MARKERS = [
     { pattern: 'app/clients', what: 'müşteriler rotası' },
+    { pattern: 'app/delivery', what: 'teslim görünümü rotası' },
     { pattern: 'deleteConfirmProjects', what: 'niş çeviri anahtarı' },
     { pattern: 'projesi de silinir', what: 'niş Türkçe metin' },
+    { pattern: 'teslim tarihine yakınlığına', what: 'teslim görünümü metni' },
 ];
 
 function build(nicheEnabled) {
