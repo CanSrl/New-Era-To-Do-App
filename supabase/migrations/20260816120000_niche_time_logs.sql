@@ -63,12 +63,16 @@ create trigger time_logs_set_updated_at
   before update on public.time_logs
   for each row execute function public.set_updated_at();
 
--- Bileşik FK'lar varsayılan MATCH SIMPLE ile çalışır: sütunlardan HERHANGİ
--- BİRİ null ise kısıt hiç değerlendirilmez. Bu check olmasaydı project_id
--- dolu / client_id boş satır aşağıdaki üçlü FK'yı sessizce atlardı.
-alter table public.time_logs
-  add constraint time_logs_project_requires_client
-  check (project_id is null or client_id is not null);
+-- Faz 2'deki (tasks) benzer check YOKTUR burada. Oradaki kısıt, MATCH SIMPLE
+-- boşluğunu (bileşik FK'da sütunlardan biri null ise kısıt hiç
+-- değerlendirilmez) kapatmak için gerekliydi çünkü tasks.client_id
+-- NULLABLE'dır. Burada client_id `not null`, yani project_id dolu / client_id
+-- boş bir satır zaten NOT NULL kısıtına takılır — üçlü FK boşluğuna hiç
+-- ulaşılamaz. Bu kısıt gerçekte ölü koddu (hiçbir girdi onu tetikleyemezdi).
+-- ⚠️ client_id NULLABLE yapılırsa bu yorum geçersiz olur ve
+-- `check (project_id is null or client_id is not null)` buraya GERİ
+-- EKLENMELİDİR — Faz 2'deki desene bakıp otomatik eklemeyin, önce bu notu
+-- silin.
 
 -- Sütun listesi ŞART: listesiz "on delete set null" referansın BÜTÜN
 -- sütunlarını (user_id dahil) boşaltmaya çalışır ve not null ile patlar.

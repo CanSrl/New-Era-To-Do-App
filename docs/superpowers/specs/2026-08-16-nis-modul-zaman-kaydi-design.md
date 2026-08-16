@@ -129,11 +129,17 @@ Bu, niş modülün **jenerik `tasks` tablosuna dokunan tek değişikliğidir**. 
 (salt ek bir benzersizlik, `id` zaten birincil anahtar) ama modül çıkarılırken
 `drop constraint` gerektirir; çıkarma yordamı bunu söylemeli.
 
-```sql
-alter table public.time_logs
-  add constraint time_logs_project_requires_client
-  check (project_id is null or client_id is not null);
+**Faz 2'deki `tasks_project_requires_client` check burada YOK.** O kısıt,
+bileşik FK'ların MATCH SIMPLE boşluğunu (sütunlardan biri null ise kısıt hiç
+değerlendirilmez) kapatmak için gerekliydi çünkü `tasks.client_id`
+NULLABLE'dır. `time_logs.client_id` ise `not null` — `project_id` dolu /
+`client_id` boş bir satır zaten NOT NULL kısıtına takılır, üçlü FK boşluğuna
+hiç ulaşılamaz. İlk yazımda bu check Faz 2 deseninden birebir kopyalanmıştı;
+gözden geçirmede ölü kod olduğu (hiçbir girdi onu tetikleyemiyor)
+belirlenip kaldırıldı. `client_id` ileride nullable yapılırsa check GERİ
+EKLENMELİDİR.
 
+```sql
 -- Görev bağı. Sütun listesi ŞART: listesiz `on delete set null` referansın
 -- bütün sütunlarını (user_id dahil) boşaltmaya çalışır ve not null ile patlar.
 alter table public.time_logs
@@ -159,7 +165,7 @@ alter table public.time_logs
 | Silinen | `time_logs`'a etkisi | Neden |
 | --- | --- | --- |
 | Görev | `task_id` boşalır, kayıt durur | Fatura kaydı, ürettiği görevden uzun yaşamalı |
-| Proje | `project_id` boşalır, kayıt durur | `client_id` yerinde kaldığı için check bozulmaz |
+| Proje | `project_id` boşalır, kayıt durur | `client_id` yerinde kaldığı için NOT NULL bozulmaz |
 | Müşteri | **Kayıt silinir** (cascade) | `client_id` zorunlu, boşaltılamaz |
 
 **Müşteri silmek zaman kayıtlarını da siler.** `client_id` `not null` olduğu için

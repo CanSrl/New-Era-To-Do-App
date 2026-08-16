@@ -461,14 +461,16 @@ const tlLog = await (async () => {
     await a.client.from('clients').delete().eq('id', otherClient.id);
 }
 {
-    // MATCH SIMPLE yüzünden client_id null iken üçlü FK hiç değerlendirilmez;
-    // time_logs_project_requires_client check'i bunu kapatıyor.
+    // time_logs.client_id NOT NULL olduğu için (tasks'ın aksine) ayrı bir
+    // check kısıtına gerek yok: project_id dolu / client_id boş bir satır
+    // zaten client_id'nin NOT NULL kısıtına takılır, MATCH SIMPLE boşluğuna
+    // hiç ulaşılmaz. Bu test o boşluğu değil NOT NULL'u sınıyor.
     const { error } = await a.client.from('time_logs')
         .insert({
             user_id: a.userId, project_id: tlProject.id,
             started_at: '2026-08-16T11:00:00Z', duration_minutes: 30,
         });
-    check('project_id dolu / client_id boş satır reddediliyor', !!error,
+    check('projesi dolu, müşterisi boş satır NOT NULL ile reddedilir', !!error,
         error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
 }
 {
