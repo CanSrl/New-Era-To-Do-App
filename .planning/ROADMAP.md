@@ -44,8 +44,8 @@ Ayrıntı: `CLAUDE.md` → Fazlar, `.planning/PROJECT.md` → Requirements → V
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması
-- [ ] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir
+- [ ] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması *(kriter 4 karşılandı — `888e6e5`; kalanlar açık)*
+- [~] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(4/6 kriter ✅ — teslim görünümü ve bayrağın paketten çıkması açık)*
 - [ ] **Phase 3: Niş modül — zaman kaydı ve dışa aktarım** - Basit zaman kaydı (biriken senkron semantiği) ve müşteri/proje kırılımlı CSV dışa aktarım
 - [ ] **Phase 4: Ödeme ve Pro kapılama** - Stripe'sız abonelik akışı, imza doğrulamalı webhook, veritabanı seviyesinde Pro kapısı
 - [ ] **Phase 5: Paketleme ve yayın** - Demo veri, İngilizce dokümantasyon ve README, dağıtım, semver + CHANGELOG
@@ -60,11 +60,17 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Erişilebilirlik ihlali içeren bir değişiklik CI'da düşer — kural artık konvansiyon değil kapı
   2. Yayındaki uygulama `curl -I` ile bakıldığında CSP, `frame-ancestors 'none'`, `nosniff` ve `Referrer-Policy` başlıklarını döndürür; sayfa bir iframe'e gömülemez
   3. Kullanıcı, çakışma yüzünden yerel değişikliği elendiğinde bunu ekranda görür — değişiklik artık sessizce kaybolmaz
-  4. `runSync` yazma/silme sırasını bozan bir değişiklik E2E'ye kalmadan birim testinde düşer
+  4. ✅ `runSync` yazma/silme sırasını bozan bir değişiklik E2E'ye kalmadan birim testinde düşer — `888e6e5`, `src/lib/sync.test.ts`
   5. Bin satırın üzerinde veri olan bir hesapta senkron ya doğru çalışır ya da açıkça hata verir; sessizce "uzakta silinmiş" saymaz
 **Plans**: TBD
 
 **Notlar:**
+- ⚠️ **Bu faz atlandı.** Aşağıdaki gerekçe geçerliliğini korumakla birlikte
+  fiilen uygulanmadı: Phase 2'nin tamamı (14-15 Ağustos) bu fazdan önce
+  gönderildi. Senkron motoru ikiye katlandı ve niş modül arayüzü
+  `eslint-plugin-jsx-a11y` kurulmadan yazıldı — yani lint kurulduğunda
+  bu fazın önlemeyi amaçladığı toplu düzeltme borcu artık mevcut.
+  Ayrıntı: `.planning/STATE.md` → Deviations from Roadmap.
 - Bu faz bilinçli olarak Phase 2'den önce durur: `eslint-plugin-jsx-a11y` yeni
   ekranlar yazılmadan kurulmalı (sonra kurmak toplu düzeltme demek) ve
   `sync.test.ts`, senkron motoru ikiye katlanmadan önce yeşil olmalı —
@@ -78,16 +84,25 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Phase 1
 **Requirements**: NICHE-01, NICHE-02, NICHE-03, NICHE-04, NICHE-05, NICHE-06, NICHE-07, NICHE-08
 **Success Criteria** (what must be TRUE):
-  1. Kullanıcı müşteri ve proje oluşturup yönetebilir; silme diyaloğu etkiyi sayıyla söyler ("2 projesi silinecek, 5 görevin bağı kopacak, görevler silinmez")
-  2. Kullanıcı bir görevi müşteriye ve o müşterinin projesine bağlayabilir; müşteriyi değiştirdiğinde proje seçimi temizlenir
-  3. Kullanıcı `/app/delivery` ekranında görevlerini müşteri → proje kırılımında, teslim tarihine göre sıralı görür; filtre ve arama çalışır
-  4. Aynı hesabın iki cihazı çevrimdışıyken aynı müşteriyi oluşturursa senkron sonrası tek kayıt kalır ve görev bağları doğru kayda işaret eder
-  5. Başka bir kullanıcının müşterisine ya da tutarsız bir projeye bağlı görev veritabanı tarafından reddedilir — arayüzü atlayan doğrudan çağrıyla bile
-  6. `VITE_NICHE_MODULE=false npm run build` sonrası `dist/assets` içinde modülden hiçbir iz bulunmaz
-**Plans**: TBD
+  1. ✅ Kullanıcı müşteri ve proje oluşturup yönetebilir; silme diyaloğu etkiyi sayıyla söyler ("2 projesi silinecek, 5 görevin bağı kopacak, görevler silinmez") — `ClientCard.tsx`, `client.deleteConfirm*` (çoğullu, count'lu)
+  2. ✅ Kullanıcı bir görevi müşteriye ve o müşterinin projesine bağlayabilir; müşteriyi değiştirdiğinde proje seçimi temizlenir — `TaskForm.tsx` (`5ef4994`)
+  3. ❌ Kullanıcı `/app/delivery` ekranında görevlerini müşteri → proje kırılımında, teslim tarihine göre sıralı görür; filtre ve arama çalışır — **rota yok**, plan görev 6
+  4. ✅ Aynı hesabın iki cihazı çevrimdışıyken aynı müşteriyi oluşturursa senkron sonrası tek kayıt kalır ve görev bağları doğru kayda işaret eder — `idRemap` + `remapTaskLinks`, birim testli
+  5. ✅ Başka bir kullanıcının müşterisine ya da tutarsız bir projeye bağlı görev veritabanı tarafından reddedilir — arayüzü atlayan doğrudan çağrıyla bile — bileşik FK üçlüsü + RLS, 50 şema testi
+  6. ❌ `VITE_NICHE_MODULE=false npm run build` sonrası `dist/assets` içinde modülden hiçbir iz bulunmaz — **karşılanmıyor**; bayrak çalışma zamanı kapısı olduğu için derleme aynı boyutta çıkıyor
+**Plans**: TBD (iş gsd döngüsü dışında, doğrudan commit'lerle yürütüldü — `58526f2` → `d7a7074`)
 **UI hint**: yes
 
 **Notlar:**
+- **Durum (16 Ağu):** plan dokümanındaki 10 görevin 1-5'i bitti (şema+RLS,
+  tipler+saf yardımcılar, store+v4→v5 göçü, senkron motoru, yönetim arayüzü).
+  Açık kalan iki kriter yukarıda ❌ ile işaretli.
+- ⚠️ **Kriter 6 ile DEC-NICHE-01 arasında açık var.** Kararın harfi uygulandı
+  (bayrak koşulu rota kaydı seviyesinde, render içinde değil) ama amacı
+  gerçekleşmedi: `features.nicheModule` bir fonksiyon çağrısıdır, derleme
+  zamanı sabiti değil, dolayısıyla Vite ölü kod elemesi yapamıyor. Kriteri
+  karşılamak `features.ts` sözleşmesini değiştirmeyi gerektirir; bu bir
+  planlama kararıdır, kodlama detayı değil.
 - **Bu fazın görev kırılımı zaten yazılmış durumda** — burada tekrarlanmaz:
   `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md` (10 görev),
   teknik tasarım `docs/superpowers/specs/2026-08-14-nis-modul-musteri-proje-design.md`.
@@ -178,10 +193,16 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Execution Order:**
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Ürün sağlamlaştırma | 0/TBD | Not started | - |
-| 2. Niş modül — müşteriler ve projeler | 0/TBD | Not started | - |
-| 3. Niş modül — zaman kaydı ve dışa aktarım | 0/TBD | Not started | - |
-| 4. Ödeme ve Pro kapılama | 0/TBD | Not started | - |
-| 5. Paketleme ve yayın | 0/TBD | Not started | - |
+| Phase | Kriter | Status | Completed |
+|-------|--------|--------|-----------|
+| 1. Ürün sağlamlaştırma | 1/5 | **Atlandı** — Phase 2 öne alındı | - |
+| 2. Niş modül — müşteriler ve projeler | 4/6 | **In progress** | - |
+| 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | Not started | - |
+| 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |
+| 5. Paketleme ve yayın | 0/5 | Not started | - |
+
+**Not:** İlerleme plan/summary sayısıyla değil **başarı kriteriyle** ölçülüyor;
+Phase 1 ve 2 işi gsd plan→execute döngüsü dışında yürütüldüğü için
+`.planning/phases/` altında artefakt yok ve `gsd query progress` %0 gösterir.
+Sayaçlara değil bu tabloya bakın. Son senkron: 2026-08-16, `d7a7074` esas
+alınarak.
