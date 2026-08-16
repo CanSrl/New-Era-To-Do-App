@@ -19,6 +19,26 @@ export default defineConfig({
     // Sabitlenmezse testler İngilizce arayüzle karşılaşır. Dil değiştirme
     // akışı kategoriler/dil testinde ayrıca sınanıyor.
     locale: 'tr-TR',
+
+    /*
+     * Animasyonlar kapalı koşulur.
+     *
+     * Sebep somut: `ClientCard` proje listesini `height: 0 → auto` ile açıyor
+     * ve testler o panelin İÇİNDEKİ butona, panel hâlâ büyürken tıklıyordu.
+     * Playwright hareket eden hedefe tıklamayı reddeder ("element is not
+     * stable") ve 30 saniye bekleyip düşer. Hızlı makinede animasyon yetişir,
+     * yük altında yetişmez — testler bu yüzden rastgele kırılıyordu.
+     *
+     * Bu bir kaçamak değil: uygulama `prefers-reduced-motion` tercihine zaten
+     * uyuyor (`useReducedMotion`), yani burada gerçek bir kullanıcı yolu
+     * koşuluyor. Animasyonların kendisi davranış değil; kırılganlığı test
+     * sinyalini bozuyordu.
+     *
+     * `contextOptions` altında: bu Playwright sürümünde `reducedMotion`
+     * doğrudan `use` seviyesinde tiplenmemiş, tarayıcı bağlamı seçeneği
+     * olarak veriliyor.
+     */
+    contextOptions: { reducedMotion: 'reduce' },
   },
 
   projects: [

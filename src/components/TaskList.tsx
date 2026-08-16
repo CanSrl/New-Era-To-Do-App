@@ -19,7 +19,7 @@ import {
     sortableKeyboardCoordinates,
     verticalListSortingStrategy
 } from '@dnd-kit/sortable';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 
 interface TaskListProps {
     onEditTask: (task: Task) => void;
@@ -31,6 +31,18 @@ export function TaskList({ onEditTask }: TaskListProps) {
     const reorderTasks = useTaskStore(state => state.reorderTasks);
     const searchQuery = useTaskStore(state => state.searchQuery);
     const filter = useTaskStore(state => state.filter);
+
+    /**
+     * Azaltılmış hareket tercihi giriş/çıkış ve `layout` animasyonlarını
+     * kapatır. `ClientCard` bunu zaten yapıyordu; burada eksikti ve iki
+     * bileşen aynı kullanıcı tercihine farklı davranıyordu.
+     *
+     * Yan faydası testlerde: Playwright `reducedMotion: 'reduce'` ile
+     * koşuyor, dolayısıyla satırlar tıklama anında yer değiştirmiyor.
+     * Hareket eden hedef, "element is not stable" zaman aşımlarının kaynağıydı.
+     */
+    const reduceMotion = useReducedMotion();
+    const duration = reduceMotion ? 0 : 0.2;
 
     // Sıra dizinin sırasına değil position alanına dayanır; içe aktarma veya
     // ileride gelecek senkronizasyon diziyi karışık bırakabilir.
@@ -102,7 +114,7 @@ export function TaskList({ onEditTask }: TaskListProps) {
                                 initial={{ opacity: 0, scale: 0.95, y: 10 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                                transition={{ duration: 0.2 }}
+                                transition={{ duration }}
                             >
                                 <TaskItem task={task} onEdit={onEditTask} />
                             </motion.div>
