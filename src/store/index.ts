@@ -11,7 +11,7 @@ import {
 } from '../lib/categories';
 import { createClient, isClientNameTaken, nextClientPosition } from '../lib/clients';
 import { createProject, isProjectNameTaken, nextProjectPosition } from '../lib/projects';
-import { createTimeLog, elapsedMinutes } from '../lib/time-logs';
+import { createTimeLog, elapsedMinutes, isValidDuration } from '../lib/time-logs';
 
 /** Silinen görevin izi; silmenin diğer cihazlara yayılabilmesi için tutulur. */
 export interface Tombstone {
@@ -113,6 +113,8 @@ interface TaskState {
      * zaten çalışan bir sayaç varsa önce durdurulup kayda çevrilir.
      * `now` opsiyoneldir; üretimde varsayılana düşer, testte açıkça
      * geçirilir — sahte saat kurmadan süre üretebilmenin tek yolu bu.
+     *
+     * Müşterisiz çağrı yok sayılır (`time_logs.client_id not null`).
      */
     startTimer: (
         input: { taskId: string | null; clientId: string; projectId: string | null; note?: string | null },
@@ -123,7 +125,12 @@ interface TaskState {
     /** Sayacı kayıt üretmeden atar (yanlışlıkla başlatılmış sayaç için). */
     discardTimer: () => void;
 
-    /** Bağımsız (sayaç kullanmadan) bir zaman kaydı ekler. */
+    /**
+     * Bağımsız (sayaç kullanmadan) bir zaman kaydı ekler.
+     *
+     * Müşterisiz ya da şemanın kabul etmeyeceği süredeki girdi reddedilir ve
+     * `null` döner — `addClient`/`addCategory` ile aynı sözleşme.
+     */
     addTimeLog: (input: {
         taskId?: string | null;
         clientId: string;
@@ -131,7 +138,11 @@ interface TaskState {
         startedAt: string;
         durationMinutes: number;
         note?: string | null;
-    }) => TimeLog;
+    }) => TimeLog | null;
+    /**
+     * Kaydı günceller. Şemanın reddedeceği yama (boş müşteri, geçersiz süre)
+     * sessizce yok sayılır; `updateCategory`/`updateClient` ile aynı desen.
+     */
     updateTimeLog: (
         id: string,
         patch: Partial<Pick<TimeLog, 'taskId' | 'clientId' | 'projectId' | 'startedAt' | 'durationMinutes' | 'note'>>
@@ -305,6 +316,7 @@ export const useTaskStore = create<TaskState>()(
 
                 const now = new Date().toISOString();
                 const removedIds = new Set(removed.map((t) => t.id));
+                const timer = state.activeTimer;
 
                 return {
                     tasks: state.tasks.filter((t) => !t.completed),
@@ -313,6 +325,20 @@ export const useTaskStore = create<TaskState>()(
                         ...state.tombstones.filter((t) => !removedIds.has(t.id)),
                         ...removed.map((t) => ({ id: t.id, deletedAt: now })),
                     ],
+                    // Toplu silme de `deleteTask` ile aynı referans eylemini
+                    // aynalamak zorunda (`on delete set null (task_id)`):
+                    // aynalamazsa cihazda var olmayan bir göreve bağlı kayıt
+                    // kalır ve bir sonraki senkrona kadar arayüz ölü bağ
+                    // gösterir. Kayıtlar dirty işaretlenmez — sunucu aynı
+                    // şeyi kendi tarafında zaten yapıyor.
+                    timeLogs: state.timeLogs.map((l) =>
+                        l.taskId !== null && removedIds.has(l.taskId)
+                            ? { ...l, taskId: null }
+                            : l
+                    ),
+                    activeTimer: timer && timer.taskId !== null && removedIds.has(timer.taskId)
+                        ? { ...timer, taskId: null }
+                        : timer,
                 };
             }),
 
@@ -596,6 +622,13 @@ export const useTaskStore = create<TaskState>()(
             // yolu bu.
             startTimer: (input, now = new Date().toISOString()) =>
                 set((state) => {
+                    // Müşterisiz sayaç durdurulduğunda `client_id`'si boş bir
+                    // kayıt üretirdi: push 23502 ile düşer, o turdaki bütün
+                    // senkron onunla gider ve kayıt hiç temizlenmediği için
+                    // her turda aynı yerde tıkanır. Arayüzdeki `disabled`
+                    // butonun tek savunma olmaması için kural burada da var.
+                    if (!input.clientId) return state;
+
                     // Tek sayaç kuralı BURADA uygulanır, arayüzde değil: yeni
                     // sayacı başlatmak öncekini durdurup kaydeder.
                     const stopped = state.activeTimer ? stopTimerInto(state, now) : {};
@@ -619,6 +652,12 @@ export const useTaskStore = create<TaskState>()(
             discardTimer: () => set({ activeTimer: null }),
 
             addTimeLog: (input) => {
+                // Şemanın kabul etmeyeceği kayıt push kuyruğuna hiç girmemeli
+                // (bkz. isValidDuration). `createTimeLog` süreyi kırpıyor, ama
+                // kırpmak elle girilen "0 dakika"yı sessizce 1 dakika yapardı;
+                // reddetmek arayüze doğruyu söyleme şansı verir.
+                if (!input.clientId || !isValidDuration(input.durationMinutes)) return null;
+
                 const log = createTimeLog(input);
 
                 set((state) => ({
@@ -630,12 +669,34 @@ export const useTaskStore = create<TaskState>()(
             },
 
             updateTimeLog: (id, patch) => set((state) => {
-                if (!state.timeLogs.some((l) => l.id === id)) return state;
+                const existing = state.timeLogs.find((l) => l.id === id);
+                if (!existing) return state;
+
+                // Yama şemayı ihlal ediyorsa kayıt hiç değiştirilmez: geçersiz
+                // satır push kuyruğuna girerse 23514/23502 alınır ve o turdaki
+                // bütün senkron düşer.
+                if (patch.clientId !== undefined && !patch.clientId) return state;
+                if (
+                    patch.durationMinutes !== undefined
+                    && !isValidDuration(patch.durationMinutes)
+                ) return state;
+
+                // Müşteri değişince proje bağı düşer — `TaskForm`'daki kuralın
+                // aynısı: `time_logs_project_id_client_id_user_id_fkey` üçlüsü
+                // projenin müşterisiyle kaydın müşterisinin aynı olmasını
+                // zorunlu tutuyor. Yeni proje aynı yamada açıkça veriliyorsa
+                // ona dokunulmaz.
+                const clientChanged =
+                    patch.clientId !== undefined && patch.clientId !== existing.clientId;
+                const projectId = patch.projectId !== undefined
+                    ? patch.projectId
+                    : (clientChanged ? null : existing.projectId);
+
                 const now = new Date().toISOString();
 
                 return {
                     timeLogs: state.timeLogs.map((l) =>
-                        l.id === id ? { ...l, ...patch, updatedAt: now } : l
+                        l.id === id ? { ...l, ...patch, projectId, updatedAt: now } : l
                     ),
                     dirtyTimeLogIds: withDirty(state.dirtyTimeLogIds, id),
                 };

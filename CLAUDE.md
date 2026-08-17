@@ -25,7 +25,7 @@ Depo: [CanSrl/New-Era-To-Do-App](https://github.com/CanSrl/New-Era-To-Do-App) (p
 **Yığın:** React 19 + TypeScript + Vite 8 + Tailwind v4 + Zustand + Supabase +
 Radix + dnd-kit + framer-motion + react-i18next + PWA (vite-plugin-pwa).
 
-**Veritabanı** (`supabase/migrations/`): beş tablo var.
+**Veritabanı** (`supabase/migrations/`): altı tablo var.
 ```
 profiles    id(=auth.users.id), email, display_name, created_at, updated_at
             -- auth.users tetikleyicisiyle otomatik oluşur
@@ -34,19 +34,26 @@ categories  id, user_id, name, color('#rrggbb'), position(float),
 tasks       id, user_id, title, description, due_date(date), priority,
             category_id(null), client_id(null), project_id(null),
             completed, completed_at, position(float), created_at, updated_at
--- niş modül (tek migration dosyası, silinebilir):
+-- niş modül (İKİ migration dosyası, birlikte silinebilir; sıra önemli):
 clients     id, user_id, name(<=80), archived, position(float),
+            hourly_rate(numeric(10,2), >=0), currency(3 harf, 'TRY'),
             created_at, updated_at
 projects    id, user_id, client_id, name(<=80), archived, position(float),
+            hourly_rate(numeric(10,2) null = müşteriden miras),
+            created_at, updated_at
+time_logs   id, user_id, task_id(null), client_id(NOT NULL), project_id(null),
+            started_at, duration_minutes(1..1440), note(<=200),
             created_at, updated_at
 ```
+Zaman kaydı migration'ı jenerik `tasks` tablosuna da bir kısıt ekler
+(`tasks_id_user_id_key`); niş modülü çıkarma yordamı onu da düşürmeli.
 `task_priority`(low|medium|high) dile bağımsız enum olarak kaldı.
 RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `anon`'a
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 441 otomatik test — 305 birim (Vitest), 86 uçtan uca (Playwright, 9'u
-gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 50 şema güvenlik testi.
+**Test:** 547 otomatik test — 389 birim (Vitest), 86 uçtan uca (Playwright, 9'u
+gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
 ## Komutlar
@@ -263,7 +270,8 @@ auth, `AuthProvider`, giriş/kayıt/parola sıfırlama diyaloğu, hesap menüsü
 **kullanıcı tanımlı kategoriler** (ad + renk, ayarlar sayfasında yönetim,
 cihazlar arası senkron).
 **Sonraki fazlara bırakıldı:** `subscriptions` (ödeme); `clients`/`projects`
-Faz 5'te geldi, `time_logs` hâlâ bekliyor.
+Faz 5'te geldi, `time_logs` Faz 5 / görev 7'de geldi (şema hazır, senkron ve
+arayüz sürüyor).
 **Kapsam dışı bırakıldı:** Google OAuth — Google Cloud Console hesabı
 gerektiriyor, kullanıcının hesabı yok. Kod tarafında engel yok: `features.ts`'e
 ikinci bayrak, `AuthProvider`'a ikinci `signInWithOAuth` çağrısı yeterli.
@@ -330,8 +338,51 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 | 3 | Store alanları + 8 eylem, LocalStorage v4 → v5 göçü | ✅ |
 | 4 | Senkron motoru: eşleme, birleştirme, repository, sıra, bayrak kapısı | ✅ |
 | 5 | Arayüz: müşteri/proje yönetimi, TaskForm'a iki opsiyonel seçici | ✅ |
-| 6 | Teslim odaklı görünüm (ayrı route), CSV export (`papaparse`) | ⏳ |
-| 7 | `time_logs` tablosu ve basit zaman kaydı | ⏳ |
+| 6 | Teslim odaklı görünüm (`/app/delivery`, müşteri/projeye göre gruplama) | ✅ |
+| 7 | Zaman kaydı ve CSV dışa aktarım — **kendi 9 görevlik planı var** (aşağı) | ⏳ |
+
+**Görev 7 (zaman kaydı + dışa aktarım)** ayrı bir plan/spec çiftinde yaşıyor ve
+o dokümanlarda **"Faz 3"** diye anılıyor (bu dosyadaki faz numaralandırmasıyla
+aynı şey değil — orası niş modülün 2. dilimi):
+`docs/superpowers/plans/2026-08-16-nis-modul-zaman-kaydi.md` +
+`docs/superpowers/specs/2026-08-16-nis-modul-zaman-kaydi-design.md`.
+Dal: `faz-3-zaman-kaydi`.
+
+| # | İş | Durum |
+| --- | --- | --- |
+| 1 | `time_logs` şeması, ücret sütunları, tam RLS (72/72 şema testi) | ✅ |
+| 2 | `TimeLog`/`ActiveTimer` tipleri, `time-logs.ts` saf yardımcıları | ✅ |
+| 3 | Store: alanlar, tek sayaç kuralı, 6 eylem, v5 → v6 göçü | ✅ |
+| 4 | Senkron: `mergeTimeLogs`, eşleme, repository, sıra, `pendingCount` | ⏳ |
+| 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ⏳ |
+| 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ⏳ |
+| 7 | Ücret alanları arayüzü ve silme diyaloğu | ⏳ |
+| 8 | CSV dışa aktarım (`papaparse`) | ⏳ |
+| 9 | Bayrak izleri, kalan E2E, doküman senkronu | ⏳ |
+
+Zaman kaydında yerleşen kurallar:
+
+- **Çalışan sayaç cihaza özeldir ve senkronlanmaz**; yalnızca durdurulmuş kayıt
+  buluta gider. Tek sayaç kuralı **store'da** uygulanır (arayüzde değil): yeni
+  sayacı başlatmak öncekini durdurup kaydeder.
+- **`activeTimer` `partialize`'da olmak zorunda** — "sayaç sayfa yenilemesinden
+  sağ çıkar" gereksinimi tamamen buna dayanır.
+- **`projects.hourly_rate` null = müşteriden miras, 0 = proje ücretsiz.**
+  Çözerken `??` kullanılır; `||` yazmak ücretsiz projeyi sessizce faturalandırır.
+- **Şemanın reddedeceği kayıt push kuyruğuna hiç girmemeli.** Store eylemleri
+  (`startTimer`, `addTimeLog`, `updateTimeLog`) müşterisiz/geçersiz süreli
+  girdiyi reddeder: geçersiz satır push'ta 23514/23502 alır, o turdaki bütün
+  senkron onunla düşer ve kayıt dirty kaldığı için **her turda aynı yerde
+  tıkanır**. `isValidDuration` şemadaki `1..1440` kısıtının ikizidir.
+- **Görev/proje/müşteri silmenin ÜÇ yolu da referans eylemini aynalamak
+  zorunda:** `deleteTask`, `deleteProject`, `deleteClient` ve **`clearCompleted`**
+  (toplu silme unutulmuştu). Müşteri silinince kayıt gider (cascade, mezar taşı
+  bırakılmaz) ve çalışan sayaç atılır; proje/görev silinince kayıt durur,
+  yalnızca ilgili bağ boşalır ve kayıt dirty işaretlenmez.
+- **`numeric` PostgREST'ten sayı olarak gelir** (ölçüldü: `{"hourly_rate":1500.00}`).
+  Ancak `normalizeClient`/`normalizeProject` sayı olmayan ücreti sessizce
+  varsayılana düşürür — bu beklenti bozulursa hata gürültü çıkarmaz, ücret
+  verisi sıfırlanır.
 
 Görev 5'te gelen arayüz kararları:
 

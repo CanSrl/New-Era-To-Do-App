@@ -6,6 +6,21 @@ export const TIME_LOG_MAX_MINUTES = 1440;
 export const TIME_LOG_NOTE_MAX = 200;
 
 /**
+ * Süre veritabanı kısıtına uyuyor mu?
+ *
+ * Şemadaki `check (duration_minutes > 0 and duration_minutes <= 1440)` ile
+ * birebir aynı. Store eylemleri buna bakmak ZORUNDA: kısıtı ihlal eden bir
+ * kayıt push kuyruğuna girerse Postgres 23514 ile reddeder, o turdaki bütün
+ * senkron onunla düşer ve kayıt hiç temizlenmediği için her turda aynı yerde
+ * tıkanır (`normalizeClient`'taki aynı gerekçe).
+ */
+export function isValidDuration(minutes: unknown): boolean {
+    if (typeof minutes !== 'number' || !Number.isFinite(minutes)) return false;
+    const whole = Math.floor(minutes);
+    return whole >= 1 && whole <= TIME_LOG_MAX_MINUTES;
+}
+
+/**
  * Etkin saatlik ücret.
  *
  * `??` ŞART: projenin `0` ücreti "bu proje ücretsiz" demektir ve mirası ezer.

@@ -953,17 +953,18 @@ Beklenen: PASS
 `null` dönerse ham satırdan yedek üret, sunucu `updated_at`'i normalize
 edilmiş değerin yerine geçsin).
 
-⚠️ `numeric` PostgREST'ten **string** olarak gelebilir. `rowToClient` içinde
-`Number(row.hourly_rate)` ile çevirin ve `Number.isFinite` kontrolü koyun;
-doğrudan atamak ücreti `"1500"` yapar ve `amountFor` `NaN` üretir. Bunu bir
-testle sabitleyin:
+✅ **Düzeltme (ölçüldü, 2026-08-17):** Bu planın ilk hali `numeric` sütununun
+PostgREST'ten **string** geleceğini varsayıyor ve `Number(row.hourly_rate)`
+çevrimi ile bir test istiyordu. Yerel yığına karşı ölçüldü: PostgREST `numeric`
+değeri tırnaksız JSON sayısı olarak döndürüyor (`[{"hourly_rate":1500.00}]`,
+`typeof === 'number'`). Ücret eşlemesi Task 2'de zaten doğrudan atamayla
+yazıldı ve **doğru**; çevrim de "string gelirse" testi de eklenmemeli — o test
+gerçekte olmayan bir davranışı sabitlerdi.
 
-```ts
-it('numeric sutunu string gelirse sayiya cevrilir', () => {
-    const c = rowToClient({ ...row, hourly_rate: '1500.00' } as never);
-    expect(c.hourlyRate).toBe(1500);
-});
-```
+⚠️ Yine de dikkat: `normalizeClient`/`normalizeProject` sayı olmayan ücreti
+**sessizce varsayılana düşürür** (müşteride 0, projede `null` = miras). Yani
+tip beklentisi bir gün bozulursa hata gürültü çıkarmaz, ücret verisi sessizce
+sıfırlanır. Sağlayıcı ya da PostgREST sürümü değişirse önce bunu ölçün.
 
 `task-repository.ts`: `fetchRemoteTimeLogs` (mutlaka `fetchAllRows` üzerinden —
 sayfalama ve `MAX_ROWS` tavanı), `pushRemoteTimeLogs`, `deleteRemoteTimeLogs`;

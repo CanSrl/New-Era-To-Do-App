@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { amountFor, effectiveRate, elapsedMinutes, normalizeTimeLog } from './time-logs';
+import { amountFor, effectiveRate, elapsedMinutes, isValidDuration, normalizeTimeLog } from './time-logs';
 import type { Client, Project, TimeLog } from './types';
 
 const client: Client = {
@@ -60,6 +60,31 @@ describe('elapsedMinutes', () => {
             startedAt: '2026-08-16T10:00:00.000Z', note: null,
         };
         expect(elapsedMinutes(timer, '2026-08-16T09:00:00.000Z')).toBe(0);
+    });
+});
+
+// Semadaki check (duration_minutes > 0 and <= 1440) ile birebir ayni sinirlar:
+// ayrisirlarsa store gecerli sanip push kuyruguna sokar ve tur 23514 ile duser.
+describe('isValidDuration', () => {
+    it('sinirlari semayla ayni tutar', () => {
+        expect(isValidDuration(1)).toBe(true);
+        expect(isValidDuration(1440)).toBe(true);
+        expect(isValidDuration(0)).toBe(false);
+        expect(isValidDuration(-5)).toBe(false);
+        expect(isValidDuration(1441)).toBe(false);
+    });
+
+    it('sayi olmayani ve gecersiz sayiyi reddeder', () => {
+        expect(isValidDuration(NaN)).toBe(false);
+        expect(isValidDuration(Infinity)).toBe(false);
+        expect(isValidDuration('30')).toBe(false);
+        expect(isValidDuration(undefined)).toBe(false);
+    });
+
+    // Sema integer bekliyor; kesirli deger tam dakikaya inip oyle degerlendirilir.
+    it('kesirli degeri tam dakikaya indirerek degerlendirir', () => {
+        expect(isValidDuration(0.5)).toBe(false);
+        expect(isValidDuration(1.9)).toBe(true);
     });
 });
 

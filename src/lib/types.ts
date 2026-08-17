@@ -83,8 +83,10 @@ export interface TimeLog {
     /** Zorunlu — müşterisiz zaman kaydı şemada da imkânsız. */
     clientId: string;
     /**
-     * Bağlı proje. Doluysa projenin müşterisi `clientId` ile aynıdır —
-     * `time_logs_project_requires_client` kısıtının istemci karşılığı.
+     * Bağlı proje. Doluysa projenin müşterisi `clientId` ile aynıdır; bunu
+     * `time_logs_project_id_client_id_user_id_fkey` üçlüsü garanti eder.
+     * (`Task`'takinin aksine burada ayrı bir "proje varsa müşteri de olmalı"
+     * check'i yok — `client_id` zaten `not null`.)
      */
     projectId: string | null;
     /** ISO 8601 zaman damgası: kaydın başlangıcı. */
