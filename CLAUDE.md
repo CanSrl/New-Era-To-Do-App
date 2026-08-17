@@ -52,9 +52,9 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 578 otomatik test — 417 birim (Vitest), 89 uçtan uca (Playwright,
-12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 72 şema güvenlik
-testi.
+**Test:** 594 otomatik test — 420 birim (Vitest), 102 uçtan uca (Playwright,
+12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
+bayrağı kapalı olduğu için atlanır), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
 ## Komutlar
@@ -369,7 +369,7 @@ Dal: `faz-3-zaman-kaydi`.
 | 2 | `TimeLog`/`ActiveTimer` tipleri, `time-logs.ts` saf yardımcıları | ✅ |
 | 3 | Store: alanlar, tek sayaç kuralı, 6 eylem, v5 → v6 göçü | ✅ |
 | 4 | Senkron: `mergeTimeLogs`, eşleme, repository, sıra, `pendingCount` | ✅ |
-| 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ⏳ |
+| 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ✅ |
 | 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ⏳ |
 | 7 | Ücret alanları arayüzü ve silme diyaloğu | ⏳ |
 | 8 | CSV dışa aktarım (`papaparse`) | ⏳ |
@@ -394,6 +394,20 @@ Zaman kaydında yerleşen kurallar:
   (toplu silme unutulmuştu). Müşteri silinince kayıt gider (cascade, mezar taşı
   bırakılmaz) ve çalışan sayaç atılır; proje/görev silinince kayıt durur,
   yalnızca ilgili bağ boşalır ve kayıt dirty işaretlenmez.
+- **Sayaç çubuğu kabukta yaşar, sayfada değil** (`ActiveTimerBar`, `AppLayout`
+  içinde). "Unutulmuş açık sayaç" bu ürün kategorisinin klasik veri hatası ve
+  tek gerçek savunması görünürlük; çubuk yalnızca başlatıldığı ekranda
+  görünseydi kullanıcı başka sayfaya geçip unuturdu. Aynı gerekçeyle görev
+  satırındaki **durdur** butonu, düzenle/sil'in aksine hover'a bağlı değil.
+- **Durdurmak ile atmak ayrı butonlar.** Durdurmak kaydeder, atmak kaydetmez;
+  ikisi geri alınamaz biçimde farklı. Tek butonda birleştirmek, yanlışlıkla
+  başlatılmış sayacı faturaya yazardı.
+- **`useElapsed` saati `useSyncExternalStore` ile okur.** Üslup değil kural:
+  `Date.now()` render içinde çağrılamaz (`react-hooks/purity`), efekt
+  gövdesinden `setState` çağrılamaz (`react-hooks/set-state-in-effect`) ve
+  efektle kurulan state, yenilemeden sonra bir kare `0:00:00` gösterip gerçek
+  süreye sıçrardı. ⚠️ Plan dokümanındaki taslak kanca bu üç kuralın ilk
+  ikisine takılıyor — kopyalamayın.
 - **`numeric` PostgREST'ten sayı olarak gelir** (ölçüldü: `{"hourly_rate":1500.00}`).
   Ancak `normalizeClient`/`normalizeProject` sayı olmayan ücreti sessizce
   varsayılana düşürür — bu beklenti bozulursa hata gürültü çıkarmaz, ücret

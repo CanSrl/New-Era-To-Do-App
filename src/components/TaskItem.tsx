@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { Task } from '../lib/types';
 import { useTaskStore } from '../store';
-import { GripVertical, Edit2, Trash2, Calendar, Tag, Check, Briefcase } from 'lucide-react';
+import { GripVertical, Edit2, Trash2, Calendar, Tag, Check, Briefcase, Play, Square } from 'lucide-react';
 import { NICHE_MODULE } from '../config/features';
 import { format, parseISO } from 'date-fns';
 import { useTranslation } from 'react-i18next';
@@ -53,6 +53,13 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
             ? undefined
             : state.projects.find(p => p.id === task.projectId)
     );
+    // Sayaç durumu bayrak kapalıyken hiç okunmaz; aşağıdaki blok da o zaman
+    // hiç render edilmiyor.
+    const isTimerRunning = useTaskStore(state =>
+        NICHE_MODULE && state.activeTimer?.taskId === task.id
+    );
+    const startTimer = useTaskStore(state => state.startTimer);
+    const stopTimer = useTaskStore(state => state.stopTimer);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const {
@@ -80,7 +87,13 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
         <div
             ref={setNodeRef}
             style={style}
-            className={`group relative flex items-start gap-3 p-4 bg-card border border-border rounded-xl shadow-sm transition-all hover:shadow-md mb-3 ${task.completed ? 'opacity-70 bg-muted/40' : ''} ${isDeleting ? 'scale-95 opacity-0 pointer-events-none' : ''}`}
+            /*
+              * Çalışan satır çerçeveyle işaretlenir; renk token'lardan gelir
+              * (sabit renk açık/koyu temanın birinde okunmaz olurdu) ve tek
+              * gösterge değildir — satırdaki durdur butonu ve kabuktaki sayaç
+              * çubuğu aynı bilgiyi metinle de taşır.
+              */
+            className={`group relative flex items-start gap-3 p-4 bg-card border rounded-xl shadow-sm transition-all hover:shadow-md mb-3 ${isTimerRunning ? 'border-primary ring-1 ring-primary/40' : 'border-border'} ${task.completed ? 'opacity-70 bg-muted/40' : ''} ${isDeleting ? 'scale-95 opacity-0 pointer-events-none' : ''}`}
         >
             <div
                 {...attributes}
@@ -119,10 +132,45 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2">
+                        {/*
+                          * Sayaç butonu diğer eylemlerin aksine çalışırken
+                          * HER ZAMAN görünür: durdurmanın hover'a bağlı olması,
+                          * unutulmuş sayacı görünmez kılardı — bu ürün
+                          * kategorisinin klasik veri hatası tam olarak budur.
+                          *
+                          * Müşterisiz görevde buton kapalıdır çünkü
+                          * `time_logs.client_id` zorunlu; sebebi `title` ile
+                          * söylenmezse buton "bozuk" görünür.
+                          */}
+                        {NICHE_MODULE && (
+                            <button
+                                onClick={() => isTimerRunning
+                                    ? stopTimer()
+                                    : startTimer({
+                                        taskId: task.id,
+                                        clientId: task.clientId ?? '',
+                                        projectId: task.projectId,
+                                    })}
+                                disabled={!task.clientId}
+                                title={task.clientId ? undefined : t('time.needsClient')}
+                                aria-label={isTimerRunning
+                                    ? t('time.stopFor', { title: task.title })
+                                    : t('time.startFor', { title: task.title })}
+                                className={`p-1.5 rounded-md transition-all disabled:cursor-not-allowed disabled:opacity-30 ${isTimerRunning
+                                    ? 'text-primary bg-primary/10 opacity-100'
+                                    : 'text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 disabled:group-hover:opacity-30'
+                                    }`}
+                            >
+                                {isTimerRunning
+                                    ? <Square size={16} fill="currentColor" />
+                                    : <Play size={16} />}
+                            </button>
+                        )}
+
                         <button
                             onClick={() => onEdit(task)}
-                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-colors"
+                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
                             title={t('common.edit')}
                             aria-label={t('taskItem.edit', { title: task.title })}
                         >
@@ -131,7 +179,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <button
-                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
+                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
                                     title={t('common.delete')}
                                     aria-label={t('taskItem.delete', { title: task.title })}
                                 >

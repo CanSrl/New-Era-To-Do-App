@@ -8,6 +8,7 @@ import { NICHE_MODULE } from '../config/features';
 import type { TranslationKey } from '../i18n';
 import { useTaskStore } from '../store';
 import { useUiStore } from '../store/ui';
+import { ActiveTimerBar } from '../features/time/ActiveTimerBar';
 import { AccountMenu } from './AccountMenu';
 import { AuthDialog } from './AuthDialog';
 import { TaskForm } from './TaskForm';
@@ -183,6 +184,14 @@ export function AppLayout() {
 
             {/* İçerik */}
             <main className="flex-1 flex flex-col min-w-0 max-h-screen overflow-y-auto pb-24 md:pb-0 relative">
+                {/*
+                  * Sayaç çubuğu kaydırılan alanın en üstünde yapışık durur:
+                  * "unutulmuş açık sayaç" bu ürün kategorisinin klasik veri
+                  * hatası ve tek gerçek savunması görünürlük. Kabukta olduğu
+                  * için hangi sayfaya gidilirse gidilsin görünür.
+                  */}
+                {NICHE_MODULE && <ActiveTimerBar />}
+
                 <div className="max-w-4xl w-full mx-auto p-4 md:p-8 flex-1">
                     <Outlet />
                 </div>

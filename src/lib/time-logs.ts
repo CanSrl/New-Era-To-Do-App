@@ -50,6 +50,24 @@ export function elapsedMinutes(timer: ActiveTimer, now: string): number {
     return Math.max(0, Math.floor(ms / 60_000));
 }
 
+/**
+ * Çalışan sayacın ekranda görünen biçimi: `s:dd:ss`.
+ *
+ * Saat basamağı sıfır olsa bile yazılır (`0:07:12`): alan genişliği sabit
+ * kalır, sayaç saati geçtiğinde çubuk zıplamaz. Dile bağımlı bir biçim
+ * DEĞİLDİR, bu yüzden çeviri dosyasında değil burada duruyor — iki dilde de
+ * aynı okunur.
+ */
+export function formatElapsed(totalSeconds: number): string {
+    const safe = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
+
+    const hours = Math.floor(safe / 3600);
+    const minutes = Math.floor((safe % 3600) / 60);
+    const seconds = safe % 60;
+
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 /** Dışarıdan gelen ham veriyi geçerli bir TimeLog'a çevirir. */
 export function normalizeTimeLog(raw: unknown): TimeLog | null {
     if (!raw || typeof raw !== 'object') return null;

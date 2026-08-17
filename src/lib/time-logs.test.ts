@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { amountFor, effectiveRate, elapsedMinutes, isValidDuration, normalizeTimeLog } from './time-logs';
+import {
+    amountFor,
+    effectiveRate,
+    elapsedMinutes,
+    formatElapsed,
+    isValidDuration,
+    normalizeTimeLog,
+} from './time-logs';
 import type { Client, Project, TimeLog } from './types';
 
 const client: Client = {
@@ -85,6 +92,26 @@ describe('isValidDuration', () => {
     it('kesirli degeri tam dakikaya indirerek degerlendirir', () => {
         expect(isValidDuration(0.5)).toBe(false);
         expect(isValidDuration(1.9)).toBe(true);
+    });
+});
+
+describe('formatElapsed', () => {
+    it('s:dd:ss biciminde yazar', () => {
+        expect(formatElapsed(0)).toBe('0:00:00');
+        expect(formatElapsed(59)).toBe('0:00:59');
+        expect(formatElapsed(90)).toBe('0:01:30');
+        expect(formatElapsed(3661)).toBe('1:01:01');
+    });
+
+    // Saat basamagi sifirken de yazilir: alan genisligi sabit kalsin, sayac
+    // saati gecince cubuk ziplamasin.
+    it('saat sifir olsa da basamagi birakir', () => {
+        expect(formatElapsed(5)).toMatch(/^0:/);
+    });
+
+    it('negatif ve gecersiz degeri sifira duser', () => {
+        expect(formatElapsed(-10)).toBe('0:00:00');
+        expect(formatElapsed(NaN)).toBe('0:00:00');
     });
 });
 

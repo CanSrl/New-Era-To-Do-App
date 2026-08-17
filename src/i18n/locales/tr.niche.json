@@ -56,6 +56,15 @@
     "unarchived": "\"{{name}}\" arşivden çıkarıldı.",
     "deleted": "\"{{name}}\" silindi."
   },
+  "time": {
+    "startFor": "\"{{title}}\" için sayacı başlat",
+    "stopFor": "\"{{title}}\" için sayacı durdur",
+    "needsClient": "Sayaç başlatmak için görevi bir müşteriye bağlayın.",
+    "noTask": "Göreve bağlı olmayan kayıt",
+    "running": "Çalışan sayaç: {{name}}",
+    "stopAndSave": "Sayacı durdur ve kaydet",
+    "discard": "Sayacı kaydetmeden at"
+  },
   "nav": {
     "clients": "Müşteriler",
     "clientsShort": "Müşteri",

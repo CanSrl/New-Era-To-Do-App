@@ -56,6 +56,15 @@
     "unarchived": "\"{{name}}\" unarchived.",
     "deleted": "\"{{name}}\" deleted."
   },
+  "time": {
+    "startFor": "Start timer for \"{{title}}\"",
+    "stopFor": "Stop timer for \"{{title}}\"",
+    "needsClient": "Link the task to a client to start a timer.",
+    "noTask": "Entry not linked to a task",
+    "running": "Timer running: {{name}}",
+    "stopAndSave": "Stop timer and save",
+    "discard": "Discard timer without saving"
+  },
   "nav": {
     "clients": "Clients",
     "clientsShort": "Clients",
