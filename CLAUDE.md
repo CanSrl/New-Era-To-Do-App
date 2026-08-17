@@ -327,7 +327,8 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 
 ### ⏳ Kalan işler
 
-**Ürün sağlamlaştırma:** `eslint-plugin-jsx-a11y`.
+**Ürün sağlamlaştırma:** ✅ bitti — `eslint-plugin-jsx-a11y`
+(`flatConfigs.recommended`) `eslint.config.js` içinde kurulu ve CI'da koşuyor.
 
 **Faz 5 — Niş modül** *(sürüyor)*
 
