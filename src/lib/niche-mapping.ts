@@ -25,6 +25,8 @@ export function clientToRow(client: Client, userId: string): ClientInsert {
         name: client.name,
         archived: client.archived,
         position: client.position,
+        hourly_rate: client.hourlyRate,
+        currency: client.currency,
         created_at: client.createdAt,
         updated_at: client.updatedAt,
     };
@@ -43,6 +45,8 @@ export function rowToClient(row: ClientRow): Client {
             name: row.name,
             archived: row.archived,
             position: row.position,
+            hourlyRate: row.hourly_rate,
+            currency: row.currency,
             createdAt: row.created_at,
         },
         row.position
@@ -54,6 +58,8 @@ export function rowToClient(row: ClientRow): Client {
             name: row.name || 'Adsız müşteri',
             archived: row.archived,
             position: row.position,
+            hourlyRate: row.hourly_rate,
+            currency: row.currency,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
         };
@@ -73,6 +79,8 @@ export function projectToRow(project: Project, userId: string): ProjectInsert {
         name: project.name,
         archived: project.archived,
         position: project.position,
+        // null = müşteriden miras, 0 = ücretsiz proje; ikisi ayrı satır değeridir.
+        hourly_rate: project.hourlyRate,
         created_at: project.createdAt,
         updated_at: project.updatedAt,
     };
@@ -87,6 +95,7 @@ export function rowToProject(row: ProjectRow): Project {
             name: row.name,
             archived: row.archived,
             position: row.position,
+            hourlyRate: row.hourly_rate,
             createdAt: row.created_at,
         },
         row.position
@@ -102,6 +111,8 @@ export function rowToProject(row: ProjectRow): Project {
             name: row.name || 'Adsız proje',
             archived: row.archived,
             position: row.position,
+            hourlyRate: row.hourly_rate,
+            currency: 'TRY',
             createdAt: row.created_at,
             updatedAt: row.updated_at,
         };

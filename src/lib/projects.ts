@@ -23,6 +23,15 @@ export function normalizeProject(raw: unknown, fallbackPosition: number): Projec
 
     const createdAt = toIsoTimestamp(source.createdAt);
 
+    // null = müşteriden miras al, 0 = proje ücretsiz — ikisi FARKLI, bu yüzden
+    // `source.hourlyRate == null` değil `typeof ... !== 'number'` denetlenir.
+    const hourlyRate = typeof source.hourlyRate === 'number' && Number.isFinite(source.hourlyRate)
+        ? source.hourlyRate
+        : null;
+    const currency = typeof source.currency === 'string' && source.currency
+        ? source.currency
+        : 'TRY';
+
     return {
         id: typeof source.id === 'string' && source.id ? source.id : createId(),
         clientId,
@@ -31,6 +40,8 @@ export function normalizeProject(raw: unknown, fallbackPosition: number): Projec
         position: typeof source.position === 'number' && Number.isFinite(source.position)
             ? source.position
             : fallbackPosition,
+        hourlyRate,
+        currency,
         createdAt,
         updatedAt: source.updatedAt == null ? createdAt : toIsoTimestamp(source.updatedAt),
     };
@@ -49,6 +60,9 @@ export function createProject(
         name: name.trim().slice(0, PROJECT_NAME_MAX),
         archived: false,
         position,
+        // null: müşterinin ücretini miras alır (varsayılan davranış).
+        hourlyRate: null,
+        currency: 'TRY',
         createdAt: now,
         updatedAt: now,
     };

@@ -44,16 +44,70 @@ export interface Client {
     archived: boolean;
     /** Kullanıcı tanımlı sıralama anahtarı; küçük değer listede önde. */
     position: number;
+    /**
+     * Saatlik ücret. Zorunlu ve varsayılanı 0 — "ücret girilmemiş" ile
+     * "ücretsiz" arasında müşteri seviyesinde ayrım yapılmıyor; ayrım
+     * projedeki null/0 farkında yaşıyor.
+     */
+    hourlyRate: number;
+    /** ISO 4217, üç harf. Dönüşüm yapılmaz; toplamlar para birimi başına alınır. */
+    currency: string;
     /** ISO 8601 zaman damgası. */
     createdAt: string;
     /** ISO 8601 zaman damgası; çakışma bu alana göre çözülür. */
     updatedAt: string;
 }
 
-/** Niş modül: bir müşteriye ait proje. */
-export interface Project extends Client {
+/**
+ * Niş modül: bir müşteriye ait proje.
+ *
+ * `Client`'ı genişletmez: `hourlyRate`'i `number`'dan `number | null`'a
+ * daraltmak TypeScript'te geçersizdir. Bunun yerine `Client`'ın o alan
+ * dışındaki gövdesi üzerine kurulur.
+ */
+export interface Project extends Omit<Client, 'hourlyRate'> {
     /** Her proje bir müşteriye aittir; şemada da `not null`. */
     clientId: string;
+    /**
+     * Müşteriyi ezen opsiyonel ücret. `null` = miras, `0` = bu proje
+     * ücretsiz. İkisi FARKLIDIR; çözerken `??` kullanılır, `||` değil.
+     */
+    hourlyRate: number | null;
+}
+
+/** Niş modül: bir müşteri/proje/göreve bağlı zaman kaydı. */
+export interface TimeLog {
+    id: string;
+    /** Bağlı görev; opsiyonel — bağımsız (görevsiz) zaman kaydı da mümkün. */
+    taskId: string | null;
+    /** Zorunlu — müşterisiz zaman kaydı şemada da imkânsız. */
+    clientId: string;
+    /**
+     * Bağlı proje. Doluysa projenin müşterisi `clientId` ile aynıdır —
+     * `time_logs_project_requires_client` kısıtının istemci karşılığı.
+     */
+    projectId: string | null;
+    /** ISO 8601 zaman damgası: kaydın başlangıcı. */
+    startedAt: string;
+    /** Veritabanı kısıtıyla aynı tavan: `TIME_LOG_MAX_MINUTES`. */
+    durationMinutes: number;
+    note: string | null;
+    /** ISO 8601 zaman damgası. */
+    createdAt: string;
+    /** ISO 8601 zaman damgası; çakışma bu alana göre çözülür. */
+    updatedAt: string;
+}
+
+/**
+ * O an çalışan sayaç. Ayrı bir tip: `TimeLog`'un aksine `durationMinutes`
+ * henüz yok, `startedAt`'ten türetilir (bkz. `elapsedMinutes`).
+ */
+export interface ActiveTimer {
+    taskId: string | null;
+    clientId: string;
+    projectId: string | null;
+    startedAt: string;
+    note: string | null;
 }
 
 export interface Task {

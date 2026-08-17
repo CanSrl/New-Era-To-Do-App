@@ -10,6 +10,8 @@ const client: Client = {
     name: 'Acme A.Ş.',
     archived: false,
     position: 3,
+    hourlyRate: 1500,
+    currency: 'TRY',
     createdAt: ISO,
     updatedAt: ISO,
 };
@@ -20,6 +22,8 @@ const project: Project = {
     name: 'Websitesi',
     archived: false,
     position: 1,
+    hourlyRate: null,
+    currency: 'TRY',
     createdAt: ISO,
     updatedAt: ISO,
 };
@@ -32,6 +36,8 @@ describe('clientToRow', () => {
             name: 'Acme A.Ş.',
             archived: false,
             position: 3,
+            hourly_rate: 1500,
+            currency: 'TRY',
             created_at: ISO,
             updated_at: ISO,
         });
@@ -42,7 +48,8 @@ describe('rowToClient', () => {
     it('satırı yerel müşteriye çevirir', () => {
         const result = rowToClient({
             id: 'c1', user_id: 'user-1', name: 'Acme A.Ş.', archived: true,
-            position: 3, created_at: ISO, updated_at: LATER,
+            position: 3, hourly_rate: 1500, currency: 'TRY',
+            created_at: ISO, updated_at: LATER,
         });
 
         expect(result).toEqual({
@@ -50,6 +57,8 @@ describe('rowToClient', () => {
             name: 'Acme A.Ş.',
             archived: true,
             position: 3,
+            hourlyRate: 1500,
+            currency: 'TRY',
             createdAt: ISO,
             updatedAt: LATER,
         });
@@ -60,7 +69,8 @@ describe('rowToClient', () => {
         // alınmazsa bir sonraki turda "uzak daha eski" sanılırdı.
         const result = rowToClient({
             id: 'c1', user_id: 'user-1', name: 'Acme', archived: false,
-            position: 0, created_at: ISO, updated_at: LATER,
+            position: 0, hourly_rate: 0, currency: 'TRY',
+            created_at: ISO, updated_at: LATER,
         });
 
         expect(result.updatedAt).toBe(LATER);
@@ -71,7 +81,8 @@ describe('rowToClient', () => {
         // çökertmemeli.
         const result = rowToClient({
             id: 'c1', user_id: 'user-1', name: '', archived: false,
-            position: 0, created_at: ISO, updated_at: ISO,
+            position: 0, hourly_rate: 0, currency: 'TRY',
+            created_at: ISO, updated_at: ISO,
         });
 
         expect(result.id).toBe('c1');
@@ -88,6 +99,7 @@ describe('projectToRow', () => {
             name: 'Websitesi',
             archived: false,
             position: 1,
+            hourly_rate: null,
             created_at: ISO,
             updated_at: ISO,
         });
@@ -98,7 +110,8 @@ describe('rowToProject', () => {
     it('satırı yerel projeye çevirir', () => {
         const result = rowToProject({
             id: 'p1', user_id: 'user-1', client_id: 'c1', name: 'Websitesi',
-            archived: false, position: 1, created_at: ISO, updated_at: LATER,
+            archived: false, position: 1, hourly_rate: null,
+            created_at: ISO, updated_at: LATER,
         });
 
         expect(result).toEqual({
@@ -107,6 +120,8 @@ describe('rowToProject', () => {
             name: 'Websitesi',
             archived: false,
             position: 1,
+            hourlyRate: null,
+            currency: 'TRY',
             createdAt: ISO,
             updatedAt: LATER,
         });
@@ -117,7 +132,8 @@ describe('rowToProject', () => {
         // düşer ve bir sonraki push 23502 ile reddedilirdi.
         const result = rowToProject({
             id: 'p1', user_id: 'user-1', client_id: 'c1', name: '',
-            archived: false, position: 0, created_at: ISO, updated_at: ISO,
+            archived: false, position: 0, hourly_rate: null,
+            created_at: ISO, updated_at: ISO,
         });
 
         expect(result.clientId).toBe('c1');

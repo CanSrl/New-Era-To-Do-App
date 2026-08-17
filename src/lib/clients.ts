@@ -21,6 +21,13 @@ export function normalizeClient(raw: unknown, fallbackPosition: number): Client 
 
     const createdAt = toIsoTimestamp(source.createdAt);
 
+    const hourlyRate = typeof source.hourlyRate === 'number' && Number.isFinite(source.hourlyRate)
+        ? source.hourlyRate
+        : 0;
+    const currency = typeof source.currency === 'string' && source.currency
+        ? source.currency
+        : 'TRY';
+
     return {
         id: typeof source.id === 'string' && source.id ? source.id : createId(),
         name: name.slice(0, CLIENT_NAME_MAX),
@@ -28,6 +35,8 @@ export function normalizeClient(raw: unknown, fallbackPosition: number): Client 
         position: typeof source.position === 'number' && Number.isFinite(source.position)
             ? source.position
             : fallbackPosition,
+        hourlyRate,
+        currency,
         createdAt,
         // Eski kayıtlarda updatedAt yok; oluşturma zamanına düşülür.
         updatedAt: source.updatedAt == null ? createdAt : toIsoTimestamp(source.updatedAt),
@@ -45,13 +54,19 @@ export function createClient(
         name: name.trim().slice(0, CLIENT_NAME_MAX),
         archived: false,
         position,
+        // Veritabanı varsayılanlarıyla aynı; ücret sonradan ayarlar sayfasından girilir.
+        hourlyRate: 0,
+        currency: 'TRY',
         createdAt: now,
         updatedAt: now,
     };
 }
 
 /** Sıralama anahtarına göre karşılaştırır; eşitlikte oluşturma sırasına düşer. */
-export function byClientPosition(a: Client, b: Client): number {
+export function byClientPosition(
+    a: { position: number; createdAt: string },
+    b: { position: number; createdAt: string }
+): number {
     if (a.position !== b.position) return a.position - b.position;
     return a.createdAt.localeCompare(b.createdAt);
 }
@@ -59,11 +74,16 @@ export function byClientPosition(a: Client, b: Client): number {
 /**
  * Ekran sırası: arşivlenmemişler önce, her grup kendi içinde `position`'a göre.
  *
- * `Project`, `Client`'ı genişlettiği için bu karşılaştırıcı iki tür için de
- * geçerlidir. Arşivleme silme değildir — kayıt listenin dibine iner ama
- * kaybolmaz, böylece geçmiş görevlerin bağı okunabilir kalır.
+ * Yapısal (structural) bir tip alır — `Client`'ın kendisi değil: `Project`
+ * artık `Client`'ı genişletmiyor (`hourlyRate` daraltması yüzünden), ama bu
+ * karşılaştırıcı ikisi için de geçerli kalmalı. Arşivleme silme değildir —
+ * kayıt listenin dibine iner ama kaybolmaz, böylece geçmiş görevlerin bağı
+ * okunabilir kalır.
  */
-export function byArchivedThenPosition(a: Client, b: Client): number {
+export function byArchivedThenPosition(
+    a: { archived: boolean; position: number; createdAt: string },
+    b: { archived: boolean; position: number; createdAt: string }
+): number {
     if (a.archived !== b.archived) return a.archived ? 1 : -1;
     return byClientPosition(a, b);
 }
