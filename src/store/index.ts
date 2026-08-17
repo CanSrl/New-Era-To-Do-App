@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { Category, Client, Project, Task, FilterStatus } from '../lib/types';
+import type { ActiveTimer, Category, Client, Project, Task, TimeLog, FilterStatus } from '../lib/types';
 import { createId, nextPosition, normalizeTask, toPriority } from '../lib/tasks';
 import {
     categoryKey,
@@ -11,6 +11,7 @@ import {
 } from '../lib/categories';
 import { createClient, isClientNameTaken, nextClientPosition } from '../lib/clients';
 import { createProject, isProjectNameTaken, nextProjectPosition } from '../lib/projects';
+import { createTimeLog, elapsedMinutes } from '../lib/time-logs';
 
 /** Silinen görevin izi; silmenin diğer cihazlara yayılabilmesi için tutulur. */
 export interface Tombstone {
@@ -35,6 +36,14 @@ interface TaskState {
     clients: Client[];
     /** Niş modül: müşterilere ait projeler. */
     projects: Project[];
+    /** Niş modül: müşteri/proje/göreve bağlı zaman kayıtları. */
+    timeLogs: TimeLog[];
+    /**
+     * O an çalışan sayaç, cihaz başına en fazla bir tane. `null` = sayaç
+     * kapalı. `partialize`'da SAKLANMAK ZORUNDA — TIME-01 "sayfa
+     * yenilemesinden sağ çıkar" gereksinimi tamamen buna dayanır.
+     */
+    activeTimer: ActiveTimer | null;
     searchQuery: string;
     filter: FilterStatus;
 
@@ -54,6 +63,10 @@ interface TaskState {
     dirtyProjectIds: string[];
     /** Buluttan silinmeyi bekleyen projeler. */
     projectTombstones: Tombstone[];
+    /** Buluta itilmeyi bekleyen zaman kaydı id'leri. */
+    dirtyTimeLogIds: string[];
+    /** Buluttan silinmeyi bekleyen zaman kayıtları. */
+    timeLogTombstones: Tombstone[];
     lastSyncedAt: string | null;
     /**
      * Cihazdaki görevlerin ait olduğu hesap. Misafir verisi için null.
@@ -95,6 +108,37 @@ interface TaskState {
     deleteProject: (id: string) => void;
     reorderProjects: (projects: Project[]) => void;
 
+    /**
+     * Sayacı başlatır. Tek sayaç kuralı BURADA uygulanır, arayüzde değil:
+     * zaten çalışan bir sayaç varsa önce durdurulup kayda çevrilir.
+     * `now` opsiyoneldir; üretimde varsayılana düşer, testte açıkça
+     * geçirilir — sahte saat kurmadan süre üretebilmenin tek yolu bu.
+     */
+    startTimer: (
+        input: { taskId: string | null; clientId: string; projectId: string | null; note?: string | null },
+        now?: string
+    ) => void;
+    /** Çalışan sayacı durdurup kayda çevirir (1 dakikadan kısaysa atar). */
+    stopTimer: (now?: string) => void;
+    /** Sayacı kayıt üretmeden atar (yanlışlıkla başlatılmış sayaç için). */
+    discardTimer: () => void;
+
+    /** Bağımsız (sayaç kullanmadan) bir zaman kaydı ekler. */
+    addTimeLog: (input: {
+        taskId?: string | null;
+        clientId: string;
+        projectId?: string | null;
+        startedAt: string;
+        durationMinutes: number;
+        note?: string | null;
+    }) => TimeLog;
+    updateTimeLog: (
+        id: string,
+        patch: Partial<Pick<TimeLog, 'taskId' | 'clientId' | 'projectId' | 'startedAt' | 'durationMinutes' | 'note'>>
+    ) => void;
+    /** Zaman kaydını siler. */
+    deleteTimeLog: (id: string) => void;
+
     setSearchQuery: (query: string) => void;
     setFilter: (filter: FilterStatus) => void;
     importTasks: (tasks: unknown[]) => number;
@@ -105,6 +149,7 @@ interface TaskState {
         categories: Category[];
         clients?: Client[];
         projects?: Project[];
+        timeLogs?: TimeLog[];
         syncedIds: string[];
         clearedTombstoneIds: string[];
         syncedCategoryIds: string[];
@@ -113,6 +158,8 @@ interface TaskState {
         clearedClientTombstoneIds?: string[];
         syncedProjectIds?: string[];
         clearedProjectTombstoneIds?: string[];
+        syncedTimeLogIds?: string[];
+        clearedTimeLogTombstoneIds?: string[];
         syncedAt: string;
     }) => void;
     prepareForSync: (userId: string) => void;
@@ -120,6 +167,32 @@ interface TaskState {
 
 const withDirty = (dirtyIds: string[], ...ids: string[]): string[] =>
     Array.from(new Set([...dirtyIds, ...ids]));
+
+/**
+ * Çalışan sayacı kayda çevirir. 1 dakikadan kısa süre kaydedilmez:
+ * veritabanı kısıtı `duration_minutes > 0` ve yanlışlıkla başlatılıp hemen
+ * durdurulan sayaç veri değil gürültüdür.
+ */
+function stopTimerInto(state: TaskState, now: string): Partial<TaskState> {
+    if (!state.activeTimer) return {};
+
+    const minutes = elapsedMinutes(state.activeTimer, now);
+    if (minutes < 1) return {};
+
+    const log = createTimeLog({
+        taskId: state.activeTimer.taskId,
+        clientId: state.activeTimer.clientId,
+        projectId: state.activeTimer.projectId,
+        startedAt: state.activeTimer.startedAt,
+        durationMinutes: minutes,
+        note: state.activeTimer.note,
+    }, now);
+
+    return {
+        timeLogs: [...state.timeLogs, log],
+        dirtyTimeLogIds: withDirty(state.dirtyTimeLogIds, log.id),
+    };
+}
 
 export const useTaskStore = create<TaskState>()(
     persist(
@@ -132,6 +205,8 @@ export const useTaskStore = create<TaskState>()(
             categories: seedCategories(),
             clients: [],
             projects: [],
+            timeLogs: [],
+            activeTimer: null,
             searchQuery: '',
             filter: 'all',
             dirtyIds: [],
@@ -142,6 +217,8 @@ export const useTaskStore = create<TaskState>()(
             clientTombstones: [],
             dirtyProjectIds: [],
             projectTombstones: [],
+            dirtyTimeLogIds: [],
+            timeLogTombstones: [],
             lastSyncedAt: null,
             ownerId: null,
 
@@ -180,6 +257,13 @@ export const useTaskStore = create<TaskState>()(
                         ...state.tombstones.filter((t) => t.id !== id),
                         { id, deletedAt: new Date().toISOString() },
                     ],
+                    // Sunucuda `on delete set null (task_id)`; kayıt durur,
+                    // yalnızca görev bağı kopar. Sunucu aynı şeyi kendi
+                    // referans eylemiyle zaten yapıyor, bu yüzden dirty
+                    // işaretlenmez (bkz. deleteCategory'deki aynı gerekçe).
+                    timeLogs: state.timeLogs.map((l) =>
+                        l.taskId === id ? { ...l, taskId: null } : l
+                    ),
                 };
             }),
 
@@ -352,6 +436,9 @@ export const useTaskStore = create<TaskState>()(
                 const removedProjectIds = new Set(
                     state.projects.filter((p) => p.clientId === id).map((p) => p.id)
                 );
+                const removedLogIds = new Set(
+                    state.timeLogs.filter((l) => l.clientId === id).map((l) => l.id)
+                );
 
                 return {
                     clients: state.clients.filter((c) => c.id !== id),
@@ -373,6 +460,14 @@ export const useTaskStore = create<TaskState>()(
                         ...state.clientTombstones.filter((t) => t.id !== id),
                         { id, deletedAt: new Date().toISOString() },
                     ],
+                    // Bağlı zaman kayıtları mezar taşı BIRAKMADAN silinir —
+                    // sunucu zaten `on delete cascade` ile siliyor, mezar taşı
+                    // ikinci bir (ve zaten yok olmuş bir kaydı hedefleyen)
+                    // silme emri olurdu.
+                    timeLogs: state.timeLogs.filter((l) => l.clientId !== id),
+                    dirtyTimeLogIds: state.dirtyTimeLogIds.filter(
+                        (dirtyId) => !removedLogIds.has(dirtyId)
+                    ),
                 };
             }),
 
@@ -454,6 +549,12 @@ export const useTaskStore = create<TaskState>()(
                         ...state.projectTombstones.filter((t) => t.id !== id),
                         { id, deletedAt: new Date().toISOString() },
                     ],
+                    // Sunucuda da yalnızca project_id boşalır (`on delete set
+                    // null (project_id)`), client_id dokunulmaz; kayıtlar da
+                    // dirty işaretlenmez (bkz. deleteCategory'deki gerekçe).
+                    timeLogs: state.timeLogs.map((l) =>
+                        l.projectId === id ? { ...l, projectId: null } : l
+                    ),
                 };
             }),
 
@@ -468,6 +569,69 @@ export const useTaskStore = create<TaskState>()(
                 });
 
                 return { projects, dirtyProjectIds: withDirty(state.dirtyProjectIds, ...changed) };
+            }),
+
+            // `now` opsiyonel parametre: üretimde varsayılana düşer, testte
+            // açıkça geçirilir. Sahte saat kurmadan süre üretebilmenin tek
+            // yolu bu.
+            startTimer: (input, now = new Date().toISOString()) =>
+                set((state) => {
+                    // Tek sayaç kuralı BURADA uygulanır, arayüzde değil: yeni
+                    // sayacı başlatmak öncekini durdurup kaydeder.
+                    const stopped = state.activeTimer ? stopTimerInto(state, now) : {};
+
+                    return {
+                        ...stopped,
+                        activeTimer: {
+                            taskId: input.taskId,
+                            clientId: input.clientId,
+                            projectId: input.projectId,
+                            startedAt: now,
+                            note: input.note ?? null,
+                        },
+                    };
+                }),
+
+            stopTimer: (now = new Date().toISOString()) =>
+                set((state) => ({ ...stopTimerInto(state, now), activeTimer: null })),
+
+            /** Sayacı kayıt üretmeden atar (yanlışlıkla başlatılmış sayaç için). */
+            discardTimer: () => set({ activeTimer: null }),
+
+            addTimeLog: (input) => {
+                const log = createTimeLog(input);
+
+                set((state) => ({
+                    timeLogs: [...state.timeLogs, log],
+                    dirtyTimeLogIds: withDirty(state.dirtyTimeLogIds, log.id),
+                }));
+
+                return log;
+            },
+
+            updateTimeLog: (id, patch) => set((state) => {
+                if (!state.timeLogs.some((l) => l.id === id)) return state;
+                const now = new Date().toISOString();
+
+                return {
+                    timeLogs: state.timeLogs.map((l) =>
+                        l.id === id ? { ...l, ...patch, updatedAt: now } : l
+                    ),
+                    dirtyTimeLogIds: withDirty(state.dirtyTimeLogIds, id),
+                };
+            }),
+
+            deleteTimeLog: (id) => set((state) => {
+                if (!state.timeLogs.some((l) => l.id === id)) return state;
+
+                return {
+                    timeLogs: state.timeLogs.filter((l) => l.id !== id),
+                    dirtyTimeLogIds: state.dirtyTimeLogIds.filter((dirtyId) => dirtyId !== id),
+                    timeLogTombstones: [
+                        ...state.timeLogTombstones.filter((t) => t.id !== id),
+                        { id, deletedAt: new Date().toISOString() },
+                    ],
+                };
             }),
 
             setSearchQuery: (query) => set({ searchQuery: query }),
@@ -531,6 +695,7 @@ export const useTaskStore = create<TaskState>()(
                 categories,
                 clients,
                 projects,
+                timeLogs,
                 syncedIds,
                 clearedTombstoneIds,
                 syncedCategoryIds,
@@ -539,6 +704,8 @@ export const useTaskStore = create<TaskState>()(
                 clearedClientTombstoneIds = [],
                 syncedProjectIds = [],
                 clearedProjectTombstoneIds = [],
+                syncedTimeLogIds = [],
+                clearedTimeLogTombstoneIds = [],
                 syncedAt,
             }) => set((state) => {
                 const synced = new Set(syncedIds);
@@ -549,6 +716,8 @@ export const useTaskStore = create<TaskState>()(
                 const clearedClients = new Set(clearedClientTombstoneIds);
                 const syncedProjects = new Set(syncedProjectIds);
                 const clearedProjects = new Set(clearedProjectTombstoneIds);
+                const syncedTimeLogs = new Set(syncedTimeLogIds);
+                const clearedTimeLogs = new Set(clearedTimeLogTombstoneIds);
                 const cutoff = Date.now() - TOMBSTONE_TTL_MS;
                 const alive = (t: Tombstone) => new Date(t.deletedAt).getTime() > cutoff;
 
@@ -557,6 +726,7 @@ export const useTaskStore = create<TaskState>()(
                     categories,
                     clients: clients ?? state.clients,
                     projects: projects ?? state.projects,
+                    timeLogs: timeLogs ?? state.timeLogs,
                     dirtyIds: state.dirtyIds.filter((id) => !synced.has(id)),
                     tombstones: state.tombstones.filter((t) => !cleared.has(t.id) && alive(t)),
                     dirtyCategoryIds: state.dirtyCategoryIds.filter(
@@ -576,6 +746,12 @@ export const useTaskStore = create<TaskState>()(
                     ),
                     projectTombstones: state.projectTombstones.filter(
                         (t) => !clearedProjects.has(t.id) && alive(t)
+                    ),
+                    dirtyTimeLogIds: state.dirtyTimeLogIds.filter(
+                        (id) => !syncedTimeLogs.has(id)
+                    ),
+                    timeLogTombstones: state.timeLogTombstones.filter(
+                        (t) => !clearedTimeLogs.has(t.id) && alive(t)
                     ),
                     lastSyncedAt: syncedAt,
                 };
@@ -606,6 +782,7 @@ export const useTaskStore = create<TaskState>()(
                         dirtyCategoryIds: state.categories.map((c) => c.id),
                         dirtyClientIds: state.clients.map((c) => c.id),
                         dirtyProjectIds: state.projects.map((p) => p.id),
+                        dirtyTimeLogIds: state.timeLogs.map((l) => l.id),
                     };
                 }
 
@@ -615,6 +792,8 @@ export const useTaskStore = create<TaskState>()(
                     categories: [],
                     clients: [],
                     projects: [],
+                    timeLogs: [],
+                    activeTimer: null,
                     dirtyIds: [],
                     tombstones: [],
                     dirtyCategoryIds: [],
@@ -623,18 +802,24 @@ export const useTaskStore = create<TaskState>()(
                     clientTombstones: [],
                     dirtyProjectIds: [],
                     projectTombstones: [],
+                    dirtyTimeLogIds: [],
+                    timeLogTombstones: [],
                     lastSyncedAt: null,
                 };
             }),
         }),
         {
             name: 'yapilacaklar-storage',
-            version: 5,
+            version: 6,
             partialize: (state) => ({
                 tasks: state.tasks,
                 categories: state.categories,
                 clients: state.clients,
                 projects: state.projects,
+                timeLogs: state.timeLogs,
+                // Sayfa yenilemesinden sağ çıkması gereken TEK alan (TIME-01):
+                // çalışan sayaç kaydedilmezse yenilemede sessizce kaybolurdu.
+                activeTimer: state.activeTimer,
                 filter: state.filter,
                 dirtyIds: state.dirtyIds,
                 tombstones: state.tombstones,
@@ -644,6 +829,8 @@ export const useTaskStore = create<TaskState>()(
                 clientTombstones: state.clientTombstones,
                 dirtyProjectIds: state.dirtyProjectIds,
                 projectTombstones: state.projectTombstones,
+                dirtyTimeLogIds: state.dirtyTimeLogIds,
+                timeLogTombstones: state.timeLogTombstones,
                 lastSyncedAt: state.lastSyncedAt,
                 ownerId: state.ownerId,
             }) as unknown as TaskState,
@@ -659,6 +846,11 @@ export const useTaskStore = create<TaskState>()(
              * v4 -> v5: niş modül — clients/projects alanları ve görevlerdeki
              *           clientId/projectId eklendi. Eski kayıtlarda bu alanlar
              *           hiç yoktu; boş listeye ve null bağlara düşülür.
+             * v5 -> v6: niş modül 2. dilim — zaman kaydı. timeLogs/activeTimer
+             *           ve ücret sütunları (clients.hourlyRate/currency,
+             *           projects.hourlyRate) eklendi. Eski kayıtlarda bu
+             *           alanlar hiç yoktu; boş listeye/null'a ve veritabanı
+             *           varsayılanlarına düşülür.
              */
             migrate: (persisted, version) => {
                 const state = persisted as Partial<TaskState> | undefined;
@@ -751,6 +943,25 @@ export const useTaskStore = create<TaskState>()(
                     state.clientTombstones = [];
                     state.dirtyProjectIds = [];
                     state.projectTombstones = [];
+                }
+
+                if (version < 6) {
+                    // Zaman kaydı geldi. Eski kayıtta bu alanlar hiç yoktu;
+                    // boş listelere düşülür. Ücret alanları da yeni:
+                    // veritabanı varsayılanlarıyla aynı.
+                    state.timeLogs = [];
+                    state.activeTimer = null;
+                    state.dirtyTimeLogIds = [];
+                    state.timeLogTombstones = [];
+                    state.clients = (state.clients ?? []).map((c) => ({
+                        ...c,
+                        hourlyRate: typeof c.hourlyRate === 'number' ? c.hourlyRate : 0,
+                        currency: typeof c.currency === 'string' ? c.currency : 'TRY',
+                    }));
+                    state.projects = (state.projects ?? []).map((p) => ({
+                        ...p,
+                        hourlyRate: typeof p.hourlyRate === 'number' ? p.hourlyRate : null,
+                    }));
                 }
 
                 return state as TaskState;

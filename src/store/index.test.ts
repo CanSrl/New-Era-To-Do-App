@@ -13,6 +13,8 @@ function resetStore() {
         categories: seedCategories(),
         clients: [],
         projects: [],
+        timeLogs: [],
+        activeTimer: null,
         searchQuery: '',
         filter: 'all',
         dirtyIds: [],
@@ -23,6 +25,8 @@ function resetStore() {
         clientTombstones: [],
         dirtyProjectIds: [],
         projectTombstones: [],
+        dirtyTimeLogIds: [],
+        timeLogTombstones: [],
         lastSyncedAt: null,
         ownerId: null,
     });
@@ -393,7 +397,7 @@ describe('kalıcılık (persist)', () => {
         expect(raw).toBeTruthy();
         const parsed = JSON.parse(raw as string);
         expect(parsed.state.tasks[0].title).toBe('Kalıcı görev');
-        expect(parsed.version).toBe(5);
+        expect(parsed.version).toBe(6);
     });
 
     it('yazılan tarihler string olarak saklanır', async () => {
@@ -986,5 +990,188 @@ describe('v4 -> v5 göçü (niş modül)', () => {
         expect(store().dirtyProjectIds).toEqual([]);
         expect(store().tasks[0].clientId).toBeNull();
         expect(store().tasks[0].projectId).toBeNull();
+    });
+});
+
+describe('zaman kaydı', () => {
+    // `now` açıkça geçirilir: sahte saat kurmadan süre üretebilmenin tek
+    // yolu bu — startTimer/stopTimer ikisi de opsiyonel bir `now` alır.
+    const T0 = '2026-08-16T09:00:00.000Z';
+    const T30 = '2026-08-16T09:30:00.000Z';
+
+    it('startTimer çalışan sayacı ÖNCE durdurup kaydeder — tek sayaç kuralı', () => {
+        store().startTimer({ taskId: 't1', clientId: 'c1', projectId: null }, T0);
+        store().startTimer({ taskId: 't2', clientId: 'c1', projectId: null }, T30);
+
+        const state = useTaskStore.getState();
+        expect(state.activeTimer?.taskId).toBe('t2');
+        expect(state.activeTimer?.startedAt).toBe(T30);
+        expect(state.timeLogs).toHaveLength(1);
+        expect(state.timeLogs[0].taskId).toBe('t1');
+        expect(state.timeLogs[0].durationMinutes).toBe(30);
+        // Kayıt gönderilmeyi bekler; pendingCount bunu görmek zorunda.
+        expect(state.dirtyTimeLogIds).toEqual([state.timeLogs[0].id]);
+    });
+
+    it('stopTimer 1 dakikadan kısa süreyi kaydetmez', () => {
+        store().startTimer({ taskId: 't1', clientId: 'c1', projectId: null }, T0);
+        store().stopTimer(T0); // anında durdurulan sayaç
+
+        expect(useTaskStore.getState().timeLogs).toHaveLength(0);
+        expect(useTaskStore.getState().activeTimer).toBeNull();
+    });
+
+    it('discardTimer kayıt üretmeden sayacı atar', () => {
+        store().startTimer({ taskId: 't1', clientId: 'c1', projectId: null }, T0);
+        store().discardTimer();
+
+        expect(useTaskStore.getState().activeTimer).toBeNull();
+        expect(useTaskStore.getState().timeLogs).toHaveLength(0);
+    });
+
+    it('addTimeLog kaydı ekler ve gönderilmeyi bekleyenlere alır', () => {
+        const clientId = store().addClient('Acme')!.id;
+
+        const log = store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 45 });
+
+        expect(useTaskStore.getState().timeLogs).toEqual([log]);
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([log.id]);
+    });
+
+    it('updateTimeLog yalnızca hedef kaydı değiştirir ve dirty işaretler', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const log = store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 45 });
+        store().applySyncResult({
+            tasks: [], categories: [], syncedIds: [], clearedTombstoneIds: [],
+            syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedTimeLogIds: [log.id], syncedAt: 'x',
+        });
+
+        store().updateTimeLog(log.id, { note: 'Telefon görüşmesi' });
+
+        const updated = useTaskStore.getState().timeLogs[0];
+        expect(updated.note).toBe('Telefon görüşmesi');
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([log.id]);
+    });
+
+    it('deleteTimeLog kaydı siler ve mezar taşı bırakır', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const log = store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 45 });
+
+        store().deleteTimeLog(log.id);
+
+        expect(useTaskStore.getState().timeLogs).toEqual([]);
+        expect(useTaskStore.getState().timeLogTombstones.map(t => t.id)).toEqual([log.id]);
+        expect(useTaskStore.getState().dirtyTimeLogIds).not.toContain(log.id);
+    });
+
+    it('deleteClient bağlı zaman kayıtlarını da siler (DB cascade ile aynı)', () => {
+        const clientId = store().addClient('Acme')!.id;
+        store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 30 });
+
+        store().deleteClient(clientId);
+
+        const state = useTaskStore.getState();
+        expect(state.timeLogs.filter((l) => l.clientId === clientId)).toHaveLength(0);
+        // Sunucu zaten cascade ile siliyor: mezar taşı BIRAKILMAZ.
+        expect(state.timeLogTombstones).toHaveLength(0);
+    });
+
+    it('deleteProject kaydı silmez, yalnızca proje bağını boşaltır, dirty işaretlemez', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const projectId = store().addProject(clientId, 'Websitesi')!.id;
+        const log = store().addTimeLog({ clientId, projectId, startedAt: T0, durationMinutes: 30 });
+        store().applySyncResult({
+            tasks: [], categories: [], syncedIds: [], clearedTombstoneIds: [],
+            syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedTimeLogIds: [log.id], syncedAt: 'x',
+        });
+
+        store().deleteProject(projectId);
+
+        const updated = useTaskStore.getState().timeLogs[0];
+        expect(updated.projectId).toBeNull();
+        expect(updated.clientId).toBe(clientId);
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([]);
+    });
+
+    it('deleteTask kaydı silmez, yalnızca görev bağını boşaltır, dirty işaretlemez', () => {
+        const clientId = store().addClient('Acme')!.id;
+        addTask('Rapor', { clientId });
+        const taskId = store().tasks[0].id;
+        const log = store().addTimeLog({ taskId, clientId, startedAt: T0, durationMinutes: 30 });
+        store().applySyncResult({
+            tasks: store().tasks, categories: store().categories,
+            syncedIds: [], clearedTombstoneIds: [],
+            syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
+            syncedTimeLogIds: [log.id], syncedAt: 'x',
+        });
+
+        store().deleteTask(taskId);
+
+        expect(useTaskStore.getState().timeLogs[0].taskId).toBeNull();
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([]);
+    });
+
+    it('misafir verisi hesaba aktarılırken zaman kayıtları da bekleyenlere alınır', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const log = store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 30 });
+
+        store().prepareForSync('kullanici-1');
+
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([log.id]);
+    });
+
+    it('başka hesap giriş yaparsa zaman kayıtlarını ve sayacı temizler', () => {
+        const clientId = store().addClient('Acme')!.id;
+        store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 30 });
+        store().startTimer({ taskId: null, clientId, projectId: null }, T30);
+        store().prepareForSync('kullanici-1');
+
+        store().prepareForSync('kullanici-2');
+
+        expect(useTaskStore.getState().timeLogs).toEqual([]);
+        expect(useTaskStore.getState().activeTimer).toBeNull();
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([]);
+        expect(useTaskStore.getState().timeLogTombstones).toEqual([]);
+    });
+});
+
+describe('v5 -> v6 göçü (zaman kaydı)', () => {
+    it('eski kayda boş zaman alanları ekler, mevcut veriye dokunmaz', async () => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 5,
+            state: {
+                filter: 'all', dirtyIds: [], tombstones: [],
+                dirtyCategoryIds: [], categoryTombstones: [],
+                dirtyClientIds: [], clientTombstones: [],
+                dirtyProjectIds: [], projectTombstones: [],
+                ownerId: null,
+                categories: [],
+                // Ücret alanları eski müşterilerde yok; varsayılana düşer.
+                clients: [
+                    { id: 'c1', name: 'Acme', archived: false, position: 0,
+                      createdAt: '2026-01-05T08:00:00.000Z',
+                      updatedAt: '2026-01-05T08:00:00.000Z' },
+                ],
+                projects: [],
+                tasks: [
+                    { id: 't1', title: 'Eski görev', priority: 'medium', completed: false,
+                      categoryId: null, clientId: null, projectId: null,
+                      createdAt: '2026-01-05T08:00:00.000Z',
+                      updatedAt: '2026-01-05T08:00:00.000Z', position: 0 },
+                ],
+            },
+        }));
+
+        await useTaskStore.persist.rehydrate();
+
+        expect(store().timeLogs).toEqual([]);
+        expect(store().activeTimer).toBeNull();
+        expect(store().dirtyTimeLogIds).toEqual([]);
+        expect(store().timeLogTombstones).toEqual([]);
+        expect(store().clients[0].hourlyRate).toBe(0);
+        expect(store().clients[0].currency).toBe('TRY');
+        expect(store().tasks).toHaveLength(1);
     });
 });
