@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
-import { useTaskStore } from '../store';
+import { pendingChangeCount, useTaskStore } from '../store';
 import { runSync } from '../lib/sync';
 // i18n doğrudan import ediliyor, `useTranslation` ile değil: `t` bir hook'tan
 // gelseydi dil değişiminde kimliği değişir, `sync` useCallback'i yenilenir ve
@@ -39,27 +39,18 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const [errorMessageKey, setErrorMessageKey] = useState<TranslationKey | null>(null);
 
     const lastSyncedAt = useTaskStore((state) => state.lastSyncedAt);
-    const dirtyIds = useTaskStore((state) => state.dirtyIds);
-    const tombstones = useTaskStore((state) => state.tombstones);
-    const dirtyCategoryIds = useTaskStore((state) => state.dirtyCategoryIds);
-    const categoryTombstones = useTaskStore((state) => state.categoryTombstones);
-    const dirtyClientIds = useTaskStore((state) => state.dirtyClientIds);
-    const clientTombstones = useTaskStore((state) => state.clientTombstones);
-    const dirtyProjectIds = useTaskStore((state) => state.dirtyProjectIds);
-    const projectTombstones = useTaskStore((state) => state.projectTombstones);
-    const dirtyTimeLogIds = useTaskStore((state) => state.dirtyTimeLogIds);
-    const timeLogTombstones = useTaskStore((state) => state.timeLogTombstones);
-
-    // HER kayıt türü sayılmak zorunda: senkron yalnızca bu sayı değişince
-    // tetikleniyor. Bir tür sayılmazsa o türdeki ekleme/silme bir sonraki
-    // yoklamaya (dakikada bir) kadar buluta hiç gitmez — kategorilerde bir
-    // kez gerçekten yaşandı.
-    const pendingCount =
-        dirtyIds.length + tombstones.length
-        + dirtyCategoryIds.length + categoryTombstones.length
-        + dirtyClientIds.length + clientTombstones.length
-        + dirtyProjectIds.length + projectTombstones.length
-        + dirtyTimeLogIds.length + timeLogTombstones.length;
+    /**
+     * HER kayıt türü sayılmak zorunda: senkron yalnızca bu sayı değişince
+     * tetikleniyor. Bir tür sayılmazsa o türdeki ekleme/silme bir sonraki
+     * yoklamaya (dakikada bir) kadar buluta hiç gitmez — kategorilerde bir kez
+     * gerçekten yaşandı ve sessizce başarısız oldu.
+     *
+     * Toplam bu yüzden burada elle yazılmıyor: `pendingChangeCount` store'un
+     * bekleyen alanlarının tamamını dolaşır ve `index.test.ts` listenin eksik
+     * kalmadığını doğrular. Seçici bir sayı döndürüyor, dolayısıyla yeni bir
+     * alan eklendiğinde burada değişiklik gerekmez.
+     */
+    const pendingCount = useTaskStore(pendingChangeCount);
 
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const userId = user?.id ?? null;

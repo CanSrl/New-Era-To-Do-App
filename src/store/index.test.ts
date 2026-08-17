@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useTaskStore } from './index';
+import { PENDING_FIELDS, pendingChangeCount, useTaskStore } from './index';
 import type { Task } from '../lib/types';
 import { seedCategories } from '../lib/categories';
 
@@ -47,6 +47,47 @@ function addTask(title: string, overrides: Partial<Task> = {}) {
 }
 
 beforeEach(resetStore);
+
+describe('bekleyen değişiklik sayacı', () => {
+    /**
+     * Bu testin asıl işi aritmetik değil KAPSAM: senkron yalnızca bu sayı
+     * değişince tetikleniyor, dolayısıyla sayılmayan bir kayıt türündeki
+     * değişiklik bir sonraki yoklamaya (dakikada bir) kadar buluta hiç
+     * gitmez. Kategorilerde bir kez gerçekten yaşandı ve sessizce başarısız
+     * oldu — o yüzden liste elle değil, store'un kendi alanlarıyla
+     * karşılaştırılıyor.
+     */
+    it('store-daki BÜTÜN bekleyen alanları sayar', () => {
+        const state = useTaskStore.getState() as unknown as Record<string, unknown>;
+
+        const pendingLike = Object.keys(state).filter(
+            (key) =>
+                // Görevlerinki yalnızca `tombstones`; büyük/küçük harfe
+                // duyarsız bakılmazsa liste onu ıskalardı.
+                (key.startsWith('dirty') || key.toLowerCase().endsWith('tombstones'))
+                && Array.isArray(state[key])
+        );
+
+        expect([...PENDING_FIELDS].sort()).toEqual(pendingLike.sort());
+    });
+
+    it('her türden bekleyeni toplar', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const projectId = store().addProject(clientId, 'Websitesi')!.id;
+        addTask('Rapor');
+        store().addCategory('Yeni kategori', '#3b82f6');
+        store().addTimeLog({ clientId, startedAt: '2026-08-16T09:00:00.000Z', durationMinutes: 30 });
+        store().deleteProject(projectId);
+
+        // 1 müşteri + 1 görev + 1 kategori + 1 zaman kaydı (dirty)
+        // + 1 proje mezar taşı; silinen projenin dirty bayrağı düşer.
+        expect(pendingChangeCount(useTaskStore.getState())).toBe(5);
+    });
+
+    it('temiz durumda sıfırdır', () => {
+        expect(pendingChangeCount(useTaskStore.getState())).toBe(0);
+    });
+});
 
 describe('addTask', () => {
     it('görevi id, createdAt ve position ile ekler', () => {

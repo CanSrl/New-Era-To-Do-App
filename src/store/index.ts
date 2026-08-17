@@ -180,6 +180,36 @@ const withDirty = (dirtyIds: string[], ...ids: string[]): string[] =>
     Array.from(new Set([...dirtyIds, ...ids]));
 
 /**
+ * Buluta gönderilmeyi bekleyen değişiklikleri taşıyan BÜTÜN alanlar.
+ *
+ * Yeni bir kayıt türü eklendiğinde buraya da yazılmak zorunda: senkron
+ * yalnızca bu toplam değişince tetikleniyor. Eksik bir alan, o türdeki
+ * değişikliğin bir sonraki yoklamaya (dakikada bir) kadar buluta hiç
+ * gitmemesi demek — sessiz bir hata, kategorilerde bir kez gerçekten yaşandı.
+ * `index.test.ts` listeyi store'un kendi alanlarıyla karşılaştırır, yani
+ * unutulan alan derleme değil TEST hatası verir.
+ */
+export const PENDING_FIELDS = [
+    'dirtyIds',
+    'tombstones',
+    'dirtyCategoryIds',
+    'categoryTombstones',
+    'dirtyClientIds',
+    'clientTombstones',
+    'dirtyProjectIds',
+    'projectTombstones',
+    'dirtyTimeLogIds',
+    'timeLogTombstones',
+] as const;
+
+export type PendingFields = Pick<TaskState, (typeof PENDING_FIELDS)[number]>;
+
+/** Buluta gönderilmeyi bekleyen değişiklik sayısı. */
+export function pendingChangeCount(state: PendingFields): number {
+    return PENDING_FIELDS.reduce((total, field) => total + state[field].length, 0);
+}
+
+/**
  * Çalışan sayacı kayda çevirir. 1 dakikadan kısa süre kaydedilmez:
  * veritabanı kısıtı `duration_minutes > 0` ve yanlışlıkla başlatılıp hemen
  * durdurulan sayaç veri değil gürültüdür.

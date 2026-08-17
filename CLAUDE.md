@@ -52,8 +52,9 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 572 otomatik test — 414 birim (Vitest), 86 uçtan uca (Playwright, 9'u
-gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 72 şema güvenlik testi.
+**Test:** 578 otomatik test — 417 birim (Vitest), 89 uçtan uca (Playwright,
+12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 72 şema güvenlik
+testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
 ## Komutlar
@@ -152,7 +153,11 @@ olabilir. Sıra bozulursa 23503 alınır ve o turdaki bütün senkron düşer.
 `SyncProvider`'daki `pendingCount` **her** kayıt türünün sayaçlarını içermek
 zorunda; içermezse o tür değiştiğinde senkron hiç tetiklenmez ve değişiklik
 bir sonraki yoklamaya (dakikada bir) kadar bekler. Bu kategorilerde bir kez
-gerçekten oldu; `senkron.spec.ts` bunu korur.
+gerçekten oldu. Toplam artık elle yazılmıyor: `store/index.ts`'teki
+`PENDING_FIELDS` + `pendingChangeCount` tek kaynak, `index.test.ts` de listeyi
+**store'un kendi alanlarıyla** karşılaştırıyor — yani yeni bir kayıt türü
+eklenip listeye yazılmazsa test düşer. (E2E bu boşluğu göremiyor: sayfa
+yenilendiğinde senkron başka bir tetikleyiciyle zaten çalışıyor, ölçüldü.)
 
 **Niş modül bağ onarımı veritabanını birebir aynalamak zorundadır.**
 `sync-merge-niche.ts` içindeki `remapTaskLinks`, üç referans eylemini istemci
