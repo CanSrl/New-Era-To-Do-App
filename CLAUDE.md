@@ -52,7 +52,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 547 otomatik test — 389 birim (Vitest), 86 uçtan uca (Playwright, 9'u
+**Test:** 572 otomatik test — 414 birim (Vitest), 86 uçtan uca (Playwright, 9'u
 gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -140,10 +140,11 @@ başkasının kategori id'sini bilirse görevini ona bağlayabilirdi. `on delete
 set null (category_id)` (Postgres 15+ sütun listesi) kategori silinince görevi
 silmez, yalnızca bağı koparır.
 
-**Senkron sırası serbest değil.** Bağımlılık zinciri `tasks` → `projects` →
-`clients`, ayrıca `tasks` → `categories`. Yazma bağımsızdan bağımlıya
-(müşteri → proje → kategori → görev), silme tam tersi (görev → proje →
-müşteri → kategori); ve **bütün yazmalar bütün silmelerden önce biter**, çünkü
+**Senkron sırası serbest değil.** Bağımlılık zinciri `time_logs` → `tasks` →
+`projects` → `clients`, ayrıca `tasks` → `categories`. Yazma bağımsızdan
+bağımlıya (müşteri → proje → kategori → görev → zaman kaydı), silme tam tersi
+(zaman kaydı → görev → proje → müşteri → kategori); ve **bütün yazmalar bütün
+silmelerden önce biter**, çünkü
 aynı turda hem yeni bir projeye bağlanan hem eski projesi silinen bir görev
 olabilir. Sıra bozulursa 23503 alınır ve o turdaki bütün senkron düşer.
 `sync.test.ts` bu düzeni doğrudan sınar.
@@ -165,6 +166,14 @@ tarafında tekrarlar:
 İki taraf ayrışırsa görev bağları senkron turunda geri dirilir ya da şemada
 imkânsız bir satır gönderilip bütün tur düşer. RLS testlerinin üç maddesi tam
 da bu davranışları doğruluyor — istemci kuralları değişirse önce oraya bakın.
+
+Zaman kaydının kendi onarımı var (`remapTimeLogLinks`) ve **bir noktada
+görevinkinden ayrılır**: görevde müşteri bağı boşaltılabilir
+(`tasks.client_id` nullable), zaman kaydında boşaltılamaz —
+`time_logs.client_id` `not null` ve referans `on delete cascade`. Bu yüzden
+müşterisi kalmayan **kayıt düşürülür**, bağı boşaltılmaz (`remapProjectClients`
+ile aynı gerekçe). Diğer üç kural aynıdır: görev/proje silinince yalnızca o bağ
+kopar, proje taşınınca kayıt projeyi izler.
 
 ⚠️ İnce nokta: müşterisi silinmiş **ama projesi duran** görev, bağlarını
 korur ve projenin müşterisine taşınır. Bu durum şemada imkânsızdır, yani ancak
@@ -354,7 +363,7 @@ Dal: `faz-3-zaman-kaydi`.
 | 1 | `time_logs` şeması, ücret sütunları, tam RLS (72/72 şema testi) | ✅ |
 | 2 | `TimeLog`/`ActiveTimer` tipleri, `time-logs.ts` saf yardımcıları | ✅ |
 | 3 | Store: alanlar, tek sayaç kuralı, 6 eylem, v5 → v6 göçü | ✅ |
-| 4 | Senkron: `mergeTimeLogs`, eşleme, repository, sıra, `pendingCount` | ⏳ |
+| 4 | Senkron: `mergeTimeLogs`, eşleme, repository, sıra, `pendingCount` | ✅ |
 | 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ⏳ |
 | 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ⏳ |
 | 7 | Ücret alanları arayüzü ve silme diyaloğu | ⏳ |
