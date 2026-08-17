@@ -8,12 +8,14 @@
  * bağları geri dirilir.
  */
 import { describe, expect, it } from 'vitest';
-import type { Client, Project, Task } from './types';
+import type { Client, Project, Task, TimeLog } from './types';
 import {
     mergeClients,
     mergeProjects,
+    mergeTimeLogs,
     remapProjectClients,
     remapTaskLinks,
+    remapTimeLogLinks,
 } from './sync-merge-niche';
 
 const ISO = '2026-08-14T10:00:00.000Z';
@@ -443,5 +445,199 @@ describe('remapTaskLinks', () => {
         const [result] = remap([task]);
 
         expect(result.updatedAt).toBe(ISO);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Zaman kayıtları
+// ---------------------------------------------------------------------------
+
+function makeTimeLog(over: Partial<TimeLog> & { id: string }): TimeLog {
+    return {
+        taskId: null,
+        clientId: 'c1',
+        projectId: null,
+        startedAt: ISO,
+        durationMinutes: 60,
+        note: null,
+        createdAt: ISO,
+        updatedAt: ISO,
+        ...over,
+    };
+}
+
+describe('mergeTimeLogs', () => {
+    // TIME-04'ün ta kendisi: iki cihazın kayıtları BİRBİRİNİ EZMEZ, toplanır.
+    // Bu, her kaydın kendi UUID'si olduğu için ada göre tekilleştirme OLMADAN
+    // çalışır — mergeClients/mergeProjects ailesinden ayrıldığı nokta burası.
+    it('iki cihazda ayrı ayrı girilen kayıtlar TOPLANIR', () => {
+        const plan = mergeTimeLogs({
+            local: [makeTimeLog({ id: 'a', updatedAt: LATER })],
+            remote: [makeTimeLog({ id: 'b' })],
+            dirtyIds: ['a'],
+            tombstones: [],
+        });
+
+        expect(plan.timeLogs.map((l) => l.id).sort()).toEqual(['a', 'b']);
+        expect(plan.toPush.map((l) => l.id)).toEqual(['a']);
+    });
+
+    it('ada göre tekilleştirme YAPMAZ — idRemap döndürmez', () => {
+        const plan = mergeTimeLogs({
+            local: [makeTimeLog({ id: 'a' })],
+            remote: [makeTimeLog({ id: 'b' })],
+            dirtyIds: ['a'],
+            tombstones: [],
+        });
+
+        expect('idRemap' in plan).toBe(false);
+        expect(plan.timeLogs).toHaveLength(2);
+    });
+
+    it('çakışmada updatedAt yenisi kazanır', () => {
+        const plan = mergeTimeLogs({
+            local: [makeTimeLog({ id: 'a', durationMinutes: 90, updatedAt: LATER })],
+            remote: [makeTimeLog({ id: 'a', durationMinutes: 30 })],
+            dirtyIds: ['a'],
+            tombstones: [],
+        });
+
+        expect(plan.timeLogs[0].durationMinutes).toBe(90);
+        expect(plan.toPush.map((l) => l.id)).toEqual(['a']);
+        expect(plan.discardedIds).toEqual([]);
+    });
+
+    it('eşitlikte bulut kazanır ve yerel kayıt elenir', () => {
+        // Bütün cihazlar aynı sonuca varsın diye eşitlikte uzak taraf kazanır.
+        // Elenen kaydın dirty bayrağı hemen temizlenir; yoksa her turda
+        // yeniden denenip her seferinde kaybederek sonsuza dek dirty kalırdı.
+        const plan = mergeTimeLogs({
+            local: [makeTimeLog({ id: 'a', durationMinutes: 90 })],
+            remote: [makeTimeLog({ id: 'a', durationMinutes: 30 })],
+            dirtyIds: ['a'],
+            tombstones: [],
+        });
+
+        expect(plan.timeLogs[0].durationMinutes).toBe(30);
+        expect(plan.discardedIds).toEqual(['a']);
+    });
+
+    it('mezar taşı buluttaki kaydı silinmeye işaretler', () => {
+        const plan = mergeTimeLogs({
+            local: [],
+            remote: [makeTimeLog({ id: 'a' })],
+            dirtyIds: [],
+            tombstones: [{ id: 'a', deletedAt: LATER }],
+        });
+
+        expect(plan.toDelete).toEqual(['a']);
+        expect(plan.timeLogs).toEqual([]);
+    });
+
+    it('bulutta karşılığı olmayan mezar taşını eskimiş sayar', () => {
+        const plan = mergeTimeLogs({
+            local: [], remote: [], dirtyIds: [],
+            tombstones: [{ id: 'yok', deletedAt: LATER }],
+        });
+
+        expect(plan.obsoleteTombstoneIds).toEqual(['yok']);
+        expect(plan.toDelete).toEqual([]);
+    });
+
+    it('dirty OLMAYAN, uzakta bulunmayan kayıt cihazdan düşer', () => {
+        // Bir önceki turda senkronlanmıştı ve artık bulutta yok: başka cihazda
+        // silinmiş demektir.
+        const plan = mergeTimeLogs({
+            local: [makeTimeLog({ id: 'a' })],
+            remote: [], dirtyIds: [], tombstones: [],
+        });
+
+        expect(plan.timeLogs).toEqual([]);
+    });
+});
+
+describe('remapTimeLogLinks', () => {
+    const projects = new Map([
+        ['p1', makeProject({ id: 'p1', clientId: 'c1' })],
+        ['p2', makeProject({ id: 'p2', clientId: 'c2' })],
+    ]);
+
+    const remapLogs = (logs: TimeLog[]) =>
+        remapTimeLogLinks(logs, {
+            clientIdRemap: { 'c-yerel': 'c1' },
+            projectIdRemap: { 'p-yerel': 'p1' },
+            validClientIds: new Set(['c1', 'c2']),
+            validTaskIds: new Set(['t1']),
+            projectsById: projects,
+        });
+
+    it('tekilleştirilen müşteri ve proje id-lerini buluttakine taşır', () => {
+        const log = makeTimeLog({ id: 'l1', clientId: 'c-yerel', projectId: 'p-yerel' });
+
+        const { timeLogs } = remapLogs([log]);
+
+        expect(timeLogs[0].clientId).toBe('c1');
+        expect(timeLogs[0].projectId).toBe('p1');
+    });
+
+    it('müşterisi kalmayan kaydı DÜŞÜRÜR — bağı boşaltmaz', () => {
+        // `client_id` şemada `not null` ve referans `on delete cascade`:
+        // müşteri silinince kayıt da gider. Bağı boşaltmaya çalışmak şemanın
+        // kabul etmeyeceği bir satır üretirdi.
+        const log = makeTimeLog({ id: 'l1', clientId: 'c-silinmis' });
+
+        const { timeLogs, droppedIds } = remapLogs([log]);
+
+        expect(timeLogs).toEqual([]);
+        expect(droppedIds).toEqual(['l1']);
+    });
+
+    it('silinmiş projeye bağlı kaydın yalnızca proje bağını koparır', () => {
+        const log = makeTimeLog({ id: 'l1', clientId: 'c1', projectId: 'p-silinmis' });
+
+        const { timeLogs, droppedIds } = remapLogs([log]);
+
+        expect(timeLogs[0].projectId).toBeNull();
+        expect(timeLogs[0].clientId).toBe('c1');
+        expect(droppedIds).toEqual([]);
+    });
+
+    it('silinmiş göreve bağlı kaydın yalnızca görev bağını koparır', () => {
+        // `on delete set null (task_id)`: görev silinince kayıt DURUR.
+        const log = makeTimeLog({ id: 'l1', clientId: 'c1', taskId: 't-silinmis' });
+
+        const { timeLogs } = remapLogs([log]);
+
+        expect(timeLogs[0].taskId).toBeNull();
+        expect(timeLogs[0].clientId).toBe('c1');
+    });
+
+    it('projesi başka müşteriye taşınmış kaydı projenin peşinden götürür', () => {
+        // `on update cascade`: kaydın müşterisiyle projesinin müşterisi
+        // ayrışamaz — o satır ŞEMADA imkânsız ve push 23503 ile reddedilirdi.
+        const log = makeTimeLog({ id: 'l1', clientId: 'c1', projectId: 'p2' });
+
+        const { timeLogs } = remapLogs([log]);
+
+        expect(timeLogs[0].clientId).toBe('c2');
+        expect(timeLogs[0].projectId).toBe('p2');
+    });
+
+    it('updatedAt damgasını ilerletmez', () => {
+        // Bu bir kullanıcı düzenlemesi değil, bağ onarımı. Damgayı ilerletmek
+        // aynı kaydı başka cihazda gerçekten düzenleyeni haksız yere yenerdi.
+        const log = makeTimeLog({ id: 'l1', clientId: 'c-yerel' });
+
+        const { timeLogs } = remapLogs([log]);
+
+        expect(timeLogs[0].updatedAt).toBe(ISO);
+    });
+
+    it('dokunulmayan kaydı aynı nesne olarak döndürür', () => {
+        const log = makeTimeLog({ id: 'l1', clientId: 'c1', taskId: 't1', projectId: 'p1' });
+
+        const { timeLogs } = remapLogs([log]);
+
+        expect(timeLogs[0]).toBe(log);
     });
 });

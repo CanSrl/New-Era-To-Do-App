@@ -1,27 +1,32 @@
 import type { TranslationKey } from '../i18n';
-import type { Task } from './types';
+import type { Task, TimeLog } from './types';
 import { useTaskStore } from '../store';
 import { NICHE_MODULE } from '../config/features';
 import { mergeCategories, mergeTasks, remapTaskCategories } from './sync-merge';
 import {
     mergeClients,
     mergeProjects,
+    mergeTimeLogs,
     remapProjectClients,
     remapTaskLinks,
+    remapTimeLogLinks,
 } from './sync-merge-niche';
 import {
     deleteRemoteCategories,
     deleteRemoteClients,
     deleteRemoteProjects,
     deleteRemoteTasks,
+    deleteRemoteTimeLogs,
     fetchRemoteCategories,
     fetchRemoteClients,
     fetchRemoteProjects,
     fetchRemoteTasks,
+    fetchRemoteTimeLogs,
     pushRemoteCategories,
     pushRemoteClients,
     pushRemoteProjects,
     pushRemoteTasks,
+    pushRemoteTimeLogs,
     SyncTooLargeError,
     SyncUnavailableError,
 } from './task-repository';
@@ -65,12 +70,14 @@ function errorKeyFor(error: unknown): TranslationKey {
  * farkları buluta yazar ve sonucu store'a uygular.
  *
  * **Sıra yabancı anahtar yüzünden serbest değildir.** Bağımlılık zinciri:
- * `tasks` → `projects` → `clients`, ayrıca `tasks` → `categories`.
+ * `time_logs` → `tasks` → `projects` → `clients`, ayrıca `tasks` → `categories`.
+ * Zaman kaydı üç tabloya birden bağlıdır (görev, müşteri, proje).
  *
- *   1. Yazma, bağımsızdan bağımlıya: müşteri → proje → kategori → görev.
- *      Henüz var olmayan bir kayda işaret eden satır 23503 ile reddedilir.
- *   2. Silme, tam tersi: görev → proje → müşteri → kategori. Referans veren
- *      satır önce gitmeli.
+ *   1. Yazma, bağımsızdan bağımlıya: müşteri → proje → kategori → görev →
+ *      zaman kaydı. Henüz var olmayan bir kayda işaret eden satır 23503 ile
+ *      reddedilir.
+ *   2. Silme, tam tersi: zaman kaydı → görev → proje → müşteri → kategori.
+ *      Referans veren satır önce gitmeli.
  *   3. Bütün yazmalar bütün silmelerden önce biter: aynı turda hem yeni bir
  *      projeye bağlanan hem eski projesi silinen bir görev olabilir.
  *
@@ -93,11 +100,18 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
         // hatası GÖREV senkronunu da beraberinde düşürürdü.
         const niche = NICHE_MODULE;
 
-        const [remoteCategories, remoteClients, remoteProjects, remoteTasks] = await Promise.all([
+        const [
+            remoteCategories,
+            remoteClients,
+            remoteProjects,
+            remoteTasks,
+            remoteTimeLogs,
+        ] = await Promise.all([
             fetchRemoteCategories(),
             niche ? fetchRemoteClients() : [],
             niche ? fetchRemoteProjects() : [],
             fetchRemoteTasks(),
+            niche ? fetchRemoteTimeLogs() : [],
         ]);
 
         // Ağ beklenirken kullanıcı değişiklik yapmış olabilir; durum tam da
@@ -189,7 +203,35 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
 
         const pushedTasks = await pushRemoteTasks(plan.toPush, userId);
 
+        // --- Zaman kayıtları: üç tabloya birden bağlı, en sona kalır. --------
+        // Görev bağı ancak görevler kesinleştikten sonra doğrulanabilir; aynı
+        // turda oluşturulmuş bir göreve bağlı kaydı önce göndermek 23503 olurdu.
+        const validTaskIds = new Set(plan.tasks.map((t) => t.id));
+        const repairTimeLogs = (list: readonly TimeLog[]) =>
+            niche
+                ? remapTimeLogLinks(list, { ...linkContext, validTaskIds })
+                : { timeLogs: [...list], droppedIds: [] as string[] };
+
+        const localTimeLogs = niche
+            ? repairTimeLogs(state.timeLogs)
+            : { timeLogs: [], droppedIds: [] as string[] };
+
+        const timeLogPlan = niche
+            ? mergeTimeLogs({
+                local: localTimeLogs.timeLogs,
+                remote: remoteTimeLogs,
+                dirtyIds: state.dirtyTimeLogIds,
+                tombstones: state.timeLogTombstones,
+            })
+            : null;
+
+        const pushedTimeLogs = timeLogPlan
+            ? await pushRemoteTimeLogs(timeLogPlan.toPush, userId)
+            : [];
+
         // --- Silmeler: referans verenden referans verilene. ------------------
+        // Zaman kaydı en çok referans veren taraf, ilk o gider.
+        if (timeLogPlan) await deleteRemoteTimeLogs(timeLogPlan.toDelete);
         await deleteRemoteTasks(plan.toDelete);
         if (projectPlan) await deleteRemoteProjects(projectPlan.toDelete);
         if (clientPlan) await deleteRemoteClients(clientPlan.toDelete);
@@ -200,12 +242,24 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
         const pushedById = new Map(pushedTasks.map((task) => [task.id, task]));
         const tasks = repairLinks(plan.tasks.map((task) => pushedById.get(task.id) ?? task));
 
+        // Buluttan inen kayıtların bağları da onarılır: uzaktan gelen bir kayıt
+        // bu turda silinen bir müşteriye/projeye işaret ediyor olabilir. Sunucu
+        // aynı sonucu cascade ile zaten üretti, cihaz da onu izlemeli.
+        const pushedLogById = new Map(pushedTimeLogs.map((log) => [log.id, log]));
+        const mergedTimeLogs = repairTimeLogs(
+            (timeLogPlan?.timeLogs ?? []).map((log) => pushedLogById.get(log.id) ?? log)
+        );
+        const droppedTimeLogIds = [
+            ...localTimeLogs.droppedIds,
+            ...mergedTimeLogs.droppedIds,
+        ];
+
         useTaskStore.getState().applySyncResult({
             tasks,
             categories,
             // Bayrak kapalıyken bu alanlar atlanır ve store'daki mevcut değer
             // korunur; bayrak yeniden açılırsa kullanıcı verisini yerinde bulur.
-            ...(niche ? { clients, projects } : {}),
+            ...(niche ? { clients, projects, timeLogs: mergedTimeLogs.timeLogs } : {}),
             syncedIds: [...plan.toPush.map((t) => t.id), ...plan.discardedIds],
             clearedTombstoneIds: [...plan.toDelete, ...plan.obsoleteTombstoneIds],
             syncedCategoryIds: [
@@ -234,6 +288,18 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
             clearedProjectTombstoneIds: projectPlan
                 ? [...projectPlan.toDelete, ...projectPlan.obsoleteTombstoneIds]
                 : [],
+            // Müşterisi kalmadığı için düşen kayıtlar da temiz sayılır; aksi
+            // halde her turda var olmayan bir kayıt gönderilmeye çalışılırdı.
+            syncedTimeLogIds: timeLogPlan
+                ? [
+                    ...timeLogPlan.toPush.map((l) => l.id),
+                    ...timeLogPlan.discardedIds,
+                    ...droppedTimeLogIds,
+                ]
+                : [],
+            clearedTimeLogTombstoneIds: timeLogPlan
+                ? [...timeLogPlan.toDelete, ...timeLogPlan.obsoleteTombstoneIds]
+                : [],
             syncedAt: new Date().toISOString(),
         });
 
@@ -246,18 +312,21 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
                 plan.discardedIds.length
                 + categoryPlan.discardedIds.length
                 + (clientPlan?.discardedIds.length ?? 0)
-                + (projectPlan?.discardedIds.length ?? 0),
+                + (projectPlan?.discardedIds.length ?? 0)
+                + (timeLogPlan?.discardedIds.length ?? 0),
             pushed:
                 plan.toPush.length
                 + categoryPlan.toPush.length
                 + (clientPlan?.toPush.length ?? 0)
-                + (projectPlan?.toPush.length ?? 0),
+                + (projectPlan?.toPush.length ?? 0)
+                + (timeLogPlan?.toPush.length ?? 0),
             pulled: remoteTasks.length,
             deleted:
                 plan.toDelete.length
                 + categoryPlan.toDelete.length
                 + (clientPlan?.toDelete.length ?? 0)
-                + (projectPlan?.toDelete.length ?? 0),
+                + (projectPlan?.toDelete.length ?? 0)
+                + (timeLogPlan?.toDelete.length ?? 0),
         };
     } catch (error) {
         if (error instanceof SyncUnavailableError) {

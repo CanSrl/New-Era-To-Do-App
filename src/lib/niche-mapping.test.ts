@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { clientToRow, projectToRow, rowToClient, rowToProject } from './niche-mapping';
-import type { Client, Project } from './types';
+import {
+    clientToRow,
+    projectToRow,
+    rowToClient,
+    rowToProject,
+    rowToTimeLog,
+    timeLogToRow,
+} from './niche-mapping';
+import type { Client, Project, TimeLog } from './types';
 
 const ISO = '2026-08-14T10:00:00.000Z';
 const LATER = '2026-08-14T11:00:00.000Z';
@@ -138,5 +145,67 @@ describe('rowToProject', () => {
 
         expect(result.clientId).toBe('c1');
         expect(result.name).toBeTruthy();
+    });
+});
+
+const timeLog: TimeLog = {
+    id: 'l1',
+    taskId: 't1',
+    clientId: 'c1',
+    projectId: 'p1',
+    startedAt: ISO,
+    durationMinutes: 90,
+    note: 'Telefon görüşmesi',
+    createdAt: ISO,
+    updatedAt: ISO,
+};
+
+describe('timeLogToRow', () => {
+    it('alan adlarını snake_case-e çevirir ve user_id ekler', () => {
+        expect(timeLogToRow(timeLog, 'user-1')).toEqual({
+            id: 'l1',
+            user_id: 'user-1',
+            task_id: 't1',
+            client_id: 'c1',
+            project_id: 'p1',
+            started_at: ISO,
+            duration_minutes: 90,
+            note: 'Telefon görüşmesi',
+            created_at: ISO,
+            updated_at: ISO,
+        });
+    });
+
+    it('boş bağları null olarak gönderir', () => {
+        const row = timeLogToRow({ ...timeLog, taskId: null, projectId: null, note: null }, 'user-1');
+
+        expect(row.task_id).toBeNull();
+        expect(row.project_id).toBeNull();
+        expect(row.note).toBeNull();
+        // Müşteri bağı hiçbir durumda boş gitmez: şemada `not null`.
+        expect(row.client_id).toBe('c1');
+    });
+});
+
+describe('rowToTimeLog', () => {
+    it('satırı yerel kayda çevirir ve sunucu damgasını korur', () => {
+        expect(rowToTimeLog({
+            id: 'l1', user_id: 'user-1', task_id: 't1', client_id: 'c1', project_id: 'p1',
+            started_at: ISO, duration_minutes: 90, note: 'Telefon görüşmesi',
+            created_at: ISO, updated_at: LATER,
+        })).toEqual({ ...timeLog, updatedAt: LATER });
+    });
+
+    it('şema kısıtını aşan süreyi kırpar, kaydı düşürmez', () => {
+        // Böyle bir satır şemadan gelemez ama gelirse: olduğu gibi almak onu
+        // doğrudan push kuyruğuna sokar ve 23514 ile bütün turu düşürürdü.
+        const result = rowToTimeLog({
+            id: 'l1', user_id: 'user-1', task_id: null, client_id: 'c1', project_id: null,
+            started_at: ISO, duration_minutes: 5000, note: null,
+            created_at: ISO, updated_at: ISO,
+        });
+
+        expect(result.durationMinutes).toBe(1440);
+        expect(result.clientId).toBe('c1');
     });
 });

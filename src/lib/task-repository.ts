@@ -1,8 +1,15 @@
 import { supabase } from './supabase';
 import { rowToTask, taskToRow } from './task-mapping';
 import { categoryToRow, rowToCategory } from './category-mapping';
-import { clientToRow, projectToRow, rowToClient, rowToProject } from './niche-mapping';
-import type { Category, Client, Project, Task } from './types';
+import {
+    clientToRow,
+    projectToRow,
+    rowToClient,
+    rowToProject,
+    rowToTimeLog,
+    timeLogToRow,
+} from './niche-mapping';
+import type { Category, Client, Project, Task, TimeLog } from './types';
 
 /** Supabase yapılandırılmamışken senkron çağrıldığında atılır. */
 export class SyncUnavailableError extends Error {
@@ -257,5 +264,49 @@ export async function deleteRemoteProjects(ids: readonly string[]): Promise<void
     if (ids.length === 0) return;
 
     const { error } = await client().from('projects').delete().in('id', ids);
+    if (error) throw new Error(error.message);
+}
+
+/** Kullanıcının bulut üzerindeki tüm zaman kayıtlarını çeker. */
+export async function fetchRemoteTimeLogs(): Promise<TimeLog[]> {
+    const rows = await fetchAllRows('time_logs', (from, to) =>
+        client().from('time_logs').select('*').order('id').range(from, to)
+    );
+    return rows.map(rowToTimeLog);
+}
+
+/**
+ * Zaman kayıtlarını buluta yazar ve sunucunun kaydettiği hâllerini döner.
+ *
+ * Yazma zincirinin EN SONUNDA çağrılmalıdır: kayıt üç tabloya birden bağlı
+ * (`tasks`, `clients`, `projects`) ve hepsinin hedefi önce var olmalı. Aynı
+ * turda oluşturulmuş bir göreve bağlı kaydı görevden önce göndermek 23503 ile
+ * reddedilir ve o turdaki bütün senkron onunla düşer.
+ */
+export async function pushRemoteTimeLogs(
+    logs: readonly TimeLog[],
+    userId: string
+): Promise<TimeLog[]> {
+    if (logs.length === 0) return [];
+
+    const { data, error } = await client()
+        .from('time_logs')
+        .upsert(logs.map((l) => timeLogToRow(l, userId)), { onConflict: 'id' })
+        .select();
+
+    if (error) throw new Error(error.message);
+    return data.map(rowToTimeLog);
+}
+
+/**
+ * Zaman kayıtlarını buluttan siler.
+ *
+ * Silme zincirinin EN BAŞINDA çağrılmalıdır: kayıt referans veren taraftır,
+ * referans verdiği görev/proje/müşteriden önce gitmelidir.
+ */
+export async function deleteRemoteTimeLogs(ids: readonly string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const { error } = await client().from('time_logs').delete().in('id', ids);
     if (error) throw new Error(error.message);
 }

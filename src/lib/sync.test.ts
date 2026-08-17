@@ -15,7 +15,7 @@
  * vermediği değil, `runSync`'in onu doğru düzende çağırıp çağırmadığı sınanıyor.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Category, Client, Project, Task } from './types';
+import type { Category, Client, Project, Task, TimeLog } from './types';
 
 /**
  * Çağrı sırası buraya kaydedilir. `vi.hoisted` şart: `vi.mock` fabrikaları
@@ -114,6 +114,17 @@ vi.mock('./task-repository', () => {
         deleteRemoteProjects: vi.fn(async () => {
             calls.push('deleteProjects');
         }),
+        fetchRemoteTimeLogs: vi.fn(async () => {
+            calls.push('fetchTimeLogs');
+            return [] as TimeLog[];
+        }),
+        pushRemoteTimeLogs: vi.fn(async (logs: readonly TimeLog[]) => {
+            calls.push('pushTimeLogs');
+            return [...logs];
+        }),
+        deleteRemoteTimeLogs: vi.fn(async () => {
+            calls.push('deleteTimeLogs');
+        }),
     };
 });
 
@@ -176,6 +187,31 @@ function makeProject(over: Partial<Project> & { id: string; clientId: string }):
     };
 }
 
+/**
+ * Son `pushRemoteTimeLogs` çağrısına giden kayıtlar.
+ *
+ * `mock.calls[0]` kullanılmaz: taklit fonksiyonların çağrı geçmişi testler
+ * arasında sıfırlanmıyor (`restoreMocks` yalnızca uygulamayı geri alıyor),
+ * dolayısıyla ilk çağrı önceki bir testin çağrısı olabilir.
+ */
+function lastPushedTimeLogs(): TimeLog[] {
+    return [...(vi.mocked(repo.pushRemoteTimeLogs).mock.lastCall?.[0] ?? [])];
+}
+
+function makeTimeLog(over: Partial<TimeLog> & { id: string }): TimeLog {
+    return {
+        taskId: null,
+        clientId: 'c1',
+        projectId: null,
+        startedAt: ISO,
+        durationMinutes: 60,
+        note: null,
+        createdAt: ISO,
+        updatedAt: ISO,
+        ...over,
+    };
+}
+
 /** Store'u bilinen bir başlangıca çeker. */
 function seedStore(over: Partial<ReturnType<typeof useTaskStore.getState>> = {}) {
     useTaskStore.setState({
@@ -183,6 +219,10 @@ function seedStore(over: Partial<ReturnType<typeof useTaskStore.getState>> = {})
         categories: [],
         clients: [],
         projects: [],
+        timeLogs: [],
+        activeTimer: null,
+        dirtyTimeLogIds: [],
+        timeLogTombstones: [],
         searchQuery: '',
         filter: 'all',
         dirtyIds: [],
@@ -221,6 +261,11 @@ beforeEach(() => {
     vi.mocked(repo.pushRemoteProjects).mockImplementation(async (p) => {
         calls.push('pushProjects');
         return [...p];
+    });
+    vi.mocked(repo.fetchRemoteTimeLogs).mockResolvedValue([]);
+    vi.mocked(repo.pushRemoteTimeLogs).mockImplementation(async (l) => {
+        calls.push('pushTimeLogs');
+        return [...l];
     });
     resetSyncLock();
     localStorage.clear();
@@ -522,6 +567,8 @@ describe('runSync — niş modül yazma ve silme sırası', () => {
             'pushProjects',
             'pushCategories',
             'pushTasks',
+            // Zaman kaydı üç tabloya birden bağlı: en sona kalır.
+            'pushTimeLogs',
         ]);
     });
 
@@ -542,6 +589,8 @@ describe('runSync — niş modül yazma ve silme sırası', () => {
 
         // Silme sırası yazmanın tersidir: referans veren önce gider.
         expect(calls.filter((c) => c.startsWith('delete'))).toEqual([
+            // En çok referans veren taraf ilk gider.
+            'deleteTimeLogs',
             'deleteTasks',
             'deleteProjects',
             'deleteClients',
@@ -565,7 +614,124 @@ describe('runSync — niş modül yazma ve silme sırası', () => {
     });
 });
 
+describe('runSync — zaman kayıtları', () => {
+    it('görev yazıldıktan SONRA gönderir', async () => {
+        // Aynı turda oluşturulmuş bir göreve bağlı kaydı önce göndermek 23503
+        // ile reddedilir ve o turdaki bütün senkron onunla düşer.
+        seedStore({
+            clients: [makeClient({ id: 'c1' })],
+            tasks: [makeTask({ id: 't1', clientId: 'c1' })],
+            timeLogs: [makeTimeLog({ id: 'l1', clientId: 'c1', taskId: 't1' })],
+            dirtyClientIds: ['c1'],
+            dirtyIds: ['t1'],
+            dirtyTimeLogIds: ['l1'],
+        });
+
+        await runSync('user-1');
+
+        expect(calls.indexOf('pushTasks')).toBeLessThan(calls.indexOf('pushTimeLogs'));
+        expect(lastPushedTimeLogs().map((l) => l.id)).toEqual(['l1']);
+    });
+
+    it('iki cihazın kayıtlarını toplar, birini diğerine ezdirmez', async () => {
+        vi.mocked(repo.fetchRemoteTimeLogs).mockResolvedValue([
+            makeTimeLog({ id: 'l-uzak', clientId: 'c1' }),
+        ]);
+        seedStore({
+            clients: [makeClient({ id: 'c1' })],
+            timeLogs: [makeTimeLog({ id: 'l-yerel', clientId: 'c1' })],
+            dirtyClientIds: ['c1'],
+            dirtyTimeLogIds: ['l-yerel'],
+        });
+
+        await runSync('user-1');
+
+        expect(useTaskStore.getState().timeLogs.map((l) => l.id).sort())
+            .toEqual(['l-uzak', 'l-yerel']);
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([]);
+    });
+
+    it('tekilleştirilen müşteriye bağlı kaydı bulut id-sine taşır', async () => {
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([
+            makeClient({ id: 'c-bulut', name: 'Acme' }),
+        ]);
+        seedStore({
+            clients: [makeClient({ id: 'c-yerel', name: 'Acme' })],
+            timeLogs: [makeTimeLog({ id: 'l1', clientId: 'c-yerel' })],
+            dirtyClientIds: ['c-yerel'],
+            dirtyTimeLogIds: ['l1'],
+        });
+
+        await runSync('user-1');
+
+        // Yerel müşteri buluttakine katlandı; kayıt onunla birlikte taşınmazsa
+        // artık var olmayan bir müşteriye işaret eder ve push 23503 ile düşer.
+        const [pushed] = lastPushedTimeLogs();
+        expect(pushed.clientId).toBe('c-bulut');
+        expect(useTaskStore.getState().timeLogs[0].clientId).toBe('c-bulut');
+    });
+
+    it('müşterisi kalmayan kaydı düşürür ve dirty bayrağını temizler', async () => {
+        // `client_id not null` + `on delete cascade`: sunucu bu kaydı zaten
+        // sildi. Cihazda tutmak, her turda var olmayan bir müşteriye kayıt
+        // göndermeye çalışmak demekti.
+        seedStore({
+            timeLogs: [makeTimeLog({ id: 'l1', clientId: 'c-silinmis' })],
+            dirtyTimeLogIds: ['l1'],
+        });
+
+        await runSync('user-1');
+
+        expect(useTaskStore.getState().timeLogs).toEqual([]);
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([]);
+        expect(lastPushedTimeLogs()).toEqual([]);
+    });
+
+    it('silinmiş göreve bağlı kaydın görev bağını koparır, kaydı silmez', async () => {
+        vi.mocked(repo.fetchRemoteTimeLogs).mockResolvedValue([
+            makeTimeLog({ id: 'l1', clientId: 'c1', taskId: 't-silinmis' }),
+        ]);
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([makeClient({ id: 'c1' })]);
+
+        await runSync('user-1');
+
+        const [log] = useTaskStore.getState().timeLogs;
+        expect(log.taskId).toBeNull();
+        expect(log.clientId).toBe('c1');
+    });
+
+    it('silinen kaydın mezar taşını atar', async () => {
+        vi.mocked(repo.fetchRemoteTimeLogs).mockResolvedValue([
+            makeTimeLog({ id: 'l-uzak', clientId: 'c1' }),
+        ]);
+        vi.mocked(repo.fetchRemoteClients).mockResolvedValue([makeClient({ id: 'c1' })]);
+        seedStore({ timeLogTombstones: [{ id: 'l-uzak', deletedAt: ISO }] });
+
+        await runSync('user-1');
+
+        expect(useTaskStore.getState().timeLogTombstones).toEqual([]);
+    });
+});
+
 describe('runSync — niş modül bayrağı kapalı', () => {
+    it('time_logs tablosuna HİÇ dokunmaz', async () => {
+        // Modülü çıkarmış kurulumda tablo yoktur; tek bir "relation does not
+        // exist" GÖREV senkronunu da beraberinde düşürürdü.
+        flags.nicheModule = false;
+        seedStore({
+            timeLogs: [makeTimeLog({ id: 'l1' })],
+            dirtyTimeLogIds: ['l1'],
+        });
+
+        const outcome = await runSync('user-1');
+
+        expect(outcome.status).toBe('ok');
+        expect(calls.filter((c) => c.includes('TimeLog'))).toEqual([]);
+        // Yereldeki veri silinmez, yalnızca senkronlanmaz.
+        expect(useTaskStore.getState().timeLogs.map((l) => l.id)).toEqual(['l1']);
+        expect(useTaskStore.getState().dirtyTimeLogIds).toEqual(['l1']);
+    });
+
     it('clients/projects tablolarına hiç dokunmaz', async () => {
         flags.nicheModule = false;
         seedStore({

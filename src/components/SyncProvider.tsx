@@ -47,6 +47,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const clientTombstones = useTaskStore((state) => state.clientTombstones);
     const dirtyProjectIds = useTaskStore((state) => state.dirtyProjectIds);
     const projectTombstones = useTaskStore((state) => state.projectTombstones);
+    const dirtyTimeLogIds = useTaskStore((state) => state.dirtyTimeLogIds);
+    const timeLogTombstones = useTaskStore((state) => state.timeLogTombstones);
 
     // HER kayıt türü sayılmak zorunda: senkron yalnızca bu sayı değişince
     // tetikleniyor. Bir tür sayılmazsa o türdeki ekleme/silme bir sonraki
@@ -56,7 +58,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         dirtyIds.length + tombstones.length
         + dirtyCategoryIds.length + categoryTombstones.length
         + dirtyClientIds.length + clientTombstones.length
-        + dirtyProjectIds.length + projectTombstones.length;
+        + dirtyProjectIds.length + projectTombstones.length
+        + dirtyTimeLogIds.length + timeLogTombstones.length;
 
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const userId = user?.id ?? null;
