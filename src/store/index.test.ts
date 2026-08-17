@@ -1041,16 +1041,19 @@ describe('zaman kaydı', () => {
     it('updateTimeLog yalnızca hedef kaydı değiştirir ve dirty işaretler', () => {
         const clientId = store().addClient('Acme')!.id;
         const log = store().addTimeLog({ clientId, startedAt: T0, durationMinutes: 45 });
+        const other = store().addTimeLog({ clientId, startedAt: T30, durationMinutes: 15 });
         store().applySyncResult({
             tasks: [], categories: [], syncedIds: [], clearedTombstoneIds: [],
             syncedCategoryIds: [], clearedCategoryTombstoneIds: [],
-            syncedTimeLogIds: [log.id], syncedAt: 'x',
+            syncedTimeLogIds: [log.id, other.id], syncedAt: 'x',
         });
 
         store().updateTimeLog(log.id, { note: 'Telefon görüşmesi' });
 
-        const updated = useTaskStore.getState().timeLogs[0];
-        expect(updated.note).toBe('Telefon görüşmesi');
+        const updated = useTaskStore.getState().timeLogs.find(l => l.id === log.id);
+        const untouched = useTaskStore.getState().timeLogs.find(l => l.id === other.id);
+        expect(updated?.note).toBe('Telefon görüşmesi');
+        expect(untouched).toEqual(other);
         expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([log.id]);
     });
 
@@ -1111,6 +1114,59 @@ describe('zaman kaydı', () => {
 
         expect(useTaskStore.getState().timeLogs[0].taskId).toBeNull();
         expect(useTaskStore.getState().dirtyTimeLogIds).toEqual([]);
+    });
+
+    it('deleteClient çalışan sayaç o müşteriye bağlıysa sayacı atar', () => {
+        const clientId = store().addClient('Acme')!.id;
+        store().startTimer({ taskId: null, clientId, projectId: null }, T0);
+
+        store().deleteClient(clientId);
+
+        expect(useTaskStore.getState().activeTimer).toBeNull();
+    });
+
+    it('deleteProject çalışan sayacın yalnızca proje bağını boşaltır, sayaç durmaz', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const projectId = store().addProject(clientId, 'Websitesi')!.id;
+        store().startTimer({ taskId: null, clientId, projectId }, T0);
+
+        store().deleteProject(projectId);
+
+        const timer = useTaskStore.getState().activeTimer;
+        expect(timer).not.toBeNull();
+        expect(timer?.projectId).toBeNull();
+        expect(timer?.clientId).toBe(clientId);
+        expect(timer?.startedAt).toBe(T0);
+    });
+
+    it('deleteTask çalışan sayacın yalnızca görev bağını boşaltır, sayaç durmaz', () => {
+        const clientId = store().addClient('Acme')!.id;
+        addTask('Rapor', { clientId });
+        const taskId = store().tasks[0].id;
+        store().startTimer({ taskId, clientId, projectId: null }, T0);
+
+        store().deleteTask(taskId);
+
+        const timer = useTaskStore.getState().activeTimer;
+        expect(timer).not.toBeNull();
+        expect(timer?.taskId).toBeNull();
+        expect(timer?.clientId).toBe(clientId);
+        expect(timer?.startedAt).toBe(T0);
+    });
+
+    it('müşterisi silinen sayaç sonradan durdurulunca senkronlanamaz kayıt üretmez', () => {
+        // Asıl kusur bu: sayaç asılı kalırsa stopTimer artık var olmayan bir
+        // müşteriye dirty bir kayıt üretir ve o kayıt hiçbir turda
+        // senkronlanamaz (23503, her turda aynı yerde düşer).
+        const clientId = store().addClient('Acme')!.id;
+        store().startTimer({ taskId: null, clientId, projectId: null }, T0);
+
+        store().deleteClient(clientId);
+        store().stopTimer(T30);
+
+        const state = useTaskStore.getState();
+        expect(state.timeLogs).toEqual([]);
+        expect(state.dirtyTimeLogIds).toEqual([]);
     });
 
     it('misafir verisi hesaba aktarılırken zaman kayıtları da bekleyenlere alınır', () => {

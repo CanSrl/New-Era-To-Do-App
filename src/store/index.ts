@@ -264,6 +264,12 @@ export const useTaskStore = create<TaskState>()(
                     timeLogs: state.timeLogs.map((l) =>
                         l.taskId === id ? { ...l, taskId: null } : l
                     ),
+                    // Çalışan sayaç bu göreveyse yalnızca taskId boşalır, aynı
+                    // `on delete set null (task_id)` referansı gibi; sayaç
+                    // çalışmaya devam eder (bağımsız zaman kaydı olur).
+                    activeTimer: state.activeTimer?.taskId === id
+                        ? { ...state.activeTimer, taskId: null }
+                        : state.activeTimer,
                 };
             }),
 
@@ -468,6 +474,13 @@ export const useTaskStore = create<TaskState>()(
                     dirtyTimeLogIds: state.dirtyTimeLogIds.filter(
                         (dirtyId) => !removedLogIds.has(dirtyId)
                     ),
+                    // Çalışan sayaç bu müşteriyeyse ATILIR, kayda çevrilmez:
+                    // kaydedilmiş kayıtlar zaten cascade ile gidiyor, sayacı
+                    // durdurup yeni bir kayıt üretmek şemanın tutamayacağı bir
+                    // satır olurdu (client_id artık yok) — stopTimer bunu
+                    // dirty işaretler, push 23503 ile düşer ve dirtyTimeLogIds
+                    // hiç temizlenmediği için HER turda aynı yerde tıkanır.
+                    activeTimer: state.activeTimer?.clientId === id ? null : state.activeTimer,
                 };
             }),
 
@@ -555,6 +568,13 @@ export const useTaskStore = create<TaskState>()(
                     timeLogs: state.timeLogs.map((l) =>
                         l.projectId === id ? { ...l, projectId: null } : l
                     ),
+                    // Çalışan sayaç bu projeyeyse yalnızca projectId boşalır,
+                    // aynı `on delete set null (project_id)` referansı gibi;
+                    // clientId ve başlangıç zamanı durur, sayaç çalışmaya
+                    // devam eder.
+                    activeTimer: state.activeTimer?.projectId === id
+                        ? { ...state.activeTimer, projectId: null }
+                        : state.activeTimer,
                 };
             }),
 
