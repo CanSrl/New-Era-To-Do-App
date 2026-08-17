@@ -35,6 +35,50 @@ describe('normalizeProject', () => {
             PROJECT_NAME_MAX
         );
     });
+
+    // Veritabanındaki `check (hourly_rate is null or hourly_rate >= 0)`
+    // karşılığı. Geçersiz değerde kaydı düşürmek yerine `null`'a düşülür:
+    // müşteriden miras almak, kısıtı ihlal eden satırı push kuyruğuna sokup
+    // o turdaki bütün senkronu 23514 ile düşürmekten iyidir.
+    it('negatif hourlyRate değerinde mirasa (null) düşer', () => {
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: -50 }, 0)?.hourlyRate)
+            .toBeNull();
+    });
+
+    it('sonlu olmayan veya sayı olmayan hourlyRate değerinde mirasa düşer', () => {
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: Number.NaN }, 0)
+            ?.hourlyRate).toBeNull();
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: -Infinity }, 0)
+            ?.hourlyRate).toBeNull();
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: '900' }, 0)
+            ?.hourlyRate).toBeNull();
+    });
+
+    // null = müşteriden miras al, 0 = proje ücretsiz. İkisi FARKLI; doğrulama
+    // eklerken 0'ın sessizce null'a dönüşmemesi şart.
+    it('null mirası, 0 ise ücretsiz projeyi ifade eder', () => {
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: null }, 0)?.hourlyRate)
+            .toBeNull();
+        expect(normalizeProject({ clientId: 'c1', name: 'Site' }, 0)?.hourlyRate).toBeNull();
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: 0 }, 0)?.hourlyRate)
+            .toBe(0);
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', hourlyRate: 900 }, 0)?.hourlyRate)
+            .toBe(900);
+    });
+
+    it('3 karakter olmayan currency değerini varsayılana düşürür', () => {
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', currency: 'TR' }, 0)?.currency)
+            .toBe('TRY');
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', currency: 'TRYX' }, 0)?.currency)
+            .toBe('TRY');
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', currency: 949 }, 0)?.currency)
+            .toBe('TRY');
+    });
+
+    it('3 karakterlik currency değerini korur', () => {
+        expect(normalizeProject({ clientId: 'c1', name: 'Site', currency: 'EUR' }, 0)?.currency)
+            .toBe('EUR');
+    });
 });
 
 describe('isProjectNameTaken', () => {

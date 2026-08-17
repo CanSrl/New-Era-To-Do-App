@@ -21,10 +21,22 @@ export function normalizeClient(raw: unknown, fallbackPosition: number): Client 
 
     const createdAt = toIsoTimestamp(source.createdAt);
 
-    const hourlyRate = typeof source.hourlyRate === 'number' && Number.isFinite(source.hourlyRate)
+    /*
+     * Ücret ve para birimi veritabanı kısıtlarını aynalar:
+     *   check (hourly_rate >= 0)
+     *   check (char_length(currency) = 3)
+     * Geçersiz değerde kayıt REDDEDİLMEZ, varsayılana düşülür —
+     * `normalizeCategory`'deki `isValidColor` deseninin aynısı. Bozuk tek alan
+     * yüzünden müşteriyi tamamen atmak veri kaybı olurdu; olduğu gibi kabul
+     * etmek ise kısıtı ihlal eden satırı push kuyruğuna sokar ve Postgres 23514
+     * ile reddedince o turdaki bütün senkron onunla birlikte düşerdi.
+     */
+    const hourlyRate = typeof source.hourlyRate === 'number'
+        && Number.isFinite(source.hourlyRate)
+        && source.hourlyRate >= 0
         ? source.hourlyRate
         : 0;
-    const currency = typeof source.currency === 'string' && source.currency
+    const currency = typeof source.currency === 'string' && source.currency.length === 3
         ? source.currency
         : 'TRY';
 

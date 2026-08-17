@@ -23,12 +23,22 @@ export function normalizeProject(raw: unknown, fallbackPosition: number): Projec
 
     const createdAt = toIsoTimestamp(source.createdAt);
 
-    // null = müşteriden miras al, 0 = proje ücretsiz — ikisi FARKLI, bu yüzden
-    // `source.hourlyRate == null` değil `typeof ... !== 'number'` denetlenir.
-    const hourlyRate = typeof source.hourlyRate === 'number' && Number.isFinite(source.hourlyRate)
+    /*
+     * null = müşteriden miras al, 0 = proje ücretsiz — ikisi FARKLI, bu yüzden
+     * `source.hourlyRate == null` değil `typeof ... !== 'number'` denetlenir.
+     *
+     * Negatif değer şemadaki `check (hourly_rate is null or hourly_rate >= 0)`
+     * kısıtını ihlal eder; kaydı düşürmek yerine mirasa (`null`) düşülür.
+     * Olduğu gibi kabul edilseydi satır push kuyruğuna girer, Postgres 23514
+     * ile reddeder ve o turdaki bütün senkronu beraberinde düşürürdü.
+     */
+    const hourlyRate = typeof source.hourlyRate === 'number'
+        && Number.isFinite(source.hourlyRate)
+        && source.hourlyRate >= 0
         ? source.hourlyRate
         : null;
-    const currency = typeof source.currency === 'string' && source.currency
+    // `clients.currency` ile aynı kural: 3 karakter değilse varsayılana düşer.
+    const currency = typeof source.currency === 'string' && source.currency.length === 3
         ? source.currency
         : 'TRY';
 

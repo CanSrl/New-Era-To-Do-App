@@ -75,7 +75,9 @@ describe('normalizeTimeLog', () => {
         })).toBeNull();
     });
 
-    it('projeli ama musterisiz kaydi reddeder', () => {
+    // clientId zorunludur: diger butun alanlar gecerli olsa bile eksikse kayit
+    // dusurulur. (Sema tarafinda time_logs.client_id NOT NULL.)
+    it('diger alanlar gecerli olsa da clientId yoksa reddeder', () => {
         expect(normalizeTimeLog({
             id: 'l1', projectId: 'p1',
             startedAt: '2026-08-16T09:00:00.000Z', durationMinutes: 30,

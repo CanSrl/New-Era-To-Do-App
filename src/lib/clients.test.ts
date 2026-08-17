@@ -43,6 +43,41 @@ describe('normalizeClient', () => {
         expect(normalizeClient({ name: 'Acme', position: Number.NaN }, 5)?.position).toBe(5);
         expect(normalizeClient({ name: 'Acme', position: 'iki' }, 5)?.position).toBe(5);
     });
+
+    // Veritabanındaki `check (hourly_rate >= 0)` karşılığı. Kaydı düşürmek
+    // yerine varsayılana düşülür (normalizeCategory'deki renk deseni): bozuk
+    // tek alan yüzünden müşteriyi silmek de, kısıtı ihlal eden satırı push
+    // kuyruğuna sokup o turdaki bütün senkronu 23514 ile düşürmek de kötü.
+    it('negatif hourlyRate değerini varsayılana düşürür', () => {
+        expect(normalizeClient({ name: 'Acme', hourlyRate: -50 }, 0)?.hourlyRate).toBe(0);
+    });
+
+    it('sonlu olmayan veya sayı olmayan hourlyRate değerinde varsayılana düşer', () => {
+        expect(normalizeClient({ name: 'Acme', hourlyRate: Number.NaN }, 0)?.hourlyRate).toBe(0);
+        expect(normalizeClient({ name: 'Acme', hourlyRate: Infinity }, 0)?.hourlyRate).toBe(0);
+        expect(normalizeClient({ name: 'Acme', hourlyRate: '1500' }, 0)?.hourlyRate).toBe(0);
+    });
+
+    it('geçerli hourlyRate değerini korur — 0 dahil', () => {
+        expect(normalizeClient({ name: 'Acme', hourlyRate: 1500 }, 0)?.hourlyRate).toBe(1500);
+        expect(normalizeClient({ name: 'Acme', hourlyRate: 0 }, 0)?.hourlyRate).toBe(0);
+    });
+
+    // Veritabanındaki `check (char_length(currency) = 3)` karşılığı.
+    it('3 karakter olmayan currency değerini varsayılana düşürür', () => {
+        expect(normalizeClient({ name: 'Acme', currency: 'TR' }, 0)?.currency).toBe('TRY');
+        expect(normalizeClient({ name: 'Acme', currency: 'TRYX' }, 0)?.currency).toBe('TRY');
+        expect(normalizeClient({ name: 'Acme', currency: '' }, 0)?.currency).toBe('TRY');
+    });
+
+    it('metin olmayan currency değerinde varsayılana düşer', () => {
+        expect(normalizeClient({ name: 'Acme', currency: 949 }, 0)?.currency).toBe('TRY');
+        expect(normalizeClient({ name: 'Acme', currency: null }, 0)?.currency).toBe('TRY');
+    });
+
+    it('3 karakterlik currency değerini korur', () => {
+        expect(normalizeClient({ name: 'Acme', currency: 'EUR' }, 0)?.currency).toBe('EUR');
+    });
 });
 
 describe('createClient', () => {

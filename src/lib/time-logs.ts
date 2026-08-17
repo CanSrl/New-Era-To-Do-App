@@ -44,8 +44,6 @@ export function normalizeTimeLog(raw: unknown): TimeLog | null {
     if (!clientId) return null;
 
     const projectId = typeof source.projectId === 'string' ? source.projectId : null;
-    // Şemadaki time_logs_project_requires_client'in istemci karşılığı.
-    if (projectId && !clientId) return null;
 
     const durationMinutes = typeof source.durationMinutes === 'number'
         ? Math.floor(source.durationMinutes)
