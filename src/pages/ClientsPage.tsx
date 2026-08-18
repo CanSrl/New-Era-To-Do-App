@@ -7,6 +7,9 @@ import { CLIENT_NAME_MAX, clientsForDisplay } from '../lib/clients';
 import { projectsForDisplay } from '../lib/projects';
 import { ClientCard } from '../components/ClientCard';
 
+/** Modül seviyesinde: her render'da yeni nesne üretmek kartı boşuna tazelerdi. */
+const NO_LOGS = { count: 0, minutes: 0 };
+
 /**
  * Müşteri ve proje yönetimi — niş modülün yönetim ekranı.
  *
@@ -22,6 +25,7 @@ export function ClientsPage() {
     const clients = useTaskStore((state) => state.clients);
     const projects = useTaskStore((state) => state.projects);
     const tasks = useTaskStore((state) => state.tasks);
+    const timeLogs = useTaskStore((state) => state.timeLogs);
     const addClient = useTaskStore((state) => state.addClient);
 
     const [draft, setDraft] = useState('');
@@ -40,6 +44,29 @@ export function ClientsPage() {
 
         return { clientTaskCounts: byClient, projectTaskCounts: byProject };
     }, [tasks]);
+
+    /*
+     * Zaman kaydı sayaçları silme diyaloğunu besler. Müşteride süre de
+     * toplanır: onay metni kaç kaydın gideceğini değil, ne kadar ölçülmüş
+     * emeğin gideceğini söylemeli. Projede yalnızca sayı yeter — proje
+     * silinince kayıtlar durur, yalnızca proje bağları boşalır.
+     */
+    const { clientLogStats, projectLogCounts } = useMemo(() => {
+        const byClient: Record<string, { count: number; minutes: number }> = {};
+        const byProject: Record<string, number> = {};
+
+        for (const log of timeLogs) {
+            const own = byClient[log.clientId] ?? { count: 0, minutes: 0 };
+            byClient[log.clientId] = {
+                count: own.count + 1,
+                minutes: own.minutes + log.durationMinutes,
+            };
+            if (log.projectId) byProject[log.projectId] = (byProject[log.projectId] ?? 0) + 1;
+        }
+
+        return { clientLogStats: byClient, projectLogCounts: byProject };
+    }, [timeLogs]);
+
 
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,6 +100,8 @@ export function ClientsPage() {
                             projects={projectsForDisplay(projects, client.id)}
                             taskCount={clientTaskCounts[client.id] ?? 0}
                             projectTaskCounts={projectTaskCounts}
+                            timeLogs={clientLogStats[client.id] ?? NO_LOGS}
+                            projectLogCounts={projectLogCounts}
                         />
                     ))}
                 </ul>

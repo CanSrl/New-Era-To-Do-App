@@ -6,6 +6,7 @@ import { useTaskStore } from '../store';
 import { PROJECT_NAME_MAX } from '../lib/projects';
 import type { Project } from '../lib/types';
 import { InlineName } from './InlineName';
+import { InlineRate } from './InlineRate';
 import { cn } from '../lib/utils';
 import {
     AlertDialog,
@@ -31,8 +32,26 @@ const projectRowVariants = {
 const iconButtonClass =
     'p-2 shrink-0 rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
 
-export function ProjectRow({ project, taskCount }: { project: Project; taskCount: number }) {
-    const { t } = useTranslation();
+interface ProjectRowProps {
+    project: Project;
+    /** Bu projeye bağlı görev sayısı. */
+    taskCount: number;
+    /** Bu projeye bağlı zaman kaydı sayısı. */
+    timeLogCount: number;
+    /** Müşterinin ücreti — override boşken yer tutucuda gösterilir. */
+    inheritedRate: number;
+    /** Müşterinin para birimi; projede ayrı bir sütun yok. */
+    currency: string;
+}
+
+export function ProjectRow({
+    project,
+    taskCount,
+    timeLogCount,
+    inheritedRate,
+    currency,
+}: ProjectRowProps) {
+    const { t, i18n } = useTranslation();
     const updateProject = useTaskStore((state) => state.updateProject);
     const deleteProject = useTaskStore((state) => state.deleteProject);
 
@@ -61,6 +80,24 @@ export function ProjectRow({ project, taskCount }: { project: Project; taskCount
         );
     };
 
+    /**
+     * `null` mirası geri getirir, `0` projeyi ücretsiz yapar — ikisi farklı,
+     * bu yüzden boş alan `0`'a çevrilmez.
+     */
+    const handleRate = (rate: number | null) => {
+        updateProject(project.id, { hourlyRate: rate });
+
+        // Store reddetmiş olabilir (negatif ücret şemadaki kısıtı ihlal eder).
+        const saved = useTaskStore.getState().projects.find((p) => p.id === project.id);
+        if (saved?.hourlyRate !== rate) {
+            toast.error(t('time.rateInvalid'));
+            return false;
+        }
+
+        toast.success(t('time.rateUpdated'));
+        return true;
+    };
+
     const handleDelete = () => {
         deleteProject(project.id);
         toast.success(t('project.deleted', { name: project.name }));
@@ -87,6 +124,20 @@ export function ProjectRow({ project, taskCount }: { project: Project; taskCount
                     {t('common.archived')}
                 </span>
             )}
+
+            <InlineRate
+                value={project.hourlyRate}
+                label={t('time.projectRateLabel', { name: project.name })}
+                placeholder={t('time.inheritedRate', {
+                    rate: new Intl.NumberFormat(i18n.language, {
+                        style: 'currency',
+                        currency,
+                    }).format(inheritedRate),
+                })}
+                allowEmpty
+                onCommit={handleRate}
+                className="w-32 shrink-0 text-right text-sm"
+            />
 
             <span className="w-20 shrink-0 text-right text-xs tabular-nums text-muted-foreground">
                 {t('project.taskCount', { count: taskCount })}
@@ -129,6 +180,9 @@ export function ProjectRow({ project, taskCount }: { project: Project; taskCount
                             {taskCount > 0
                                 ? t('project.deleteConfirmTasks', { count: taskCount })
                                 : t('project.deleteConfirmTasksNone')}
+                            {timeLogCount > 0 && (
+                                <> {t('project.deleteConfirmLogs', { count: timeLogCount })}</>
+                            )}
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

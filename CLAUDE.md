@@ -52,7 +52,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 623 otomatik test — 435 birim (Vitest), 116 uçtan uca (Playwright,
+**Test:** 629 otomatik test — 445 birim (Vitest), 112 uçtan uca (Playwright,
 12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
 bayrağı kapalı olduğu için atlanır), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
@@ -371,7 +371,7 @@ Dal: `faz-3-zaman-kaydi`.
 | 4 | Senkron: `mergeTimeLogs`, eşleme, repository, sıra, `pendingCount` | ✅ |
 | 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ✅ |
 | 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ✅ |
-| 7 | Ücret alanları arayüzü ve silme diyaloğu | ⏳ |
+| 7 | Ücret alanları arayüzü ve silme diyaloğu | ✅ |
 | 8 | CSV dışa aktarım (`papaparse`) | ⏳ |
 | 9 | Bayrak izleri, kalan E2E, doküman senkronu | ⏳ |
 
@@ -399,6 +399,20 @@ Zaman kaydında yerleşen kurallar:
   tek gerçek savunması görünürlük; çubuk yalnızca başlatıldığı ekranda
   görünseydi kullanıcı başka sayfaya geçip unuturdu. Aynı gerekçeyle görev
   satırındaki **durdur** butonu, düzenle/sil'in aksine hover'a bağlı değil.
+- **Ücret alanları müşteri kartının açılan panelinde.** Başlık satırı zaten ad
+  ve üç eylem taşıyor; dar ekranda taşardı. Para birimi yalnızca **müşteride**
+  vardır — `projects` tablosunda karşılığı yok (`niche-mapping.ts` okurken
+  `'TRY'` sabitler), proje yalnızca ücreti ezebilir. Alanlar `InlineName`
+  sözleşmesini paylaşır (`InlineRate`, sayı ikizi): taslak yerel, commit
+  odak kaybında/Enter'da, Escape iptal, kenarlık hover/odakta.
+- **Aralık denetimi `InlineRate`'te değil store'da.** Bileşen yalnızca sayıya
+  çevrilemeyen taslağı geri alır; negatif ücreti şemanın ikizi olan store
+  reddeder (`isValidRate`) ve çağıran tek bir hata mesajı gösterir. Kural iki
+  yere yazılsaydı biri değişince diğeri sessizce ayrışırdı.
+- **Para birimi büyük harfe normalize edilir** (`normalizeCurrency`). Şemadaki
+  kısıt yalnızca üç karakter ister, ama aynı birim iki farklı yazımla
+  saklanırsa `sumByCurrency` genel toplamı ikiye böler; harf olmayan kod ise
+  `Intl.NumberFormat`'i patlatırdı.
 - **Durdurmak ile atmak ayrı butonlar.** Durdurmak kaydeder, atmak kaydetmez;
   ikisi geri alınamaz biçimde farklı. Tek butonda birleştirmek, yanlışlıkla
   başlatılmış sayacı faturaya yazardı.
@@ -448,8 +462,9 @@ Görev 5'te gelen arayüz kararları:
   müşterisinin aynı olmasını zorunlu tutuyor; eski proje seçili bırakılsaydı
   gönderim 23503 ile düşer ve o turdaki bütün senkron onunla giderdi.
 - **Silme onay metinleri veritabanı davranışını birebir söyler** (müşteri →
-  projeler cascade ile gider + görevlerin İKİ bağı boşalır; proje → yalnızca
-  proje bağı). Bu metinler `sync-merge-niche.ts`'in taklit ettiği kuralların
+  projeler cascade ile gider + görevlerin İKİ bağı boşalır + zaman kayıtları
+  `on delete cascade` ile **silinir**, süresiyle birlikte sayılır; proje →
+  yalnızca proje bağı, zaman kayıtları durur). Bu metinler `sync-merge-niche.ts`'in taklit ettiği kuralların
   kullanıcıya görünen yüzü; biri değişirse üçü birden değişmeli.
 - **Ad alanı her zaman gerçek bir `input`'tur** (`InlineName`), kenarlığı
   yalnızca hover/odakta belirir. "Tıklayınca girdiye dönüşen metin" deseni

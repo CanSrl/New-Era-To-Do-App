@@ -8,10 +8,8 @@ import { gotoApp } from './helpers'
  * Local-first çalışır, Supabase gerekmez. Sayaç etkileşimleri `zaman.spec.ts`
  * içinde; burada ekranın kendisi sınanıyor.
  *
- * ⚠️ Saatlik ücret arayüzü henüz yok (Görev 7), varsayılan 0. Tutarın gerçek
- * bir ücretle hesaplandığını görebilmek için tek bir testte ücret store'un
- * kalıcı deposuna yazılıyor; arayüz gelince o adım gerçek etkileşimle
- * değiştirilmeli.
+ * Saatlik ücret müşteri kartından girilir (`/app/clients`); tutarın gerçek
+ * bir ücretten hesaplandığını gösteren test o alanı kullanır.
  */
 
 const STORAGE_KEY = 'yapilacaklar-storage'
@@ -49,20 +47,16 @@ async function addEntry(
     await dialog.waitFor({ state: 'hidden' })
 }
 
-/** Müşterinin saatlik ücretini doğrudan depoya yazar (Görev 7'ye kadar). */
+/** Müşterinin saatlik ücretini kart üzerindeki alandan girer. */
 async function setHourlyRate(page: Page, clientName: string, rate: number) {
-    await page.evaluate(
-        ({ key, clientName, rate }) => {
-            const parsed = JSON.parse(localStorage.getItem(key) as string)
-            const client = parsed.state.clients.find(
-                (c: { name: string }) => c.name === clientName
-            )
-            client.hourlyRate = rate
-            localStorage.setItem(key, JSON.stringify(parsed))
-        },
-        { key: STORAGE_KEY, clientName, rate }
-    )
-    await page.reload()
+    await page.goto('/app/clients')
+    // Ücret alanı kartın açılan panelinde yaşar.
+    await page.getByRole('button', { name: `"${clientName}" projelerini göster` }).click()
+
+    const field = page.getByRole('spinbutton', { name: `${clientName} müşterisinin saatlik ücreti` })
+    await field.fill(String(rate))
+    await field.press('Enter')
+    await expect(page.getByText('Saatlik ücret güncellendi.')).toBeVisible()
 }
 
 test.beforeEach(async ({ page }) => {

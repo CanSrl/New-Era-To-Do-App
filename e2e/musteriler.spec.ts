@@ -45,6 +45,24 @@ async function linkTask(page: Page, title: string, client: string, project?: str
     await dialog.waitFor({ state: 'hidden' })
 }
 
+/** Elle zaman kaydı ekler; sayaç etkileşimi `zaman.spec.ts` içinde. */
+async function addTimeLog(
+    page: Page,
+    input: { client: string; project?: string; date: string; minutes: number }
+) {
+    await page.goto('/app/time')
+    await page.getByRole('button', { name: 'Kayıt ekle' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Tarih').fill(input.date)
+    await dialog.getByLabel('Süre (dakika)').fill(String(input.minutes))
+    await dialog.getByLabel('Müşteri').selectOption({ label: input.client })
+    if (input.project) await dialog.getByLabel('Proje').selectOption({ label: input.project })
+
+    await dialog.getByRole('button', { name: 'Ekle', exact: true }).click()
+    await dialog.waitFor({ state: 'hidden' })
+}
+
 test.beforeEach(async ({ page }) => {
     await gotoApp(page)
 })
@@ -216,6 +234,104 @@ test('müşteri silinince projeleri de gider ve görevin iki bağı da boşalır
     await expect(page.getByRole('heading', { name: 'Teslim' })).toBeVisible()
     await expect(page.getByText('Acme')).toHaveCount(0)
     await expect(page.getByText('Websitesi')).toHaveCount(0)
+})
+
+test('müşteri silme diyaloğu zaman kaydı sayısını ve süresini de söyler', async ({ page }) => {
+    await page.goto(clients)
+    await addClient(page, 'Acme')
+
+    await addTimeLog(page, { client: 'Acme', date: '2026-08-17', minutes: 60 })
+    await addTimeLog(page, { client: 'Acme', date: '2026-08-18', minutes: 20 })
+
+    await page.goto(clients)
+    await page.getByRole('button', { name: '"Acme" müşterisini sil' }).click()
+
+    /*
+     * Metin sunucunun `on delete cascade` davranışını söyler: müşteri
+     * silinince zaman kayıtları da gider — görevlerin aksine, çünkü
+     * `time_logs.client_id` `not null`.
+     */
+    const confirmation = page.getByRole('alertdialog')
+    await expect(confirmation).toContainText('2 zaman kaydı')
+    await expect(confirmation).toContainText('1 sa 20 dk')
+
+    await confirmation.getByRole('button', { name: 'Sil' }).click()
+
+    // Kayıtlar gerçekten gitti; diyalogdaki söz tutuldu.
+    await page.goto('/app/time')
+    await expect(page.getByText('Henüz zaman kaydı yok')).toBeVisible()
+})
+
+test('proje silme diyaloğu zaman kayıtlarının silinmeyeceğini söyler', async ({ page }) => {
+    await page.goto(clients)
+    await addClient(page, 'Acme')
+    await addProject(page, 'Acme', 'Websitesi')
+
+    await addTimeLog(page, { client: 'Acme', project: 'Websitesi', date: '2026-08-17', minutes: 45 })
+
+    await page.goto(clients)
+    await page.getByRole('button', { name: '"Acme" projelerini göster' }).click()
+    await page.getByRole('button', { name: '"Websitesi" projesini sil' }).click()
+
+    const confirmation = page.getByRole('alertdialog')
+    await expect(confirmation).toContainText('1 zaman kaydı silinmez')
+    await confirmation.getByRole('button', { name: 'Sil' }).click()
+
+    // Kayıt duruyor, yalnızca proje bağı boşaldı (`on delete set null`).
+    await page.goto('/app/time')
+    await expect(page.getByText('45 dk', { exact: true })).toBeVisible()
+})
+
+test('müşteri ücreti ve para birimi kaydedilir, proje onu ezebilir', async ({ page }) => {
+    await page.goto(clients)
+    await addClient(page, 'Acme')
+    await addProject(page, 'Acme', 'Websitesi')
+
+    const rate = page.getByRole('spinbutton', { name: 'Acme müşterisinin saatlik ücreti' })
+    await rate.fill('1500')
+    await rate.press('Enter')
+    await expect(page.getByText('Saatlik ücret güncellendi.')).toBeVisible()
+
+    const currency = page.getByRole('textbox', { name: 'Acme müşterisinin para birimi' })
+    await currency.fill('usd')
+    await currency.press('Enter')
+    // Kod büyük harfe normalize edilir; aksi halde toplamlar aynı birimi
+    // iki ayrı satıra bölerdi.
+    await expect(currency).toHaveValue('USD')
+
+    // Proje ücreti boşken yer tutucu müşteriden mirası gösterir.
+    const projectRate = page.getByRole('spinbutton', { name: 'Websitesi projesinin saatlik ücreti' })
+    await expect(projectRate).toHaveValue('')
+    await expect(projectRate).toHaveAttribute('placeholder', /müşteriden/)
+
+    await projectRate.fill('2000')
+    await projectRate.press('Enter')
+
+    // Yenilemeden sonra da yerinde: ücretler store'da yaşıyor.
+    await page.reload()
+    await page.getByRole('button', { name: '"Acme" projelerini göster' }).click()
+    await expect(page.getByRole('spinbutton', { name: 'Acme müşterisinin saatlik ücreti' }))
+        .toHaveValue('1500')
+    await expect(page.getByRole('spinbutton', { name: 'Websitesi projesinin saatlik ücreti' }))
+        .toHaveValue('2000')
+})
+
+test('negatif ücret reddedilir ve alan eski değerine döner', async ({ page }) => {
+    await page.goto(clients)
+    await addClient(page, 'Acme')
+    await page.getByRole('button', { name: '"Acme" projelerini göster' }).click()
+
+    const rate = page.getByRole('spinbutton', { name: 'Acme müşterisinin saatlik ücreti' })
+    await rate.fill('1500')
+    await rate.press('Enter')
+
+    await rate.fill('-5')
+    await rate.press('Enter')
+
+    // Şemadaki `check (hourly_rate >= 0)` ihlal eden satır push kuyruğuna
+    // hiç girmemeli; store reddediyor, alan geri alınıyor.
+    await expect(page.getByText('Saatlik ücret 0 veya daha büyük olmalı.')).toBeVisible()
+    await expect(rate).toHaveValue('1500')
 })
 
 test('müşteri sayaçları bağlı proje ve görev sayısını gösterir', async ({ page }) => {

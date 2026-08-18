@@ -787,6 +787,64 @@ describe('müşteriler', () => {
         expect(store().clients.find(c => c.id === id)?.archived).toBe(true);
     });
 
+    it('saatlik ücreti ve para birimini günceller', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().updateClient(id, { hourlyRate: 1500, currency: 'usd' });
+
+        const saved = store().clients.find(c => c.id === id);
+        expect(saved?.hourlyRate).toBe(1500);
+        // Para birimi büyük harfe normalize edilir: aynı birim iki farklı
+        // yazımla saklanırsa toplamlar para birimi başına ikiye bölünür.
+        expect(saved?.currency).toBe('USD');
+        expect(store().dirtyClientIds).toContain(id);
+    });
+
+    it('sıfır ücreti kabul eder', () => {
+        const id = store().addClient('Acme')!.id;
+        store().updateClient(id, { hourlyRate: 1500 });
+
+        store().updateClient(id, { hourlyRate: 0 });
+
+        expect(store().clients.find(c => c.id === id)?.hourlyRate).toBe(0);
+    });
+
+    // Şemadaki `check (hourly_rate >= 0)` kısıtını ihlal eden satır push
+    // kuyruğuna girerse 23514 alır ve o turdaki bütün senkron onunla düşer.
+    it('negatif ücreti reddeder', () => {
+        const id = store().addClient('Acme')!.id;
+        store().updateClient(id, { hourlyRate: 1500 });
+
+        store().updateClient(id, { hourlyRate: -1 });
+
+        expect(store().clients.find(c => c.id === id)?.hourlyRate).toBe(1500);
+    });
+
+    it('sayı olmayan ücreti reddeder', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().updateClient(id, { hourlyRate: Number.NaN });
+
+        expect(store().clients.find(c => c.id === id)?.hourlyRate).toBe(0);
+    });
+
+    // Şemadaki `check (char_length(currency) = 3)` ile aynı kural.
+    it('üç harfli olmayan para birimini reddeder', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().updateClient(id, { currency: 'TR' });
+
+        expect(store().clients.find(c => c.id === id)?.currency).toBe('TRY');
+    });
+
+    it('harf olmayan para birimini reddeder', () => {
+        const id = store().addClient('Acme')!.id;
+
+        store().updateClient(id, { currency: '12$' });
+
+        expect(store().clients.find(c => c.id === id)?.currency).toBe('TRY');
+    });
+
     it('bilinmeyen id için hiçbir şey değiştirmez', () => {
         const before = store().clients;
         store().updateClient('yok-boyle-id', { name: 'X' });
@@ -927,6 +985,46 @@ describe('projeler', () => {
         store().updateProject(id, { archived: true });
 
         expect(store().projects.find(p => p.id === id)?.archived).toBe(true);
+    });
+
+    it('proje ücretini ayarlar', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+
+        store().updateProject(id, { hourlyRate: 2000 });
+
+        expect(store().projects.find(p => p.id === id)?.hourlyRate).toBe(2000);
+        expect(store().dirtyProjectIds).toContain(id);
+    });
+
+    // 0 ile null AYRI: 0 "bu proje ücretsiz", null "müşteriden miras".
+    it('sıfır ücreti mirasa düşürmeden saklar', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+
+        store().updateProject(id, { hourlyRate: 0 });
+
+        expect(store().projects.find(p => p.id === id)?.hourlyRate).toBe(0);
+    });
+
+    it('null ile müşteri ücretine geri döner', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+        store().updateProject(id, { hourlyRate: 2000 });
+
+        store().updateProject(id, { hourlyRate: null });
+
+        expect(store().projects.find(p => p.id === id)?.hourlyRate).toBeNull();
+    });
+
+    it('negatif ücreti reddeder', () => {
+        const clientId = store().addClient('Acme')!.id;
+        const id = store().addProject(clientId, 'Websitesi')!.id;
+        store().updateProject(id, { hourlyRate: 2000 });
+
+        store().updateProject(id, { hourlyRate: -5 });
+
+        expect(store().projects.find(p => p.id === id)?.hourlyRate).toBe(2000);
     });
 
     it('sıralama yalnızca konumu değişen projeleri bekleyenlere alır', () => {

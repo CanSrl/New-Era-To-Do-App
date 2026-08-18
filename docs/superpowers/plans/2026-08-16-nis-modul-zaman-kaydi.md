@@ -1247,14 +1247,14 @@ git commit -m "/app/time: kayit listesi, elle giris, musteri-proje toplamlari"
 - Consumes: `updateClient`, `updateProject` (mevcut), `effectiveRate` (Task 2)
 - Produces: yok (yalnızca arayüz)
 
-- [ ] **Step 1: Ücret alanlarını ekle**
+- [x] **Step 1: Ücret alanlarını ekle**
 
 Müşteri kartında `hourly_rate` + para birimi; proje satırında opsiyonel
 override. `InlineName` deseni izlenir: alan **her zaman gerçek bir `input`**,
 kenarlık hover/odakta belirir. Override boşken yer tutucu mirası gösterir:
 `t('time.inheritedRate', { rate: formatted })`.
 
-- [ ] **Step 2: Silme diyaloğu metnini genişlet**
+- [x] **Step 2: Silme diyaloğu metnini genişlet**
 
 Müşteri silme diyaloğu artık **üç** sonucu sayıyla söyler:
 
@@ -1265,7 +1265,7 @@ Müşteri silme diyaloğu artık **üç** sonucu sayıyla söyler:
 değil. ⚠️ Bu metin şemanın ve `sync-merge-niche.ts`'in taklit ettiği kuralların
 kullanıcıya görünen yüzüdür — **üçü birlikte değişir**.
 
-- [ ] **Step 3: E2E testini yaz**
+- [x] **Step 3: E2E testini yaz**
 
 ```ts
 test('musteri silme diyalogu zaman kaydi sayisini da soyler', async ({ page }) => {
@@ -1275,11 +1275,11 @@ test('musteri silme diyalogu zaman kaydi sayisini da soyler', async ({ page }) =
 });
 ```
 
-- [ ] **Step 4: Koştur**
+- [x] **Step 4: Koştur**
 
 Run: `npx playwright test e2e/musteriler.spec.ts` → PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ClientCard.tsx src/components/ProjectRow.tsx \

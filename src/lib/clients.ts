@@ -8,6 +8,36 @@ import { categoryKey } from './categories';
  */
 export const CLIENT_NAME_MAX = 80;
 
+/** Veritabanı varsayılanı; para birimi çözülemediğinde buraya düşülür. */
+export const DEFAULT_CURRENCY = 'TRY';
+
+/**
+ * Saatlik ücret şemanın kabul edeceği bir değer mi?
+ *
+ * `check (hourly_rate >= 0)` kısıtının istemci ikizi. Kısıtı ihlal eden bir
+ * satır push kuyruğuna girerse Postgres 23514 ile reddeder, o turdaki bütün
+ * senkron onunla düşer ve kayıt dirty kaldığı için her turda aynı yerde
+ * tıkanır (`isValidDuration` ile aynı gerekçe).
+ */
+export function isValidRate(value: unknown): value is number {
+    return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
+
+/**
+ * Para birimi kodunu şemanın beklediği biçime çevirir; çeviremezse `null`.
+ *
+ * Şemadaki kısıt yalnızca `char_length(currency) = 3`, ama harf olmayan bir
+ * kod `Intl.NumberFormat` tarafından reddedilir ve ekranı çökertirdi.
+ * Büyük harfe normalize edilir: aynı birim iki farklı yazımla saklanırsa
+ * `sumByCurrency` genel toplamı ikiye böler.
+ */
+export function normalizeCurrency(raw: unknown): string | null {
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (!/^[A-Za-z]{3}$/.test(trimmed)) return null;
+    return trimmed.toUpperCase();
+}
+
 /**
  * Dışarıdan gelen (LocalStorage, veritabanı) ham veriyi geçerli bir Client'a
  * çevirir. Adı olmayan kayıtlar reddedilir.
@@ -31,14 +61,8 @@ export function normalizeClient(raw: unknown, fallbackPosition: number): Client 
      * etmek ise kısıtı ihlal eden satırı push kuyruğuna sokar ve Postgres 23514
      * ile reddedince o turdaki bütün senkron onunla birlikte düşerdi.
      */
-    const hourlyRate = typeof source.hourlyRate === 'number'
-        && Number.isFinite(source.hourlyRate)
-        && source.hourlyRate >= 0
-        ? source.hourlyRate
-        : 0;
-    const currency = typeof source.currency === 'string' && source.currency.length === 3
-        ? source.currency
-        : 'TRY';
+    const hourlyRate = isValidRate(source.hourlyRate) ? source.hourlyRate : 0;
+    const currency = normalizeCurrency(source.currency) ?? DEFAULT_CURRENCY;
 
     return {
         id: typeof source.id === 'string' && source.id ? source.id : createId(),
@@ -68,7 +92,7 @@ export function createClient(
         position,
         // Veritabanı varsayılanlarıyla aynı; ücret sonradan ayarlar sayfasından girilir.
         hourlyRate: 0,
-        currency: 'TRY',
+        currency: DEFAULT_CURRENCY,
         createdAt: now,
         updatedAt: now,
     };

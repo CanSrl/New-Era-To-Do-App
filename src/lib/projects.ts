@@ -1,7 +1,7 @@
 import type { Project } from './types';
 import { createId, toIsoTimestamp } from './tasks';
 import { categoryKey } from './categories';
-import { byArchivedThenPosition } from './clients';
+import { byArchivedThenPosition, DEFAULT_CURRENCY, isValidRate, normalizeCurrency } from './clients';
 
 /** Veritabanı kısıtıyla aynı. */
 export const PROJECT_NAME_MAX = 80;
@@ -32,15 +32,9 @@ export function normalizeProject(raw: unknown, fallbackPosition: number): Projec
      * Olduğu gibi kabul edilseydi satır push kuyruğuna girer, Postgres 23514
      * ile reddeder ve o turdaki bütün senkronu beraberinde düşürürdü.
      */
-    const hourlyRate = typeof source.hourlyRate === 'number'
-        && Number.isFinite(source.hourlyRate)
-        && source.hourlyRate >= 0
-        ? source.hourlyRate
-        : null;
-    // `clients.currency` ile aynı kural: 3 karakter değilse varsayılana düşer.
-    const currency = typeof source.currency === 'string' && source.currency.length === 3
-        ? source.currency
-        : 'TRY';
+    const hourlyRate = isValidRate(source.hourlyRate) ? source.hourlyRate : null;
+    // `clients.currency` ile aynı kural: çözülemezse varsayılana düşer.
+    const currency = normalizeCurrency(source.currency) ?? DEFAULT_CURRENCY;
 
     return {
         id: typeof source.id === 'string' && source.id ? source.id : createId(),
@@ -72,7 +66,7 @@ export function createProject(
         position,
         // null: müşterinin ücretini miras alır (varsayılan davranış).
         hourlyRate: null,
-        currency: 'TRY',
+        currency: DEFAULT_CURRENCY,
         createdAt: now,
         updatedAt: now,
     };

@@ -8,6 +8,7 @@ import { CLIENT_NAME_MAX } from '../lib/clients';
 import { PROJECT_NAME_MAX } from '../lib/projects';
 import type { Client, Project } from '../lib/types';
 import { InlineName } from './InlineName';
+import { InlineRate } from './InlineRate';
 import { ProjectRow } from './ProjectRow';
 import { cn } from '../lib/utils';
 import {
@@ -30,6 +31,10 @@ interface ClientCardProps {
     taskCount: number;
     /** Proje id → o projeye bağlı görev sayısı. */
     projectTaskCounts: Record<string, number>;
+    /** Bu müşteriye ait zaman kayıtlarının sayısı ve toplam süresi. */
+    timeLogs: { count: number; minutes: number };
+    /** Proje id → o projeye bağlı zaman kaydı sayısı. */
+    projectLogCounts: Record<string, number>;
 }
 
 /**
@@ -44,7 +49,14 @@ const listVariants = {
 const iconButtonClass =
     'p-2 shrink-0 rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground';
 
-export function ClientCard({ client, projects, taskCount, projectTaskCounts }: ClientCardProps) {
+export function ClientCard({
+    client,
+    projects,
+    taskCount,
+    projectTaskCounts,
+    timeLogs,
+    projectLogCounts,
+}: ClientCardProps) {
     const { t } = useTranslation();
     const updateClient = useTaskStore((state) => state.updateClient);
     const deleteClient = useTaskStore((state) => state.deleteClient);
@@ -71,6 +83,49 @@ export function ClientCard({ client, projects, taskCount, projectTaskCounts }: C
 
         toast.success(t('client.updated'));
         return true;
+    };
+
+    /**
+     * Müşterinin ücreti `not null`, dolayısıyla alan boş bırakılamaz
+     * (`allowEmpty` verilmiyor) ve `null` buraya hiç ulaşmaz.
+     */
+    const handleRate = (rate: number | null) => {
+        const next = rate ?? 0;
+        updateClient(client.id, { hourlyRate: next });
+
+        // Store reddetmiş olabilir: negatif ücret şemadaki kısıtı ihlal eder.
+        const saved = useTaskStore.getState().clients.find((c) => c.id === client.id);
+        if (saved?.hourlyRate !== next) {
+            toast.error(t('time.rateInvalid'));
+            return false;
+        }
+
+        toast.success(t('time.rateUpdated'));
+        return true;
+    };
+
+    const handleCurrency = (raw: string) => {
+        updateClient(client.id, { currency: raw });
+
+        // Store üç harfli olmayan kodu reddeder, kalanı büyük harfe çevirir.
+        const saved = useTaskStore.getState().clients.find((c) => c.id === client.id);
+        if (saved?.currency !== raw.toUpperCase()) {
+            toast.error(t('time.currencyInvalid'));
+            return false;
+        }
+
+        toast.success(t('time.currencyUpdated'));
+        return true;
+    };
+
+    /**
+     * Silme diyaloğundaki süre. `TimeView`'daki ikiziyle aynı; biçim dile
+     * bağlı olduğu için `time.hm`/`time.mOnly` anahtarlarına dayanır.
+     */
+    const formatDuration = (minutes: number) => {
+        const hours = Math.floor(minutes / 60);
+        const rest = minutes % 60;
+        return hours > 0 ? t('time.hm', { hours, minutes: rest }) : t('time.mOnly', { minutes });
     };
 
     const handleArchiveToggle = () => {
@@ -204,6 +259,13 @@ export function ClientCard({ client, projects, taskCount, projectTaskCounts }: C
                                 {taskCount > 0
                                     ? t('client.deleteConfirmTasks', { count: taskCount })
                                     : t('client.deleteConfirmTasksNone')}
+                                {' '}
+                                {timeLogs.count > 0
+                                    ? t('client.deleteConfirmLogs', {
+                                        count: timeLogs.count,
+                                        duration: formatDuration(timeLogs.minutes),
+                                    })
+                                    : t('client.deleteConfirmLogsNone')}
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -227,6 +289,38 @@ export function ClientCard({ client, projects, taskCount, projectTaskCounts }: C
                         className="overflow-hidden"
                     >
                         <div className="ml-6 space-y-2 border-l border-border px-3 pb-3 pl-3">
+                            {/*
+                              * Ücret paneldedir, kart başlığında değil: başlık
+                              * satırı zaten ad ve üç eylem taşıyor, dar ekranda
+                              * taşardı. Para birimi müşteri seviyesindedir —
+                              * `projects` tablosunda karşılığı yok, proje
+                              * yalnızca ücreti ezebilir.
+                              */}
+                            <div className="flex items-center gap-2 pb-1">
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                    {t('time.rateHeading')}
+                                </span>
+                                <InlineRate
+                                    value={client.hourlyRate}
+                                    label={t('time.rateLabel', { name: client.name })}
+                                    onCommit={handleRate}
+                                    className="w-28 text-sm"
+                                />
+                                {/*
+                                  * Para birimi de satır içi bir metin alanı:
+                                  * `InlineName` yalnızca ada özel değil, aynı
+                                  * commit/Escape sözleşmesini taşıyan her kısa
+                                  * metin için geçerli.
+                                  */}
+                                <InlineName
+                                    value={client.currency}
+                                    maxLength={3}
+                                    label={t('time.currencyLabel', { name: client.name })}
+                                    onCommit={handleCurrency}
+                                    className="w-16 text-sm uppercase"
+                                />
+                            </div>
+
                             {projects.length > 0 ? (
                                 <motion.ul
                                     variants={listVariants}
@@ -239,6 +333,9 @@ export function ClientCard({ client, projects, taskCount, projectTaskCounts }: C
                                             key={project.id}
                                             project={project}
                                             taskCount={projectTaskCounts[project.id] ?? 0}
+                                            timeLogCount={projectLogCounts[project.id] ?? 0}
+                                            inheritedRate={client.hourlyRate}
+                                            currency={client.currency}
                                         />
                                     ))}
                                 </motion.ul>

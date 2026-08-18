@@ -9,7 +9,13 @@ import {
     nextCategoryPosition,
     seedCategories,
 } from '../lib/categories';
-import { createClient, isClientNameTaken, nextClientPosition } from '../lib/clients';
+import {
+    createClient,
+    isClientNameTaken,
+    isValidRate,
+    nextClientPosition,
+    normalizeCurrency,
+} from '../lib/clients';
 import { createProject, isProjectNameTaken, nextProjectPosition } from '../lib/projects';
 import { createTimeLog, elapsedMinutes, isValidDuration } from '../lib/time-logs';
 
@@ -91,7 +97,16 @@ interface TaskState {
 
     /** Adı zaten kullanılıyorsa null döner; aksi halde yeni müşteriyi. */
     addClient: (name: string) => Client | null;
-    updateClient: (id: string, updates: { name?: string; archived?: boolean }) => void;
+    /**
+     * Müşteriyi günceller. Şemanın reddedeceği ücret ya da para birimi
+     * gelirse hiçbir alan yazılmaz (`name` çakışmasıyla aynı sözleşme):
+     * geçersiz satır push kuyruğuna girerse o turdaki bütün senkron düşer.
+     * Çağıran, sonucu store'dan geri okuyarak anlar.
+     */
+    updateClient: (
+        id: string,
+        updates: { name?: string; archived?: boolean; hourlyRate?: number; currency?: string }
+    ) => void;
     /**
      * Müşteriyi siler. Bağlı projeler veritabanındaki cascade ile aynı
      * şekilde silinir (mezar taşı bırakılmadan — sunucu zaten kendi
@@ -103,7 +118,15 @@ interface TaskState {
 
     /** Adı aynı müşterinin başka projesinde kullanılıyorsa null döner. */
     addProject: (clientId: string, name: string) => Project | null;
-    updateProject: (id: string, updates: { name?: string; archived?: boolean }) => void;
+    /**
+     * Projeyi günceller. `hourlyRate: null` mirası geri getirir (müşterinin
+     * ücreti kullanılır), `0` ise "bu proje ücretsiz" demektir — ikisi
+     * farklıdır, bu yüzden alan opsiyonel DEĞİL nullable geçilir.
+     */
+    updateProject: (
+        id: string,
+        updates: { name?: string; archived?: boolean; hourlyRate?: number | null }
+    ) => void;
     /** Projeyi siler; bağlı görevler silinmez, proje bağı boşalır. */
     deleteProject: (id: string) => void;
     reorderProjects: (projects: Project[]) => void;
@@ -477,6 +500,17 @@ export const useTaskStore = create<TaskState>()(
                     return state;
                 }
 
+                // Ücret/para birimi şemanın kısıtlarını aynalar; geçersiz
+                // değerde kayıt olduğu gibi bırakılır.
+                if (updates.hourlyRate !== undefined && !isValidRate(updates.hourlyRate)) {
+                    return state;
+                }
+
+                const currency = updates.currency === undefined
+                    ? undefined
+                    : normalizeCurrency(updates.currency);
+                if (updates.currency !== undefined && currency === null) return state;
+
                 return {
                     clients: state.clients.map((c) =>
                         c.id === id
@@ -484,6 +518,8 @@ export const useTaskStore = create<TaskState>()(
                                 ...c,
                                 ...(name !== undefined ? { name } : {}),
                                 ...(updates.archived !== undefined ? { archived: updates.archived } : {}),
+                                ...(updates.hourlyRate !== undefined ? { hourlyRate: updates.hourlyRate } : {}),
+                                ...(currency ? { currency } : {}),
                                 updatedAt: new Date().toISOString(),
                             }
                             : c
@@ -588,6 +624,16 @@ export const useTaskStore = create<TaskState>()(
                     return state;
                 }
 
+                // `null` geçerlidir (mirasa dön); yalnızca sayı olup da
+                // kısıtı ihlal eden değer reddedilir.
+                if (
+                    updates.hourlyRate !== undefined
+                    && updates.hourlyRate !== null
+                    && !isValidRate(updates.hourlyRate)
+                ) {
+                    return state;
+                }
+
                 return {
                     projects: state.projects.map((p) =>
                         p.id === id
@@ -595,6 +641,7 @@ export const useTaskStore = create<TaskState>()(
                                 ...p,
                                 ...(name !== undefined ? { name } : {}),
                                 ...(updates.archived !== undefined ? { archived: updates.archived } : {}),
+                                ...(updates.hourlyRate !== undefined ? { hourlyRate: updates.hourlyRate } : {}),
                                 updatedAt: new Date().toISOString(),
                             }
                             : p
