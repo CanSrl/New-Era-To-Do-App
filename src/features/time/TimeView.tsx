@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
-import { Clock, Edit2, Plus, Trash2 } from 'lucide-react';
+import { Clock, Download, Edit2, Plus, Trash2 } from 'lucide-react';
 import { useTaskStore } from '@/store';
 import type { TimeLog } from '@/lib/types';
 import { dateLocaleFor } from '@/i18n';
@@ -20,6 +20,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { byStartedAtDesc, filterLogs, groupTotals, sumByCurrency } from './totals';
+import { buildTimeCsv, csvFileName } from './time-csv';
 import { TimeLogForm } from './TimeLogForm';
 
 const FIELD_CLASS =
@@ -28,9 +29,9 @@ const FIELD_CLASS =
 /**
  * Zaman ekranı: filtre, kayıt listesi ve müşteri → proje toplamları.
  *
- * Filtre `filterLogs` ile uygulanıyor — CSV dışa aktarımı (Görev 8) **aynı**
- * fonksiyonu kullanacak, böylece kullanıcı ekranda ne görüyorsa onu dışa
- * aktarır.
+ * Filtre `filterLogs` ile uygulanıyor ve CSV dışa aktarımı **aynı** `visible`
+ * dizisini alıyor: kullanıcı ekranda ne görüyorsa onu indirir. İki ayrı
+ * filtre mantığı zamanla ayrışır ve dosyadaki toplam ekrandakini tutmazdı.
  */
 export function TimeView() {
     const { t, i18n } = useTranslation();
@@ -88,6 +89,28 @@ export function TimeView() {
             ? new Intl.NumberFormat(i18n.language, { style: 'currency', currency }).format(amount)
             : '—';
 
+    /**
+     * Dosya bir Blob'dan, geçici bir `<a download>` ile indirilir.
+     *
+     * Sunucuya gitmenin anlamı yok: veri zaten cihazda ve uygulama
+     * çevrimdışı da çalışıyor. Nesne adresi tıklamadan hemen sonra
+     * bırakılır — bırakılmazsa sekme kapanana kadar bellekte kalır.
+     */
+    const handleExport = () => {
+        const csv = buildTimeCsv(visible, { clients, projects, tasks }, t);
+        const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = csvFileName({ clientId, projectId, from, to }, clients);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+
+        toast.success(t('time.exported', { count: visible.length }));
+    };
+
     const handleDelete = (log: TimeLog) => {
         deleteTimeLog(log.id);
         toast.success(t('time.deleted'));
@@ -116,14 +139,31 @@ export function TimeView() {
                     <p className="text-sm text-muted-foreground">{t('time.pageDescription')}</p>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={() => { setEditingId(null); setIsFormOpen(true); }}
-                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-95"
-                >
-                    <Plus size={18} />
-                    {t('time.add')}
-                </button>
+                <div className="flex items-center gap-2">
+                    {/*
+                      * Dışa aktarım görünen kayıtları alır; hiç kayıt yokken
+                      * buton kapalı, çünkü yalnızca başlık satırından ibaret
+                      * bir dosya kullanıcıya hata gibi görünür.
+                      */}
+                    <button
+                        type="button"
+                        onClick={handleExport}
+                        disabled={visible.length === 0}
+                        className="flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 font-medium shadow-sm transition-all hover:bg-muted active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <Download size={18} />
+                        {t('time.export')}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => { setEditingId(null); setIsFormOpen(true); }}
+                        className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 font-medium text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:bg-primary/90 active:scale-95"
+                    >
+                        <Plus size={18} />
+                        {t('time.add')}
+                    </button>
+                </div>
             </header>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

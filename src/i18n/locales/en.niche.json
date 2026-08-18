@@ -115,7 +115,23 @@
     "rateUpdated": "Hourly rate updated.",
     "rateInvalid": "The hourly rate must be 0 or greater.",
     "currencyUpdated": "Currency updated.",
-    "currencyInvalid": "The currency must be a three-letter code (e.g. TRY)."
+    "currencyInvalid": "The currency must be a three-letter code (e.g. TRY).",
+    "export": "Download CSV",
+    "exported": "{{count}} entries exported.",
+    "csv": {
+      "date": "Date",
+      "client": "Client",
+      "project": "Project",
+      "task": "Task",
+      "note": "Note",
+      "hours": "Duration (hours)",
+      "rate": "Hourly rate",
+      "amount": "Amount",
+      "currency": "Currency",
+      "clientTotal": "Client total",
+      "projectTotal": "Project total",
+      "grandTotal": "Grand total"
+    }
   },
   "nav": {
     "clients": "Clients",

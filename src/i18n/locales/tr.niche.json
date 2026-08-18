@@ -115,7 +115,23 @@
     "rateUpdated": "Saatlik ücret güncellendi.",
     "rateInvalid": "Saatlik ücret 0 veya daha büyük olmalı.",
     "currencyUpdated": "Para birimi güncellendi.",
-    "currencyInvalid": "Para birimi üç harfli olmalı (örn. TRY)."
+    "currencyInvalid": "Para birimi üç harfli olmalı (örn. TRY).",
+    "export": "CSV indir",
+    "exported": "{{count}} kayıt dışa aktarıldı.",
+    "csv": {
+      "date": "Tarih",
+      "client": "Müşteri",
+      "project": "Proje",
+      "task": "Görev",
+      "note": "Not",
+      "hours": "Süre (saat)",
+      "rate": "Saatlik ücret",
+      "amount": "Tutar",
+      "currency": "Para birimi",
+      "clientTotal": "Müşteri toplamı",
+      "projectTotal": "Proje toplamı",
+      "grandTotal": "Genel toplam"
+    }
   },
   "nav": {
     "clients": "Müşteriler",

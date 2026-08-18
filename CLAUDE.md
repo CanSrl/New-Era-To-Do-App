@@ -52,7 +52,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 629 otomatik test — 445 birim (Vitest), 112 uçtan uca (Playwright,
+**Test:** 648 otomatik test — 462 birim (Vitest), 114 uçtan uca (Playwright,
 12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
 bayrağı kapalı olduğu için atlanır), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
@@ -372,7 +372,7 @@ Dal: `faz-3-zaman-kaydi`.
 | 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ✅ |
 | 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ✅ |
 | 7 | Ücret alanları arayüzü ve silme diyaloğu | ✅ |
-| 8 | CSV dışa aktarım (`papaparse`) | ⏳ |
+| 8 | CSV dışa aktarım | ✅ |
 | 9 | Bayrak izleri, kalan E2E, doküman senkronu | ⏳ |
 
 Zaman kaydında yerleşen kurallar:
@@ -428,11 +428,28 @@ Zaman kaydında yerleşen kurallar:
   verilir (`sumByCurrency`); 1000 TL ile 100 USD'yi toplayan tek bir sayı,
   hangi kurdan çevrildiği belirsiz olduğu için faturaya esas alınamaz. Para
   birimi bilinmeyen (müşterisi çözülemeyen) kayıt hiçbir toplama girmez.
-- **Filtre `filterLogs` ile tek yerde.** Ekran ve CSV (Görev 8) aynı fonksiyonu
-  kullanır: kullanıcı ekranda ne görüyorsa onu dışa aktarır. Tarih aralığı
+- **Filtre `filterLogs` ile tek yerde.** Ekran ve CSV aynı fonksiyonu
+  kullanır — dahası CSV, ekranın hesapladığı **aynı `visible` dizisini** alır:
+  kullanıcı ekranda ne görüyorsa onu dışa aktarır. Tarih aralığı
   **yerel takvim gününe** göre ve **her iki ucu da kapsar** — damgayı
   `slice(0,10)` ile kesmek UTC gününü verir ve UTC+3'te gece yarısından sonraki
   kayıt bir önceki güne düşerdi.
+- **CSV Excel'in Türkçe yerelliğine göre yazılır:** UTF-8 BOM (yoksa dosya ANSI
+  sanılır ve başlıklar bozulur), ayraç `;` (TR listelerde ayraç budur; virgül
+  kullanılsa her satır tek hücreye sıkışır), ondalık ayraç `,`. Üçü tek bir
+  yerellik kararının parçası, ayrı ayrı değiştirilemez. Süre **ondalık saat**
+  yazılır (90 dk → `1,5`): "1 sa 30 dk" metni hücrede toplanamaz.
+- **`papaparse` denendi ve çıkarıldı.** Yan etkili bir modül olduğu için
+  tree-shaking atamıyor: `VITE_NICHE_MODULE=false` derlemesinde bile pakette
+  kalıyordu (ölçüldü: `BAD_DELIMITERS`, `RECORD_SEP`) ve **dinamik import da
+  kurtarmadı** — parça yine üretiliyordu. Yerine RFC 4180 alıntılaması
+  (`escapeCell`) yazıldı; `NEEDS_QUOTES` ayraçtan türer, yani ayraç değişirse
+  kaçış da değişir. "Niş modül izsiz çıkar" sözü tek satırlık bir kuraldan
+  daha değerli.
+- **Dosya adı dile bağlı değil** (`time-logs-<müşteri>-<from>-<to>.csv`).
+  Türkçe harfler ASCII'ye indirgenir; ad işletim sistemleri ve indirme
+  başlıkları arasında dolaşıyor. Filtre ada yansır, yoksa art arda yapılan
+  dışa aktarımlar "(1)", "(2)" ekleriyle birbirine karışırdı.
 - **`numeric` PostgREST'ten sayı olarak gelir** (ölçüldü: `{"hourly_rate":1500.00}`).
   Ancak `normalizeClient`/`normalizeProject` sayı olmayan ücreti sessizce
   varsayılana düşürür — bu beklenti bozulursa hata gürültü çıkarmaz, ücret

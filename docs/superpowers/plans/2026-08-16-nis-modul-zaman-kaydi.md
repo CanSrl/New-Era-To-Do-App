@@ -1302,13 +1302,13 @@ git commit -m "Ucret alanlari ve zaman kaydini da sayan silme diyalogu"
 - Produces: `buildTimeCsv(logs, clients, projects, t): string` (BOM dâhil),
   `csvFileName(filter, clients): string`
 
-- [ ] **Step 1: `papaparse`'ı kur**
+- [x] **Step 1: `papaparse`'ı kur**
 
 ```bash
 npm install papaparse && npm install -D @types/papaparse
 ```
 
-- [ ] **Step 2: Failing test yaz**
+- [x] **Step 2: Failing test yaz**
 
 ```ts
 describe('buildTimeCsv', () => {
@@ -1341,26 +1341,26 @@ describe('buildTimeCsv', () => {
 });
 ```
 
-- [ ] **Step 3: Koştur, düştüğünü doğrula**
+- [x] **Step 3: Koştur, düştüğünü doğrula**
 
 Run: `npx vitest run src/features/time/time-csv.test.ts` → FAIL
 
-- [ ] **Step 4: `time-csv.ts`'i yaz**
+- [x] **Step 4: `time-csv.ts`'i yaz**
 
 Saf fonksiyon; `Papa.unparse(rows, { delimiter: ';' })` ve başına `'﻿'`.
 Başlıklar çeviri anahtarlarından gelir (`t` parametre olarak geçer — saf
 katman metin üretmez, çağıran verir).
 
-- [ ] **Step 5: İndirme butonunu bağla**
+- [x] **Step 5: İndirme butonunu bağla**
 
 `TimeView` içinde `Blob` + `URL.createObjectURL` + geçici `<a download>`.
 İndirme ekrandaki filtreyi **birebir** izler: aynı `filterLogs` sonucu.
 
-- [ ] **Step 6: Testleri koştur**
+- [x] **Step 6: Testleri koştur**
 
 Run: `npx vitest run src/features/time/time-csv.test.ts` → PASS
 
-- [ ] **Step 7: E2E indirme testi**
+- [x] **Step 7: E2E indirme testi**
 
 ```ts
 test('CSV indirilir ve baslik satiri dogrudur', async ({ page }) => {
@@ -1376,7 +1376,7 @@ test('CSV indirilir ve baslik satiri dogrudur', async ({ page }) => {
 
 Run: `npx playwright test e2e/zaman.spec.ts` → PASS
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/features/time/time-csv.ts src/features/time/time-csv.test.ts \

@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { test, expect, type Page } from '@playwright/test'
 import { gotoApp } from './helpers'
 
@@ -98,6 +99,54 @@ test('tutar müşterinin saatlik ücretinden hesaplanır', async ({ page }) => {
 
     // 2 saat x 1500 = 3000; tutar saklanmaz, her okumada hesaplanır.
     await expect(page.getByText(/3[.,]000/).first()).toBeVisible()
+})
+
+test('CSV indirilir; başlık, ondalık ayraç ve özet satırı doğrudur', async ({ page }) => {
+    await addClient(page, 'Acme Ajans')
+    await setHourlyRate(page, 'Acme Ajans', 1000)
+    await page.goto(timePage)
+
+    await addEntry(page, { client: 'Acme Ajans', date: '2026-08-17', minutes: 90, note: 'Tasarım' })
+
+    const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'CSV indir' }).click(),
+    ])
+
+    expect(download.suggestedFilename()).toBe('time-logs.csv')
+
+    const content = await readFile((await download.path())!, 'utf8')
+
+    // BOM olmadan Excel'in Türkçe kurulumu dosyayı ANSI sanar.
+    expect(content.startsWith('\ufeff')).toBe(true)
+    expect(content).toContain('Tarih;Müşteri;')
+    // 90 dk -> 1,5 saat; 1,5 x 1000 = 1500,00. Ondalık ayraç da virgül.
+    expect(content).toContain(';1,5;1000,00;1500,00;TRY')
+    expect(content).toContain('Genel toplam')
+})
+
+test('CSV ekrandaki filtreyi birebir izler', async ({ page }) => {
+    await addClient(page, 'Acme Ajans')
+    await page.goto(timePage)
+
+    await addEntry(page, { client: 'Acme Ajans', date: '2026-08-10', minutes: 60, note: 'Eski iş' })
+    await addEntry(page, { client: 'Acme Ajans', date: '2026-08-17', minutes: 30, note: 'Yeni iş' })
+
+    await page.getByLabel('Başlangıç tarihi').fill('2026-08-15')
+    await expect(page.getByText('Eski iş')).toBeHidden()
+
+    const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.getByRole('button', { name: 'CSV indir' }).click(),
+    ])
+
+    // Dosya adı da filtreyi taşır: art arda yapılan dışa aktarımlar
+    // "(1)", "(2)" ekleriyle birbirine karışmasın.
+    expect(download.suggestedFilename()).toBe('time-logs-2026-08-15.csv')
+
+    const content = await readFile((await download.path())!, 'utf8')
+    expect(content).toContain('Yeni iş')
+    expect(content).not.toContain('Eski iş')
 })
 
 test('tarih aralığı filtresi kapsam dışındaki kaydı gizler', async ({ page }) => {
