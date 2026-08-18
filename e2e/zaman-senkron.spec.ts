@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { test, expect, type Browser, type Page } from '@playwright/test'
 import { gotoApp, isAuthEnabled } from './helpers'
 
@@ -10,10 +11,15 @@ import { gotoApp, isAuthEnabled } from './helpers'
  * iki tarayıcı bağlamına karşı çalışır; sıra, eşleme, bağ onarımı ve şema
  * kısıtları birlikte sınanır.
  *
- * ⚠️ Zaman kaydının **arayüzü henüz yok** (Görev 5-6). Kayıtlar bu yüzden
- * store'un kalıcı deposuna doğrudan yazılıp sayfa yenilenerek üretiliyor;
- * persist middleware onları rehydrate ediyor ve `pendingCount` senkronu
- * tetikliyor. Arayüz gelince bu yardımcı gerçek etkileşimle değiştirilmeli.
+ * Görev 4'ün testleri kayıtları store'un kalıcı deposuna yazıp sayfayı
+ * yenileyerek üretir (`seedTimeLog`): sınadıkları şey senkronun kendisi,
+ * kaydın nasıl girildiği değil — persist rehydrate ediyor, `pendingCount`
+ * değişiyor ve tur tetikleniyor.
+ *
+ * Dosyanın sonundaki Görev 7-8 kapama testleri ise **baştan sona gerçek
+ * etkileşim** kullanır: ücret alanları ve CSV indirmesi, ancak arayüzden
+ * girilen değerin gerçek veritabanı turundan sağ çıktığı görülürse kapanmış
+ * sayılır.
  */
 
 const STORAGE_KEY = 'yapilacaklar-storage'
@@ -93,6 +99,17 @@ type StoredTimeLog = {
     note: string | null
 }
 
+/**
+ * Kayıtları depodan okur.
+ *
+ * ⚠️ Sonucu **her zaman `expect.poll` ile** sınayın, tek seferlik
+ * `expect(await readTimeLogs(...))` ile değil. `waitForSynced` yalnızca
+ * "yerelde bekleyen değişiklik yok ve en az bir tur koştu" der; sayfa
+ * yenilendikten sonra `lastSyncedAt` zaten dolu ve dirty listeleri boş
+ * olduğu için **anında** döner — karşı cihazın verisini çeken tur ise hâlâ
+ * uçuyor olabilir. Tek seferlik okuma o yarışı kaybettiğinde test, gerçek bir
+ * senkron hatası varmış gibi düşer (üç test bu yüzden kararsızdı).
+ */
 async function readTimeLogs(page: Page): Promise<StoredTimeLog[]> {
     return page.evaluate((key) => {
         const raw = localStorage.getItem(key)
@@ -190,9 +207,10 @@ test('bir cihazda girilen zaman kaydı diğerine müşteri ve proje bağıyla ya
     await waitForSynced(deviceB)
 
     const [logA] = await readTimeLogs(deviceA)
+
+    await expect.poll(() => readTimeLogs(deviceB), { timeout: 30_000 }).toHaveLength(1)
     const logsB = await readTimeLogs(deviceB)
 
-    expect(logsB).toHaveLength(1)
     expect(logsB[0].id).toBe(logA.id)
     expect(logsB[0].durationMinutes).toBe(90)
     expect(logsB[0].note).toBe('Tasarım görüşmesi')
@@ -238,11 +256,13 @@ test('iki cihazda ayrı ayrı girilen kayıtlar toplanır, biri diğerini ezmez'
     await deviceA.getByTitle('Görev Ekle').waitFor()
     await waitForSynced(deviceA)
 
-    const notesA = (await readTimeLogs(deviceA)).map((l) => l.note).sort()
-    const notesB = (await readTimeLogs(deviceB)).map((l) => l.note).sort()
+    const notes = async (page: Page) =>
+        (await readTimeLogs(page)).map((l) => l.note).sort()
 
-    expect(notesA).toEqual(['A cihazı', 'B cihazı'])
-    expect(notesB).toEqual(['A cihazı', 'B cihazı'])
+    await expect.poll(() => notes(deviceA), { timeout: 30_000 })
+        .toEqual(['A cihazı', 'B cihazı'])
+    await expect.poll(() => notes(deviceB), { timeout: 30_000 })
+        .toEqual(['A cihazı', 'B cihazı'])
 })
 
 test('müşteri silinince bağlı zaman kaydı iki cihazdan da gider', async ({ browser }) => {
@@ -266,7 +286,7 @@ test('müşteri silinince bağlı zaman kaydı iki cihazdan da gider', async ({ 
     const deviceB = await openDevice(browser)
     await signIn(deviceB, email)
     await waitForSynced(deviceB)
-    expect(await readTimeLogs(deviceB)).toHaveLength(1)
+    await expect.poll(() => readTimeLogs(deviceB), { timeout: 30_000 }).toHaveLength(1)
 
     await deviceB.goto('/app/clients')
     await deviceB.getByRole('button', { name: '"Acme Ajans" müşterisini sil' }).click()
@@ -277,6 +297,161 @@ test('müşteri silinince bağlı zaman kaydı iki cihazdan da gider', async ({ 
     await deviceA.getByTitle('Görev Ekle').waitFor()
     await waitForSynced(deviceA)
 
-    expect(await readTimeLogs(deviceB)).toEqual([])
-    expect(await readTimeLogs(deviceA)).toEqual([])
+    await expect.poll(() => readTimeLogs(deviceB), { timeout: 30_000 }).toEqual([])
+    await expect.poll(() => readTimeLogs(deviceA), { timeout: 30_000 }).toEqual([])
+})
+
+/**
+ * Görev 7-8'in kapama testleri.
+ *
+ * Buradaki soru birim testlerinin ulaşamadığı yerde: ücret alanları
+ * `numeric(10,2)` sütunlara yazılıyor ve PostgREST'ten **sayı** olarak
+ * dönmesi bekleniyor (ölçülmüştü: `{"hourly_rate":1500.00}`). Bu beklenti
+ * bozulursa `normalizeClient`/`normalizeProject` sayı olmayan değeri sessizce
+ * varsayılana düşürür — hata gürültü çıkarmaz, kullanıcının ücret verisi
+ * sıfırlanır. Tek gerçek savunma, değeri gerçek bir turdan geçirip diğer
+ * cihazda okumak.
+ */
+async function expandClient(page: Page, name: string) {
+    await page.getByRole('button', { name: `"${name}" projelerini göster` }).click()
+}
+
+/** Kart zaten açıkken proje ekler; `addProjectUI` paneli her çağrıda açıp kapatırdı. */
+async function addProjectInPanel(page: Page, client: string, name: string) {
+    await page.getByRole('textbox', { name: `"${client}" için yeni proje adı` }).fill(name)
+    await page.getByRole('button', { name: `"${client}" müşterisine proje ekle` }).click()
+    await expect(page.getByRole('textbox', { name: `${name} projesinin adı` })).toBeVisible()
+}
+
+function clientRateField(page: Page, client: string) {
+    return page.getByRole('spinbutton', { name: `${client} müşterisinin saatlik ücreti` })
+}
+
+function projectRateField(page: Page, project: string) {
+    return page.getByRole('spinbutton', { name: `${project} projesinin saatlik ücreti` })
+}
+
+async function commit(field: ReturnType<typeof clientRateField>, value: string) {
+    await field.fill(value)
+    await field.press('Enter')
+
+    /*
+     * Toast değil alanın kendisi doğrulanır. Bildirim birkaç saniyede
+     * kayboluyor ve yavaş bir turda yakalanamayabilir; dahası asıl mesele
+     * değerin kayda işlenmesi. `InlineRate` reddedilen değeri eskisine geri
+     * aldığı için bu kontrol reddi de yakalar — üstelik daha keskin.
+     */
+    await expect(field).toHaveValue(value)
+}
+
+/** Elle zaman kaydı ekler — Görev 6'nın formu üzerinden, gerçek etkileşimle. */
+async function addTimeLogUI(
+    page: Page,
+    input: { client: string; date: string; minutes: number; note: string }
+) {
+    await page.goto('/app/time')
+    await page.getByRole('button', { name: 'Kayıt ekle' }).click()
+
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Tarih').fill(input.date)
+    await dialog.getByLabel('Süre (dakika)').fill(String(input.minutes))
+    await dialog.getByLabel('Müşteri').selectOption({ label: input.client })
+    await dialog.getByLabel('Not').fill(input.note)
+
+    await dialog.getByRole('button', { name: 'Ekle', exact: true }).click()
+    await dialog.waitFor({ state: 'hidden' })
+}
+
+test('ücret, para birimi ve proje override\'ı gerçek senkron turundan sağ çıkar', async ({
+    browser,
+}) => {
+    const email = `ucret-${Date.now()}@example.com`
+
+    const deviceA = await openDevice(browser)
+    await signUp(deviceA, email)
+    await addClientUI(deviceA, 'Acme Ajans')
+
+    await expandClient(deviceA, 'Acme Ajans')
+    await addProjectInPanel(deviceA, 'Acme Ajans', 'Websitesi')
+    await addProjectInPanel(deviceA, 'Acme Ajans', 'Bakım')
+    await addProjectInPanel(deviceA, 'Acme Ajans', 'Miras')
+
+    // Ondalıklı ücret bilinçli: sütun `numeric(10,2)` ve kuruş kaybı ancak
+    // gerçek bir turdan sonra görülür.
+    await commit(clientRateField(deviceA, 'Acme Ajans'), '1500.5')
+
+    const currency = deviceA.getByRole('textbox', { name: 'Acme Ajans müşterisinin para birimi' })
+    await currency.fill('usd')
+    await currency.press('Enter')
+    await expect(currency).toHaveValue('USD')
+
+    await commit(projectRateField(deviceA, 'Websitesi'), '2000')
+    // 0 = "bu proje ücretsiz"; `Miras` boş bırakılıyor = müşteriden miras.
+    await commit(projectRateField(deviceA, 'Bakım'), '0')
+
+    await waitForSynced(deviceA)
+
+    const deviceB = await openDevice(browser)
+    await signIn(deviceB, email)
+    await waitForSynced(deviceB)
+
+    await deviceB.goto('/app/clients')
+    await expandClient(deviceB, 'Acme Ajans')
+
+    await expect(clientRateField(deviceB, 'Acme Ajans')).toHaveValue('1500.5')
+    await expect(deviceB.getByRole('textbox', { name: 'Acme Ajans müşterisinin para birimi' }))
+        .toHaveValue('USD')
+    await expect(projectRateField(deviceB, 'Websitesi')).toHaveValue('2000')
+
+    /*
+     * Kapama testinin asıl maddesi: 0 ile null veritabanı turundan sonra da
+     * AYRI kalmalı. `0` mirasa düşerse ücretsiz proje sessizce faturalanır
+     * (`??` yerine `||` yazmanın sonucu), `null` 0'a düşerse miras kaybolur.
+     */
+    await expect(projectRateField(deviceB, 'Bakım')).toHaveValue('0')
+    await expect(projectRateField(deviceB, 'Miras')).toHaveValue('')
+    await expect(projectRateField(deviceB, 'Miras')).toHaveAttribute('placeholder', /müşteriden/)
+})
+
+test('CSV, buluttan gelen ücretle hesaplanmış tutarı taşır', async ({ browser }) => {
+    const email = `csv-${Date.now()}@example.com`
+
+    const deviceA = await openDevice(browser)
+    await signUp(deviceA, email)
+    await addClientUI(deviceA, 'Acme Ajans')
+
+    await expandClient(deviceA, 'Acme Ajans')
+    await commit(clientRateField(deviceA, 'Acme Ajans'), '1000')
+
+    await addTimeLogUI(deviceA, {
+        client: 'Acme Ajans',
+        date: '2026-08-17',
+        minutes: 90,
+        note: 'Tasarım görüşmesi',
+    })
+    await waitForSynced(deviceA)
+
+    const deviceB = await openDevice(browser)
+    await signIn(deviceB, email)
+    await waitForSynced(deviceB)
+
+    await deviceB.goto('/app/time')
+    await expect(deviceB.getByText('Tasarım görüşmesi')).toBeVisible()
+
+    const [download] = await Promise.all([
+        deviceB.waitForEvent('download'),
+        deviceB.getByRole('button', { name: 'CSV indir' }).click(),
+    ])
+
+    const content = await readFile((await download.path())!, 'utf8')
+
+    /*
+     * Zincirin tamamı tek satırda kanıtlanıyor: ücret A'da girildi, numeric
+     * sütuna yazıldı, B'de sayı olarak okundu, `amountFor` ile çarpıldı ve
+     * dosyaya yerel ondalık ayraçla düştü. Ara halkalardan biri koparsa bu
+     * satır tutmaz.
+     */
+    expect(content).toContain(';1,5;1000,00;1500,00;TRY')
+    expect(content).toContain('Tasarım görüşmesi')
+    expect(content).toContain('Genel toplam')
 })

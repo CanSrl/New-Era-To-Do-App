@@ -52,8 +52,8 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 648 otomatik test — 462 birim (Vitest), 114 uçtan uca (Playwright,
-12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
+**Test:** 650 otomatik test — 462 birim (Vitest), 116 uçtan uca (Playwright,
+14'ü gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
 bayrağı kapalı olduğu için atlanır), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
@@ -453,7 +453,15 @@ Zaman kaydında yerleşen kurallar:
 - **`numeric` PostgREST'ten sayı olarak gelir** (ölçüldü: `{"hourly_rate":1500.00}`).
   Ancak `normalizeClient`/`normalizeProject` sayı olmayan ücreti sessizce
   varsayılana düşürür — bu beklenti bozulursa hata gürültü çıkarmaz, ücret
-  verisi sıfırlanır.
+  verisi sıfırlanır. Görev 7-8'in kapama testi (`zaman-senkron.spec.ts`) tam
+  bu yüzden ondalıklı bir ücreti gerçek turdan geçirip diğer cihazda okur ve
+  projede **0 ile null'ın ayrı kaldığını** doğrular.
+- **Çift cihaz testlerinde depo okuması `expect.poll` ile yapılır.**
+  `waitForSynced` yalnızca "yerelde bekleyen yok ve en az bir tur koştu" der;
+  sayfa yenilendikten sonra `lastSyncedAt` zaten dolu olduğu için **anında**
+  döner, karşı cihazın verisini çeken tur ise hâlâ uçuyor olabilir. Tek
+  seferlik `expect(await readTimeLogs(...))` bu yarışı kaybettiğinde test
+  gerçek bir senkron hatası varmış gibi düşer — üç test bu yüzden kararsızdı.
 
 Görev 5'te gelen arayüz kararları:
 
