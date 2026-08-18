@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from './ThemeProvider';
-import { Moon, Sun, Monitor, CheckCircle2, ListTodo, PackageOpen, PlusCircle, Settings, Users } from 'lucide-react';
+import { Moon, Sun, Monitor, CheckCircle2, Clock, ListTodo, PackageOpen, PlusCircle, Settings, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { NICHE_MODULE } from '../config/features';
 import type { TranslationKey } from '../i18n';
@@ -23,11 +23,11 @@ interface NavItem {
 }
 
 /**
- * Niş öğeler (Teslim, Müşteriler) `NICHE_MODULE` kapılıdır — rotaların
+ * Niş öğeler (Teslim, Zaman, Müşteriler) `NICHE_MODULE` kapılıdır — rotaların
  * kendisi de öyle (bkz. `router.tsx`). İkisi ayrışırsa gezinme var olmayan
  * bir adrese götürürdü.
  *
- * Teslim, Müşteriler'den önce geliyor: günlük kullanımda okunan ekran o,
+ * Sıra kullanım sıklığına göre: Teslim ve Zaman günlük olarak okunan ekranlar,
  * müşteri/proje yönetimi ise ara sıra girilen bir kurulum ekranı.
  */
 const NAV_ITEMS: NavItem[] = [
@@ -39,6 +39,13 @@ const NAV_ITEMS: NavItem[] = [
                 labelKey: 'nav.delivery' as TranslationKey,
                 shortLabelKey: 'nav.deliveryShort' as TranslationKey,
                 icon: PackageOpen,
+                end: false,
+            },
+            {
+                to: '/app/time',
+                labelKey: 'nav.time' as TranslationKey,
+                shortLabelKey: 'nav.timeShort' as TranslationKey,
+                icon: Clock,
                 end: false,
             },
             {
@@ -57,6 +64,10 @@ const NAV_ITEMS: NavItem[] = [
  * Mobil alt gezinme: merkezdeki ekleme butonu iki grubun arasında durur.
  * Öğeler ikiye bölünür ki buton her zaman ortada kalsın — sabit bir
  * `grid-cols-3` olsaydı üçüncü gezinme öğesi merkezi kaydırırdı.
+ *
+ * ⚠️ Öğe sayısı beşe çıktığı için bölüm 3/2: merkez buton bir öğe genişliği
+ * kadar sağa kayar. Bu **kabul edilmiş** bedeldir (spec §4.3) — simetriyi
+ * korumak için gezinme öğesi çıkarmayın.
  */
 const NAV_SPLIT = Math.ceil(NAV_ITEMS.length / 2);
 

@@ -5,6 +5,7 @@ import { TasksPage } from './pages/TasksPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { DeliveryPage } from './pages/DeliveryPage';
+import { TimePage } from './pages/TimePage';
 import { SaasTemplate } from './components/ui/saas-template';
 import { NICHE_MODULE } from './config/features';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -57,6 +58,7 @@ const nicheRoutes: RouteObject[] = NICHE_MODULE
     ? [
         { path: 'clients', element: <ClientsPage /> },
         { path: 'delivery', element: <DeliveryPage />, errorElement: <RouteErrorBoundary /> },
+        { path: 'time', element: <TimePage />, errorElement: <RouteErrorBoundary /> },
     ]
     : [];
 

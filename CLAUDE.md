@@ -52,7 +52,7 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 594 otomatik test — 420 birim (Vitest), 102 uçtan uca (Playwright,
+**Test:** 623 otomatik test — 435 birim (Vitest), 116 uçtan uca (Playwright,
 12'si gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
 bayrağı kapalı olduğu için atlanır), 72 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
@@ -370,7 +370,7 @@ Dal: `faz-3-zaman-kaydi`.
 | 3 | Store: alanlar, tek sayaç kuralı, 6 eylem, v5 → v6 göçü | ✅ |
 | 4 | Senkron: `mergeTimeLogs`, eşleme, repository, sıra, `pendingCount` | ✅ |
 | 5 | Sayaç arayüzü: görev satırı butonu, aktif sayaç çubuğu | ✅ |
-| 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ⏳ |
+| 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ✅ |
 | 7 | Ücret alanları arayüzü ve silme diyaloğu | ⏳ |
 | 8 | CSV dışa aktarım (`papaparse`) | ⏳ |
 | 9 | Bayrak izleri, kalan E2E, doküman senkronu | ⏳ |
@@ -408,6 +408,17 @@ Zaman kaydında yerleşen kurallar:
   efektle kurulan state, yenilemeden sonra bir kare `0:00:00` gösterip gerçek
   süreye sıçrardı. ⚠️ Plan dokümanındaki taslak kanca bu üç kuralın ilk
   ikisine takılıyor — kopyalamayın.
+- **Tutar saklanmaz, her okumada hesaplanır** (`amountFor`, `groupTotals`).
+  Ücret değişince geçmiş kayıtların tutarı da güncel ücretten türesin diye.
+- **Kur dönüşümü yok ve olmayacak.** Genel toplam para birimi **başına**
+  verilir (`sumByCurrency`); 1000 TL ile 100 USD'yi toplayan tek bir sayı,
+  hangi kurdan çevrildiği belirsiz olduğu için faturaya esas alınamaz. Para
+  birimi bilinmeyen (müşterisi çözülemeyen) kayıt hiçbir toplama girmez.
+- **Filtre `filterLogs` ile tek yerde.** Ekran ve CSV (Görev 8) aynı fonksiyonu
+  kullanır: kullanıcı ekranda ne görüyorsa onu dışa aktarır. Tarih aralığı
+  **yerel takvim gününe** göre ve **her iki ucu da kapsar** — damgayı
+  `slice(0,10)` ile kesmek UTC gününü verir ve UTC+3'te gece yarısından sonraki
+  kayıt bir önceki güne düşerdi.
 - **`numeric` PostgREST'ten sayı olarak gelir** (ölçüldü: `{"hourly_rate":1500.00}`).
   Ancak `normalizeClient`/`normalizeProject` sayı olmayan ücreti sessizce
   varsayılana düşürür — bu beklenti bozulursa hata gürültü çıkarmaz, ücret
