@@ -36,6 +36,8 @@ const MARKERS = [
     { pattern: 'deleteConfirmProjects', what: 'niş çeviri anahtarı' },
     { pattern: 'projesi de silinir', what: 'niş Türkçe metin' },
     { pattern: 'teslim tarihine yakınlığına', what: 'teslim görünümü metni' },
+    { pattern: 'Sayacı kaydetmeden at', what: 'sayaç çubuğu metni' },
+    { pattern: 'için sayacı başlat', what: 'görev satırı sayaç butonu metni' },
 ];
 
 function build(nicheEnabled) {
