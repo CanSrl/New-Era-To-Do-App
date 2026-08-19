@@ -206,14 +206,25 @@ yanlışlıkla kapatmak kullanıcının mevcut verisini arayüzden yok ederdi.
 
 **`features.nicheModule` varsayılan AÇIKTIR** (bu depo aynı zamanda freemium
 ürünün kendisi). Kapatmak `VITE_NICHE_MODULE=false`; o zaman niş migration
-dosyası da silinebilir. Bayrak iki yerde okunuyor ve ikisi de şart:
-- `sync.ts` — kapalıyken `clients`/`projects` **hiç sorgulanmaz**. Sorgulansaydı
+dosyaları da silinebilir. Bayrak yedi dosyada okunuyor (`sync.ts`,
+`task-mapping.ts`, `router.tsx`, `i18n/index.ts`, `AppLayout`, `TaskForm`,
+`TaskItem`); veri katmanındaki ilk ikisi olmazsa olmaz:
+- `sync.ts` — kapalıyken `clients`/`projects`/`time_logs` **hiç
+  sorgulanmaz**. Sorgulansaydı
   migration'ı silmiş kurulum her turda "relation does not exist" alır ve
   GÖREV senkronu da beraberinde düşerdi. Yereldeki müşteri/proje verisi
   silinmez, yalnızca senkronlanmaz — bayrak yeniden açılırsa yerinde bulunur.
 - `task-mapping.ts` — kapalıyken `client_id`/`project_id` sütunları
   gönderilmez. Bu sütunlar niş migration'ıyla geliyor; göndermek her görev
   yazmasını "column does not exist" ile düşürür, yani bayrak sözünü tutmazdı.
+
+**Niş modül eleme doğrulaması** (`npm run verify:niche`) iki yönlü çalışır ve
+**iki ayrı kanıt** arar: 12 metin izi bayrak kapalıyken bulunmamalı, açıkken
+bulunmalı; ayrıca kapalı derleme en az 20 KB küçük olmalı (bugün 57 KB). Boyut
+eşiği süs değil — bir iz, kod paketten çıkmadan da kaybolabilir (yalnızca
+çeviri dosyası elenmişse), üstelik Faz 2'de bayrak nesne özelliği olduğu için
+iki derleme **birebir aynı boyutta** çıkıyordu ve kimse ölçmediği için aylarca
+fark edilmedi.
 
 **GitHub girişi iki taraflı bir anahtardır.** Supabase'de sağlayıcı kapalıyken
 `signInWithOAuth` **hata döndürmez**: tarayıcıyı yönlendirir ve kullanıcı
@@ -265,6 +276,25 @@ hızlı yolu `docker logs supabase_kong_...` içinde tarayıcıdan gelen isteği
 aramaktır, hiç yoksa istekler başka bir yere gidiyordur. Ayrıca yerel şema
 değişiklikleri tarayıcı testlerinde hiç sınanmamış olur. Bulut değerleri
 `.env.cloud.local` içinde saklanır (git tarafından yok sayılır).
+
+**Çift cihaz E2E'sinde girişten sonra ilk senkron turu beklenmelidir.**
+Girişin ardından `prepareForSync` cihaz sahipliğini ayarlıyor ve ilk tur bulut
+anlık görüntüsünü uyguluyor; arada eklenen kayıt o turun altında kalabiliyor.
+Belirti aldatıcı: "Ekle"ye basılıyor, kayıt bir an görünüyor ve kayboluyor —
+test "müşteri eklenemedi" diye düşüyor, sanki arayüzde kusur varmış gibi. Yükte
+ölçüldü: `zaman-senkron.spec.ts` üç kez üst üste koşturulduğunda 15 testin
+6'sı düşüyordu, `signUp`/`signIn` yardımcılarına `waitForSynced` eklenince
+15/15 oldu. `waitForSynced` burada yeterli çünkü `lastSyncedAt` girişten
+hemen sonra `null`. Aynı desen `senkron.spec.ts`'te de var ama o dosya
+bilinçli olarak bazı ara durumları sınadığı için dokunulmadı — orada
+kararsızlık görülürse ilk bakılacak yer burasıdır.
+
+**`waitForSynced` "yeni bir tur koştu" demek DEĞİLDİR**, yalnızca "bekleyen
+değişiklik yok" der. Sayfa yenilendikten sonra `lastSyncedAt` zaten dolu ve
+dirty listeleri boş olduğu için **anında** döner; karşı cihazın değişikliğini
+indirecek tur ise henüz koşmamış olabilir. Karşı cihazın verisi bekleniyorsa
+`waitForFreshSync` (damganın değişmesini bekler) ve depo okumalarında
+`expect.poll` kullanılır.
 
 `supabase/config.toml` içindeki `sign_in_sign_ups` yerelde 200'e çıkarıldı:
 varsayılan 30'du ve senkron testleri tek başına 19 kayıt/giriş yapıyor.
@@ -344,7 +374,7 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 **Ürün sağlamlaştırma:** ✅ bitti — `eslint-plugin-jsx-a11y`
 (`flatConfigs.recommended`) `eslint.config.js` içinde kurulu ve CI'da koşuyor.
 
-**Faz 5 — Niş modül** *(sürüyor)*
+**Faz 5 — Niş modül** *(bitti)*
 
 | # | İş | Durum |
 | --- | --- | --- |
@@ -354,7 +384,7 @@ oturumu açıyor ama yeni parola ekranı yoktu), SPA geri dönüş yapılandırm
 | 4 | Senkron motoru: eşleme, birleştirme, repository, sıra, bayrak kapısı | ✅ |
 | 5 | Arayüz: müşteri/proje yönetimi, TaskForm'a iki opsiyonel seçici | ✅ |
 | 6 | Teslim odaklı görünüm (`/app/delivery`, müşteri/projeye göre gruplama) | ✅ |
-| 7 | Zaman kaydı ve CSV dışa aktarım — **kendi 9 görevlik planı var** (aşağı) | ⏳ |
+| 7 | Zaman kaydı ve CSV dışa aktarım — **kendi 9 görevlik planı var** (aşağı) | ✅ |
 
 **Görev 7 (zaman kaydı + dışa aktarım)** ayrı bir plan/spec çiftinde yaşıyor ve
 o dokümanlarda **"Faz 3"** diye anılıyor (bu dosyadaki faz numaralandırmasıyla
@@ -373,7 +403,7 @@ Dal: `faz-3-zaman-kaydi`.
 | 6 | `/app/time`: kayıt listesi, elle giriş, toplamlar | ✅ |
 | 7 | Ücret alanları arayüzü ve silme diyaloğu | ✅ |
 | 8 | CSV dışa aktarım | ✅ |
-| 9 | Bayrak izleri, kalan E2E, doküman senkronu | ⏳ |
+| 9 | Bayrak izleri, kalan E2E, doküman senkronu | ✅ |
 
 Zaman kaydında yerleşen kurallar:
 

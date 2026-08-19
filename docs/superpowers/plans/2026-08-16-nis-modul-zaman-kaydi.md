@@ -69,7 +69,7 @@ Bu bölüm her görevin gereksinimlerine örtük olarak dâhildir.
   benzersizlik kısıtı. `Database['public']['Tables']['time_logs']['Row' |
   'Insert']` tipleri Task 4 tarafından kullanılır.
 
-- [ ] **Step 1: Migration dosyasını yaz**
+- [x] **Step 1: Migration dosyasını yaz**
 
 `supabase/migrations/20260816120000_niche_time_logs.sql`:
 
@@ -210,7 +210,7 @@ create policy "Kullanici kendi zaman kayitlarini silebilir"
   using ((select auth.uid()) = user_id);
 ```
 
-- [ ] **Step 2: Migration'ı uygula ve tipleri üret**
+- [x] **Step 2: Migration'ı uygula ve tipleri üret**
 
 ```bash
 npx supabase db reset
@@ -221,7 +221,7 @@ Beklenen: reset hatasız biter, `src/lib/database.types.ts` içinde `time_logs`
 görünür. `db reset` sonrası API 502 dönerse ağ geçidi eski adresi
 önbelleklemiştir: `docker restart supabase_kong_yapilacaklar-listesi`.
 
-- [ ] **Step 3: Şema güvenlik testlerini yaz (önce, düşmeleri için)**
+- [x] **Step 3: Şema güvenlik testlerini yaz (önce, düşmeleri için)**
 
 `supabase/tests/rls.test.mjs` içine, mevcut niş testlerinin yanına. Dosyadaki
 mevcut yardımcı (iki kullanıcı açan) kullanılır — yeni bir yardımcı yazılmaz.
@@ -274,14 +274,14 @@ test('musteri silinince zaman kaydi da silinir, gorev silinince kayit durur', as
 });
 ```
 
-- [ ] **Step 4: Şema testlerini koştur**
+- [x] **Step 4: Şema testlerini koştur**
 
 Run: `npm run test:rls`
 Beklenen: **PASS** — bu adımda testler zaten geçmeli, çünkü Step 1'deki
 migration davranışları sağlıyor. Bir tanesi düşerse şemada hata var; testi
 değil migration'ı düzeltin.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add supabase/migrations/20260816120000_niche_time_logs.sql \
@@ -314,7 +314,7 @@ git commit -m "Zaman kaydi semasi: time_logs, ucret sutunlari, tam RLS"
   - `createTimeLog(input, now?): TimeLog`
   - `TIME_LOG_MAX_MINUTES = 1440`, `TIME_LOG_NOTE_MAX = 200`
 
-- [ ] **Step 1: Failing test'i yaz**
+- [x] **Step 1: Failing test'i yaz**
 
 `src/lib/time-logs.test.ts`:
 
@@ -405,12 +405,12 @@ describe('normalizeTimeLog', () => {
 });
 ```
 
-- [ ] **Step 2: Test'i koştur, düştüğünü doğrula**
+- [x] **Step 2: Test'i koştur, düştüğünü doğrula**
 
 Run: `npx vitest run src/lib/time-logs.test.ts`
 Beklenen: FAIL — `Failed to resolve import "./time-logs"`
 
-- [ ] **Step 3: Tipleri ekle**
+- [x] **Step 3: Tipleri ekle**
 
 `src/lib/types.ts` içinde `Client`'a iki alan, `Project`'e bir alan:
 
@@ -456,7 +456,7 @@ export interface Project extends Omit<Client, 'hourlyRate'> {
 almalı — aksi halde `Project` artık geçmez. `src/lib/clients.ts` içindeki üç
 karşılaştırıcının imzası buna göre daraltılır.
 
-- [ ] **Step 4: `time-logs.ts`'i yaz**
+- [x] **Step 4: `time-logs.ts`'i yaz**
 
 ```ts
 import type { ActiveTimer, Client, Project, TimeLog } from './types';
@@ -564,12 +564,12 @@ export function createTimeLog(
 }
 ```
 
-- [ ] **Step 5: Test'i koştur, geçtiğini doğrula**
+- [x] **Step 5: Test'i koştur, geçtiğini doğrula**
 
 Run: `npx vitest run src/lib/time-logs.test.ts`
 Beklenen: PASS
 
-- [ ] **Step 6: Mevcut testleri koştur (tip daraltması kırmış olabilir)**
+- [x] **Step 6: Mevcut testleri koştur (tip daraltması kırmış olabilir)**
 
 Run: `npm test && npx tsc --noEmit && npm run lint`
 Beklenen: hepsi PASS. `Project extends Omit<Client, 'hourlyRate'>`
@@ -577,7 +577,7 @@ değişikliği `clients.ts`, `projects.ts`, `sync-merge-niche.ts` ve
 `niche-mapping.ts`'te tip hatası verirse **imzaları yapısal tipe daraltarak**
 düzeltin; `as` ile bastırmayın.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/lib/types.ts src/lib/time-logs.ts src/lib/time-logs.test.ts \
@@ -604,7 +604,7 @@ git commit -m "Zaman kaydi tipleri ve saf yardimcilari"
   Sayaç eylemlerinin imzaları: `startTimer(input, now?: string)`,
   `stopTimer(now?: string)` — `now` opsiyoneldir ve testler açıkça geçirir.
 
-- [ ] **Step 1: Failing test'leri yaz**
+- [x] **Step 1: Failing test'leri yaz**
 
 `src/store/index.test.ts` içine:
 
@@ -695,12 +695,12 @@ describe('v5 -> v6 gocu', () => {
 Mevcut test dosyası göç fonksiyonuna nasıl eriştiğini (v4 → v5 testine bakın)
 aynen izleyin; yeni bir erişim yolu icat etmeyin.
 
-- [ ] **Step 2: Test'leri koştur, düştüklerini doğrula**
+- [x] **Step 2: Test'leri koştur, düştüklerini doğrula**
 
 Run: `npx vitest run src/store/index.test.ts`
 Beklenen: FAIL — `startTimer is not a function`
 
-- [ ] **Step 3: Store alanlarını ve eylemleri ekle**
+- [x] **Step 3: Store alanlarını ve eylemleri ekle**
 
 `TaskState` arayüzüne dört alan, başlangıç durumuna dört boş değer,
 `partialize`'a dört alan (**`activeTimer` dâhil** — TIME-01 "sayfa
@@ -770,7 +770,7 @@ function stopTimerInto(state: TaskState, now: string): Partial<TaskState> {
 `addTimeLog` / `updateTimeLog` / `deleteTimeLog` mevcut kategori eylemlerinin
 desenini birebir izler (dirty işaretleme, mezar taşı bırakma).
 
-- [ ] **Step 4: `deleteClient` / `deleteProject` / `deleteTask`'ı genişlet**
+- [x] **Step 4: `deleteClient` / `deleteProject` / `deleteTask`'ı genişlet**
 
 `deleteClient`, veritabanındaki cascade ile **aynı sonucu** üretmek zorunda:
 
@@ -788,7 +788,7 @@ dirtyTimeLogIds: state.dirtyTimeLogIds.filter((d) => !removedLogIds.has(d)),
 kendi referans eylemleriyle zaten yapıyor; işaretlemek başka cihazda
 gereksiz bir yazma turu doğururdu. `deleteCategory`'deki aynı gerekçe.
 
-- [ ] **Step 5: v5 → v6 göçünü yaz**
+- [x] **Step 5: v5 → v6 göçünü yaz**
 
 `version: 5` → `version: 6`, yorum bloğuna bir satır, ve:
 
@@ -816,12 +816,12 @@ if (version < 6) {
 `timeLogTombstones` eklenir — **ikisi de**, yoksa hesap değişiminde eski
 hesabın kayıtları yenisine sızar.
 
-- [ ] **Step 6: Test'leri koştur**
+- [x] **Step 6: Test'leri koştur**
 
 Run: `npx vitest run src/store/index.test.ts`
 Beklenen: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/store/index.ts src/store/index.test.ts
@@ -851,7 +851,7 @@ git commit -m "Store: zaman kaydi alanlari, tek sayac kurali, v5 -> v6 gocu"
     `deleteRemoteTimeLogs(ids)`
   - `timeLogToRow(log, userId)`, `rowToTimeLog(row)`
 
-- [ ] **Step 1: `mergeTimeLogs` için failing test yaz**
+- [x] **Step 1: `mergeTimeLogs` için failing test yaz**
 
 `src/lib/sync-merge-niche.test.ts` içine:
 
@@ -915,12 +915,12 @@ describe('mergeTimeLogs', () => {
 });
 ```
 
-- [ ] **Step 2: Koştur, düştüğünü doğrula**
+- [x] **Step 2: Koştur, düştüğünü doğrula**
 
 Run: `npx vitest run src/lib/sync-merge-niche.test.ts`
 Beklenen: FAIL — `mergeTimeLogs is not exported`
 
-- [ ] **Step 3: `mergeTimeLogs`'u yaz**
+- [x] **Step 3: `mergeTimeLogs`'u yaz**
 
 `src/lib/sync-merge-niche.ts` içine. **Gövde `mergeTasks`'ın birebir aynısıdır**
 (`sync-merge.ts:51-106`), yalnızca `Task` yerine `TimeLog` ve `tasks` yerine
@@ -940,12 +940,12 @@ Beklenen: FAIL — `mergeTimeLogs is not exported`
  */
 ```
 
-- [ ] **Step 4: Koştur, geçtiğini doğrula**
+- [x] **Step 4: Koştur, geçtiğini doğrula**
 
 Run: `npx vitest run src/lib/sync-merge-niche.test.ts`
 Beklenen: PASS
 
-- [ ] **Step 5: Eşleme ve repository'yi yaz**
+- [x] **Step 5: Eşleme ve repository'yi yaz**
 
 `niche-mapping.ts`: `clientToRow`/`rowToClient`'a `hourly_rate` + `currency`,
 `projectToRow`/`rowToProject`'e `hourly_rate`, ve yeni
@@ -970,7 +970,7 @@ sıfırlanır. Sağlayıcı ya da PostgREST sürümü değişirse önce bunu öl
 sayfalama ve `MAX_ROWS` tavanı), `pushRemoteTimeLogs`, `deleteRemoteTimeLogs`;
 üçü de mevcut kategori fonksiyonlarının deseninde.
 
-- [ ] **Step 6: `runSync` sırasını genişlet ve testini yaz**
+- [x] **Step 6: `runSync` sırasını genişlet ve testini yaz**
 
 `src/lib/sync.test.ts` içine:
 
@@ -1000,7 +1000,7 @@ it('bayrak kapaliyken time_logs HIC sorgulanmaz', async () => {
 yazma, `deleteRemoteTimeLogs` **ilk** silme, ve `applySyncResult`'a üç alan.
 `pushed`/`deleted`/`discarded` sayaçlarına `timeLogPlan` katkıları eklenir.
 
-- [ ] **Step 7: `pendingCount`'u genişlet**
+- [x] **Step 7: `pendingCount`'u genişlet**
 
 `SyncProvider.tsx`:
 
@@ -1020,12 +1020,12 @@ const pendingCount =
 tetiklenmez** ve değişiklik bir sonraki yoklamaya (dakikada bir) kadar bekler.
 Kategorilerde bir kez gerçekten yaşandı ve sessizce başarısız oldu.
 
-- [ ] **Step 8: Tüm birim testlerini koştur**
+- [x] **Step 8: Tüm birim testlerini koştur**
 
 Run: `npm test && npx tsc --noEmit && npm run lint`
 Beklenen: PASS
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add src/lib/niche-mapping.ts src/lib/sync-merge-niche.ts \
@@ -1051,7 +1051,7 @@ git commit -m "Senkron: time_logs dorduncu varlik, mergeTasks kalibiyla"
   `elapsedMinutes` (Task 2), `NICHE_MODULE`
 - Produces: `<ActiveTimerBar />`, `useElapsed(startedAt): number` (saniye)
 
-- [ ] **Step 1: `useElapsed` kancasını yaz**
+- [x] **Step 1: `useElapsed` kancasını yaz**
 
 ```ts
 /**
@@ -1075,7 +1075,7 @@ export function useElapsed(startedAt: string | null): number {
 }
 ```
 
-- [ ] **Step 2: `TaskItem`'a başlat/durdur butonunu ekle**
+- [x] **Step 2: `TaskItem`'a başlat/durdur butonunu ekle**
 
 Bayrak koşulu **modül gövdesinde**, render içinde değil:
 
@@ -1100,7 +1100,7 @@ Bayrak koşulu **modül gövdesinde**, render içinde değil:
 Çalışan görev satırı görsel olarak işaretlenir (mevcut token'larla; sabit renk
 kullanmayın).
 
-- [ ] **Step 3: `ActiveTimerBar`'ı yaz ve kabuğa tak**
+- [x] **Step 3: `ActiveTimerBar`'ı yaz ve kabuğa tak**
 
 Çubuk yalnızca sayaç çalışırken render edilir; görev adı (ya da
 `time.noTask`), akan süre (`s:dd:ss`), durdur butonu. `AppLayout` içinde
@@ -1109,12 +1109,12 @@ gezinmenin üstünde, `NICHE_MODULE &&` ile.
 Gerekçe yorumu dosya başına: *"Unutulmuş açık sayaç" bu ürün kategorisinin
 klasik veri hatasıdır ve tek gerçek savunması görünürlüktür.*
 
-- [ ] **Step 4: Çeviri anahtarlarını ekle**
+- [x] **Step 4: Çeviri anahtarlarını ekle**
 
 `tr.niche.json` → `time.startFor`, `time.stopFor`, `time.needsClient`,
 `time.noTask`, `time.running`; `en.niche.json`'a aynı şekil.
 
-- [ ] **Step 5: İlk E2E testlerini yaz**
+- [x] **Step 5: İlk E2E testlerini yaz**
 
 `e2e/zaman.spec.ts`:
 
@@ -1132,12 +1132,12 @@ test('ikinci sayaci baslatmak birincisini kaydeder', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 6: Testleri koştur**
+- [x] **Step 6: Testleri koştur**
 
 Run: `npx playwright test e2e/zaman.spec.ts`
 Beklenen: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/features/time src/components/TaskItem.tsx \
@@ -1164,7 +1164,7 @@ git commit -m "Sayac arayuzu: gorev satirinda baslat/durdur, kabukta aktif sayac
   `filterLogs(logs, { clientId, projectId, from, to })` — Task 8 (CSV) ikisini
   de kullanır, **aynı** filtre sonucu dışa aktarılır.
 
-- [ ] **Step 1: `totals.ts` için failing test yaz**
+- [x] **Step 1: `totals.ts` için failing test yaz**
 
 ```ts
 describe('groupTotals', () => {
@@ -1184,20 +1184,20 @@ describe('filterLogs', () => {
 });
 ```
 
-- [ ] **Step 2: Koştur, düştüğünü doğrula**
+- [x] **Step 2: Koştur, düştüğünü doğrula**
 
 Run: `npx vitest run src/features/time/totals.test.ts`
 Beklenen: FAIL
 
-- [ ] **Step 3: `totals.ts`'i yaz**
+- [x] **Step 3: `totals.ts`'i yaz**
 
 Saf fonksiyonlar; `src/features/delivery/grouping.ts` deseni izlenir.
 
-- [ ] **Step 4: Koştur, geçtiğini doğrula**
+- [x] **Step 4: Koştur, geçtiğini doğrula**
 
 Run: `npx vitest run src/features/time/totals.test.ts` → PASS
 
-- [ ] **Step 5: Ekranı yaz**
+- [x] **Step 5: Ekranı yaz**
 
 `TimeView`: filtre çubuğu, kayıt listesi (`startedAt` azalan), satır içi
 düzeltme ve silme, altta müşteri → proje toplamları.
@@ -1211,7 +1211,7 @@ müşteriye bağlı kaydı düzenlemeye açmak bağı sessizce koparırdı).
 
 Elle giriş ve sayaç **aynı** `addTimeLog` eylemine düşer; iki kod yolu olmaz.
 
-- [ ] **Step 6: Rotayı ve gezinmeyi ekle**
+- [x] **Step 6: Rotayı ve gezinmeyi ekle**
 
 `router.tsx` → `nicheRoutes` dizisine
 `{ path: 'time', element: <TimePage />, errorElement: <RouteErrorBoundary /> }`.
@@ -1220,13 +1220,13 @@ Elle giriş ve sayaç **aynı** `addTimeLog` eylemine düşer; iki kod yolu olma
 3/2'ye bölünecek, merkez buton bir öğe genişliği kadar kayacak — bu **kabul
 edilmiş** bedeldir (spec §4.3), "düzeltmeyin".
 
-- [ ] **Step 7: Testleri koştur**
+- [x] **Step 7: Testleri koştur**
 
 Run: `npm test && npx playwright test e2e/gezinme.spec.ts`
 Beklenen: PASS. Gezinme testi öğe sayısına bağlıysa **testi güncelleyin**,
 beşinci öğeyi kaldırmayın.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/pages/TimePage.tsx src/features/time src/router.tsx \
@@ -1398,7 +1398,7 @@ git commit -m "CSV disa aktarim: kayit satirlari + ozet, UTF-8 BOM, ; ayraci"
 - Consumes: her şey
 - Produces: yok
 
-- [ ] **Step 1: `MARKERS` listesine üç iz ekle**
+- [x] **Step 1: `MARKERS` listesine üç iz ekle**
 
 ```js
 { pattern: /app\/time/, what: 'zaman rotası' },
@@ -1409,7 +1409,7 @@ git commit -m "CSV disa aktarim: kayit satirlari + ozet, UTF-8 BOM, ; ayraci"
 `papaparse` izi en somut ölçüttür: kod elenip bağımlılık pakette kalsaydı
 bayrak sözünü tutmazdı.
 
-- [ ] **Step 2: Bayrağı iki yönlü ölç**
+- [x] **Step 2: Bayrağı iki yönlü ölç**
 
 ```bash
 npm run build && npm run verify:niche
@@ -1420,12 +1420,12 @@ derlemenin boyutu açık olandan **belirgin biçimde küçük** olmalı; aynıys
 bayrak koşulu çalışma zamanına kalmış demektir (Faz 2'de tam olarak bu oldu:
 nesne özelliği derleme zamanında katlanmıyordu).
 
-- [ ] **Step 3: Kalan E2E testlerini yaz**
+- [x] **Step 3: Kalan E2E testlerini yaz**
 
 `e2e/zaman.spec.ts`: elle kayıt ekle/düzelt/sil; müşteri ve proje toplamları
 doğru; müşterisiz görevde sayaç butonu devre dışı.
 
-- [ ] **Step 4: Tüm paketi koştur**
+- [x] **Step 4: Tüm paketi koştur**
 
 ```bash
 npm run lint && npx tsc --noEmit && npm test && npm run test:rls && npm run test:e2e
@@ -1436,7 +1436,7 @@ ile düşerse **kod regresyonu değil**: `.env.local` bulut projesini gösteriyo
 demektir. Teşhis: `docker logs supabase_kong_yapilacaklar-listesi` içinde
 tarayıcıdan gelen isteği arayın; hiç yoksa istekler başka yere gidiyor.
 
-- [ ] **Step 5: Dokümanları senkronla**
+- [x] **Step 5: Dokümanları senkronla**
 
 - `CLAUDE.md`: şema bloğuna `time_logs` ve ücret sütunları; **"niş modül (tek
   migration dosyası)" ifadesi "iki migration dosyası + `tasks_id_user_id_key`
@@ -1448,7 +1448,7 @@ tarayıcıdan gelen isteği arayın; hiç yoksa istekler başka yere gidiyor.
 - `.planning/STATE.md`: Current Position, teslim edilenler tablosu, kalan
   blokerlar.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/verify-niche-stripping.mjs e2e/zaman.spec.ts \

@@ -20,23 +20,46 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 3 — zaman kaydı ve dışa aktarım; tasarım onaylandı,
-uygulama planı yazılıyor
+**Current focus:** Phase 3 ✅ tamamlandı (19 Ağu). Sıradaki: Phase 4 — ödeme
+ve Pro kapılama; sağlayıcı seçimi hâlâ açık bloker (Stripe Türkiye'den
+açılamıyor).
 
 ## Current Position
 
 Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 ✅ **tamamlandı** (16 Ağu) ·
-       Phase 3 🔵 **tasarım onaylandı** (16 Ağu), uygulama başlamadı
-Plan: gsd planı yok; Phase 2 işi
-      `docs/superpowers/plans/2026-08-14-nis-modul-musteri-proje.md`
-      görev listesine göre yürütüldü (tamamlandı).
-      Phase 3 tasarımı: `docs/superpowers/specs/2026-08-16-nis-modul-zaman-kaydi-design.md`
-      (`745b84d`) — uygulama planı aynı desende yazılacak
+       Phase 3 ✅ **tamamlandı** (19 Ağu)
+Plan: gsd planı yok; Phase 2 ve 3 işi `docs/superpowers/plans/` altındaki
+      görev listelerine göre yürütüldü.
+      Phase 3: `2026-08-16-nis-modul-zaman-kaydi.md` (9 görev, hepsi kapandı)
+      + spec `…-design.md` (`745b84d`). Dal: `faz-3-zaman-kaydi`.
 Status: Executing
-Last activity: 2026-08-16 — Phase 3 tasarım dokümanı onaylandı ve commit'lendi
+Last activity: 2026-08-19 — Phase 3 kapandı: ücret alanları, CSV dışa aktarım,
+      bayrak izleri ve doküman senkronu
 
 Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [██████████] 6/6 kriter ·
-          Phase 3 → [░░░░░░░░░░] 0/6 kriter (tasarım hazır)
+          Phase 3 → [██████████] 6/6 kriter
+
+**Phase 3, teslim edilen:**
+
+| Gereksinim | Ne yapıldı |
+|---|---|
+| TIME-01 | Görev satırında başlat/durdur, kabukta `ActiveTimerBar`. Tek sayaç kuralı **store'da** (arayüzde değil); `activeTimer` `partialize`'da olduğu için yenilemeden sağ çıkıyor |
+| TIME-02 | `/app/time` + `TimeLogForm`: elle ekleme, düzeltme, silme. Şemanın reddedeceği girdi push kuyruğuna hiç girmiyor (`isValidDuration`, kısıtın ikizi) |
+| TIME-03 | `groupTotals` müşteri → proje kırılımı, `sumByCurrency` para birimi **başına** genel toplam (kur dönüşümü yok ve olmayacak) |
+| TIME-04 | Her kaydın kendi UUID'si olduğu için birleşmede toplanıyorlar; `mergeTimeLogs` `mergeTasks` kalıbında. Gerçek çift cihaz E2E'siyle doğrulandı |
+| TIME-05 | `buildTimeCsv`: kayıt satırları + müşteri/proje/para birimi özetleri, UTF-8 BOM, `;` ayracı, ondalık saat. Ekranla **aynı** `visible` dizisini alıyor |
+| TIME-06 | `npm run verify:niche`: 12 iz iki yönlü kontrol + paket boyutu eşiği (57 KB düşüş) |
+
+**Phase 3'te planın dışına çıkılan iki karar:**
+
+- **`papaparse` kuruldu ve geri çıkarıldı.** Yan etkili modül olduğu için
+  tree-shaking atamıyor; bayrak kapalı derlemede bile pakette kalıyordu ve
+  dinamik import da parçayı üretmeye devam etti. Yerine RFC 4180 alıntılaması
+  yazıldı. Plan bu bağımlılığı şart koşuyordu ama planın kendi TIME-06'sını
+  bozuyordu.
+- **Ücret alanları için store eylemleri genişletildi.** Plan
+  `updateClient`/`updateProject`'i "mevcut" sayıyordu; ikisi de yalnızca
+  `{ name, archived }` kabul ediyordu.
 
 **Phase 3, kilitlenen tasarım kararları** (spec'ten; değişirse spec önce
 güncellenir):

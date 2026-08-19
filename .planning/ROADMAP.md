@@ -46,7 +46,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Ürün sağlamlaştırma** - Erişilebilirlik linti, HTTP güvenlik başlıkları, senkron sırasının testi ve sessiz veri kaybının görünür kılınması *(6/6 gereksinim; kriter 2'nin canlı doğrulaması dağıtıma bağlı)*
 - [x] **Phase 2: Niş modül — müşteriler ve projeler** - Görevi müşteriye/projeye bağlama, yönetim ekranı, teslim görünümü; hepsi tek bayrakla çıkarılabilir *(6/6 kriter ✅)*
-- [ ] **Phase 3: Niş modül — zaman kaydı ve dışa aktarım** - Basit zaman kaydı (biriken senkron semantiği) ve müşteri/proje kırılımlı CSV dışa aktarım
+- [x] **Phase 3: Niş modül — zaman kaydı ve dışa aktarım** - Basit zaman kaydı (biriken senkron semantiği) ve müşteri/proje kırılımlı CSV dışa aktarım
 - [ ] **Phase 4: Ödeme ve Pro kapılama** - Stripe'sız abonelik akışı, imza doğrulamalı webhook, veritabanı seviyesinde Pro kapısı
 - [ ] **Phase 5: Paketleme ve yayın** - Demo veri, İngilizce dokümantasyon ve README, dağıtım, semver + CHANGELOG
 
@@ -121,13 +121,13 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Depends on**: Phase 2
 **Requirements**: TIME-01, TIME-02, TIME-03, TIME-04, TIME-05, TIME-06
 **Success Criteria** (what must be TRUE):
-  1. Kullanıcı bir görev için sayacı başlatıp durdurabilir; sayfayı yenilediğinde sayaç kaybolmaz
-  2. Kullanıcı unuttuğu bir çalışmayı elle kayıt olarak girebilir, düzeltebilir ve silebilir
-  3. Kullanıcı bir müşteri veya proje için toplam harcanan süreyi görebilir
-  4. İki cihazda aynı gün girilen zaman kayıtları senkron sonrası **toplanır**, biri diğerini ezmez
-  5. Kullanıcı seçtiği müşteri/proje ve tarih aralığı için CSV dosyası indirebilir
-  6. `VITE_NICHE_MODULE=false` ile zaman kaydı da tamamen çıkar; `dist/` içinde iz kalmaz
-**Plans**: Tasarım hazır — `docs/superpowers/specs/2026-08-16-nis-modul-zaman-kaydi-design.md` (`745b84d`); uygulama planı yazılıyor
+  1. ✅ Kullanıcı bir görev için sayacı başlatıp durdurabilir; sayfayı yenilediğinde sayaç kaybolmaz — `activeTimer` `partialize`'da, `e2e/zaman.spec.ts` "sayaç başlatılınca çubuk görünür ve sayfa yenilemesinden sağ çıkar"
+  2. ✅ Kullanıcı unuttuğu bir çalışmayı elle kayıt olarak girebilir, düzeltebilir ve silebilir — `TimeLogForm`, `e2e/zaman-ekrani.spec.ts` "elle eklenen kayıt…" + "kayıt düzenlenir ve silinir"
+  3. ✅ Kullanıcı bir müşteri veya proje için toplam harcanan süreyi görebilir — `groupTotals`/`sumByCurrency`, `/app/time` toplamlar bölümü
+  4. ✅ İki cihazda aynı gün girilen zaman kayıtları senkron sonrası **toplanır**, biri diğerini ezmez — `e2e/zaman-senkron.spec.ts` "iki cihazda ayrı ayrı girilen kayıtlar toplanır"; her kaydın kendi UUID'si olduğu için tasarımla karşılanıyor
+  5. ✅ Kullanıcı seçtiği müşteri/proje ve tarih aralığı için CSV dosyası indirebilir — `buildTimeCsv`, ekranla **aynı** `filterLogs` sonucu; `e2e/zaman-ekrani.spec.ts` "CSV ekrandaki filtreyi birebir izler"
+  6. ✅ `VITE_NICHE_MODULE=false` ile zaman kaydı da tamamen çıkar; `dist/` içinde iz kalmaz — `npm run verify:niche`: 12 iz kapalıyken yok/açıkken var **ve** paket 57 KB küçülüyor (boyut eşiği ayrı bir kanıt: iz, kod paketten çıkmadan da kaybolabilir)
+**Plans**: `docs/superpowers/plans/2026-08-16-nis-modul-zaman-kaydi.md` (9 görev, hepsi kapandı) + spec `…-design.md` (`745b84d`)
 **UI hint**: yes
 
 **Notlar:**
@@ -212,12 +212,12 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|--------|--------|-----------|
 | 1. Ürün sağlamlaştırma | 5/5 | **Tamamlandı** (kriter 2 canlı doğrulama bekliyor) | 2026-08-16 |
 | 2. Niş modül — müşteriler ve projeler | 6/6 | **Tamamlandı** | 2026-08-16 |
-| 3. Niş modül — zaman kaydı ve dışa aktarım | 0/6 | **Tasarım onaylandı**, uygulama başlamadı | - |
+| 3. Niş modül — zaman kaydı ve dışa aktarım | 6/6 | **Tamamlandı** | 2026-08-19 |
 | 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |
 | 5. Paketleme ve yayın | 0/5 | Not started | - |
 
 **Not:** İlerleme plan/summary sayısıyla değil **başarı kriteriyle** ölçülüyor;
 Phase 1 ve 2 işi gsd plan→execute döngüsü dışında yürütüldüğü için
 `.planning/phases/` altında artefakt yok ve `gsd query progress` %0 gösterir.
-Sayaçlara değil bu tabloya bakın. Son senkron: 2026-08-16, `bf5cea1` esas
-alınarak.
+Sayaçlara değil bu tabloya bakın. Son senkron: 2026-08-19, Phase 3 kapanışı
+esas alınarak.

@@ -49,12 +49,12 @@ Kalan sürüm kapsamı. Her gereksinim tam olarak bir faza eşlenir.
 
 ### Niche Module — Slice 2 (Zaman kaydı ve dışa aktarım)
 
-- [ ] **TIME-01**: Kullanıcı bir görev için zaman sayacı başlatıp durdurabilir; sayaç sayfa yenilemesinden sağ çıkar
-- [ ] **TIME-02**: Kullanıcı elle zaman kaydı ekleyebilir, düzeltebilir ve silebilir
-- [ ] **TIME-03**: Kullanıcı harcanan süreyi müşteri ve proje kırılımında toplam olarak görebilir
-- [ ] **TIME-04**: Zaman kayıtları cihazlar arasında **birikerek** senkronlanır — iki cihazdaki kayıtlar birbirini ezmez (son-yazan-kazanır burada geçerli değildir)
-- [ ] **TIME-05**: Kullanıcı müşteri, proje ve tarih aralığına göre CSV dışa aktarım alabilir
-- [ ] **TIME-06**: Zaman kaydı ve CSV dışa aktarım aynı `VITE_NICHE_MODULE` bayrağıyla çıkar; kapalıyken `dist/` içinde iz kalmaz
+- [x] **TIME-01**: Kullanıcı bir görev için zaman sayacı başlatıp durdurabilir; sayaç sayfa yenilemesinden sağ çıkar
+- [x] **TIME-02**: Kullanıcı elle zaman kaydı ekleyebilir, düzeltebilir ve silebilir
+- [x] **TIME-03**: Kullanıcı harcanan süreyi müşteri ve proje kırılımında toplam olarak görebilir
+- [x] **TIME-04**: Zaman kayıtları cihazlar arasında **birikerek** senkronlanır — iki cihazdaki kayıtlar birbirini ezmez (son-yazan-kazanır burada geçerli değildir)
+- [x] **TIME-05**: Kullanıcı müşteri, proje ve tarih aralığına göre CSV dışa aktarım alabilir
+- [x] **TIME-06**: Zaman kaydı ve CSV dışa aktarım aynı `VITE_NICHE_MODULE` bayrağıyla çıkar; kapalıyken `dist/` içinde iz kalmaz
 
 ### Payment (Ödeme ve Pro kapılama)
 
@@ -131,12 +131,12 @@ Kabul edilmiş ama ertelenmiş. Mevcut roadmap'te yer almaz.
 | NICHE-06 | Phase 2 | ✅ Done |
 | NICHE-07 | Phase 2 | ✅ Done |
 | NICHE-08 | Phase 2 | ✅ Done |
-| TIME-01 | Phase 3 | Pending |
-| TIME-02 | Phase 3 | Pending |
-| TIME-03 | Phase 3 | Pending |
-| TIME-04 | Phase 3 | Pending |
-| TIME-05 | Phase 3 | Pending |
-| TIME-06 | Phase 3 | Pending |
+| TIME-01 | Phase 3 | Done |
+| TIME-02 | Phase 3 | Done |
+| TIME-03 | Phase 3 | Done |
+| TIME-04 | Phase 3 | Done |
+| TIME-05 | Phase 3 | Done |
+| TIME-06 | Phase 3 | Done |
 | PAY-01 | Phase 4 | Pending |
 | PAY-02 | Phase 4 | Pending |
 | PAY-03 | Phase 4 | Pending |

@@ -53,6 +53,19 @@ async function signUp(page: Page, email: string) {
     await dialog.getByLabel('Parola').fill('parola12345')
     await dialog.getByRole('button', { name: 'Hesap Oluştur', exact: true }).click()
     await expect(page.getByText(email)).toBeVisible()
+
+    /*
+     * İlk senkron turu bitmeden veri girilmez.
+     *
+     * Girişten sonra `prepareForSync` cihaz sahipliğini ayarlıyor ve ilk tur
+     * bulut anlık görüntüsünü uyguluyor; arada eklenen kayıt o turun altında
+     * kalabiliyor. Belirti aldatıcı: "Ekle"ye basılıyor, müşteri bir an
+     * görünüyor ve kayboluyor — test ise "müşteri eklenemedi" diye düşüyor,
+     * sanki arayüzde bir kusur varmış gibi. `waitForSynced` burada tam da
+     * bu yüzden yeterli: `lastSyncedAt` girişten hemen sonra `null` ve
+     * ancak ilk tur bitince damgalanıyor.
+     */
+    await waitForSynced(page)
 }
 
 async function signIn(page: Page, email: string) {
@@ -62,6 +75,19 @@ async function signIn(page: Page, email: string) {
     await dialog.getByLabel('Parola').fill('parola12345')
     await dialog.getByRole('button', { name: 'Giriş Yap', exact: true }).click()
     await expect(page.getByText(email)).toBeVisible()
+
+    /*
+     * İlk senkron turu bitmeden veri girilmez.
+     *
+     * Girişten sonra `prepareForSync` cihaz sahipliğini ayarlıyor ve ilk tur
+     * bulut anlık görüntüsünü uyguluyor; arada eklenen kayıt o turun altında
+     * kalabiliyor. Belirti aldatıcı: "Ekle"ye basılıyor, müşteri bir an
+     * görünüyor ve kayboluyor — test ise "müşteri eklenemedi" diye düşüyor,
+     * sanki arayüzde bir kusur varmış gibi. `waitForSynced` burada tam da
+     * bu yüzden yeterli: `lastSyncedAt` girişten hemen sonra `null` ve
+     * ancak ilk tur bitince damgalanıyor.
+     */
+    await waitForSynced(page)
 }
 
 /**
@@ -88,6 +114,42 @@ async function waitForSynced(page: Page) {
             (state.timeLogTombstones?.length ?? 0) === 0
         )
     }, STORAGE_KEY, { timeout: 30_000 })
+}
+
+async function readLastSyncedAt(page: Page): Promise<string | null> {
+    return page.evaluate((key) => {
+        const raw = localStorage.getItem(key)
+        if (!raw) return null
+        return (JSON.parse(raw).state.lastSyncedAt ?? null) as string | null
+    }, STORAGE_KEY)
+}
+
+/**
+ * **Yeni** bir senkron turunun bitmesini bekler.
+ *
+ * `waitForSynced` bu iş için yetmez: yalnızca "yerelde bekleyen değişiklik
+ * yok" der ve sayfa yenilendikten sonra `lastSyncedAt` zaten dolu, dirty
+ * listeleri zaten boş olduğu için **anında** döner — karşı cihazın
+ * değişikliğini indirecek tur ise henüz koşmamış olabilir. Burada damganın
+ * DEĞİŞMESİ beklenir; `applySyncResult` her başarılı turda yeni bir damga
+ * yazdığı için bu, "en az bir tur baştan sona bitti" demektir.
+ *
+ * Bu ayrım kuramsal değil: üç test tam bu yüzden kararsızdı ve yükte
+ * gerçek bir senkron hatası varmış gibi düşüyordu.
+ */
+async function waitForFreshSync(page: Page, since: string | null) {
+    await page.waitForFunction(
+        ({ key, since }) => {
+            const raw = localStorage.getItem(key)
+            if (!raw) return false
+            const stamp = JSON.parse(raw).state.lastSyncedAt ?? null
+            return stamp !== null && stamp !== since
+        },
+        { key: STORAGE_KEY, since },
+        { timeout: 30_000 }
+    )
+
+    await waitForSynced(page)
 }
 
 type StoredTimeLog = {
@@ -252,9 +314,10 @@ test('iki cihazda ayrı ayrı girilen kayıtlar toplanır, biri diğerini ezmez'
     await waitForSynced(deviceB)
 
     // A'nın yeni turu B'nin kaydını da indirmeli.
+    const beforeA = await readLastSyncedAt(deviceA)
     await deviceA.reload()
     await deviceA.getByTitle('Görev Ekle').waitFor()
-    await waitForSynced(deviceA)
+    await waitForFreshSync(deviceA, beforeA)
 
     const notes = async (page: Page) =>
         (await readTimeLogs(page)).map((l) => l.note).sort()
@@ -293,9 +356,10 @@ test('müşteri silinince bağlı zaman kaydı iki cihazdan da gider', async ({ 
     await deviceB.getByRole('alertdialog').getByRole('button', { name: 'Sil' }).click()
     await waitForSynced(deviceB)
 
+    const beforeDelete = await readLastSyncedAt(deviceA)
     await deviceA.reload()
     await deviceA.getByTitle('Görev Ekle').waitFor()
-    await waitForSynced(deviceA)
+    await waitForFreshSync(deviceA, beforeDelete)
 
     await expect.poll(() => readTimeLogs(deviceB), { timeout: 30_000 }).toEqual([])
     await expect.poll(() => readTimeLogs(deviceA), { timeout: 30_000 }).toEqual([])
@@ -313,7 +377,16 @@ test('müşteri silinince bağlı zaman kaydı iki cihazdan da gider', async ({ 
  * cihazda okumak.
  */
 async function expandClient(page: Page, name: string) {
-    await page.getByRole('button', { name: `"${name}" projelerini göster` }).click()
+    const toggle = page.getByRole('button', { name: `"${name}" projelerini göster` })
+
+    /*
+     * Karşı cihazda kayıt "eninde sonunda" görünür: giriş turu bitmiş olsa
+     * bile bulut anlık görüntüsünü uygulayan tur bir sonraki olabilir.
+     * Playwright'ın varsayılan 5 sn'si bu bekleyişin ölçüsü değil — eşik
+     * `waitForSynced` ile aynı hizada tutuluyor.
+     */
+    await expect(toggle).toBeVisible({ timeout: 30_000 })
+    await toggle.click()
 }
 
 /** Kart zaten açıkken proje ekler; `addProjectUI` paneli her çağrıda açıp kapatırdı. */
@@ -398,7 +471,7 @@ test('ücret, para birimi ve proje override\'ı gerçek senkron turundan sağ ç
     await deviceB.goto('/app/clients')
     await expandClient(deviceB, 'Acme Ajans')
 
-    await expect(clientRateField(deviceB, 'Acme Ajans')).toHaveValue('1500.5')
+    await expect(clientRateField(deviceB, 'Acme Ajans')).toHaveValue('1500.5', { timeout: 30_000 })
     await expect(deviceB.getByRole('textbox', { name: 'Acme Ajans müşterisinin para birimi' }))
         .toHaveValue('USD')
     await expect(projectRateField(deviceB, 'Websitesi')).toHaveValue('2000')
@@ -436,7 +509,8 @@ test('CSV, buluttan gelen ücretle hesaplanmış tutarı taşır', async ({ brow
     await waitForSynced(deviceB)
 
     await deviceB.goto('/app/time')
-    await expect(deviceB.getByText('Tasarım görüşmesi')).toBeVisible()
+    // Aynı gerekçe: veri karşı cihaza eninde sonunda ulaşır (bkz. expandClient).
+    await expect(deviceB.getByText('Tasarım görüşmesi')).toBeVisible({ timeout: 30_000 })
 
     const [download] = await Promise.all([
         deviceB.waitForEvent('download'),
