@@ -4,6 +4,9 @@
 > yaşar; sohbet özetlense bile kaybolmaz. **Gerçeği yansıtması şart** — bir
 > karar değişirse önce burası güncellenir.
 
+📋 **Tek sayfalık ilerleme dökümü:** `.planning/TODO.md` — baştan sona bütün
+işler, yapılanlar tikli. "Nerede kaldık?" sorusunun en hızlı cevabı orası.
+
 ## Hedef
 
 1. **Öncelik:** Geliştiricilere satılabilecek, ticari kalitede bir SaaS starter
@@ -535,18 +538,44 @@ sonucu üretecek biçimde yazıldı: bağlı projeler **mezar taşı bırakmadan
 (sunucu zaten cascade ile siliyor), bağlı görevlerin iki bağı da boşalır ve
 görevler dirty işaretlenmez.
 
-**Ödeme — en sona bırakıldı.** ⚠️ **Stripe kullanılamıyor: kullanıcı
-Türkiye'de, Stripe hesabı açamıyor.** Planın ilk hali tamamen Stripe'a göre
-yazılmıştı, o bölüm geçersiz. Adaylar:
-- **iyzico** — yerli, TL, taksit; şahıs/limited şirket gerekir; webhook/callback
-  modeli Stripe'tan farklı
-- **LemonSqueezy / Paddle** — merchant of record, vergiyi onlar halleder,
-  Türkiye'den kayıt olunabilir, komisyon daha yüksek; `subscriptions` tablosu
-  daha basit kalır
-Hangisi seçilirse seçilsin: **Pro kapılama hem arayüzde hem veritabanında**
-olmalı (Postgres fonksiyonu + `WITH CHECK`), yalnızca UI'da gizlemek doğrudan
-API çağrısıyla aşılır. Webhook imza doğrulaması yapılmadan hiçbir olaya
-güvenilmez.
+**Ödeme — sıradaki faz, planı yazıldı (1 Eylül 2026).** ⚠️ **Stripe
+kullanılamıyor: kullanıcı Türkiye'de, Stripe hesabı açamıyor.** Planın ilk
+hali tamamen Stripe'a göre yazılmıştı, o bölüm geçersiz.
+
+**Sağlayıcı seçildi: LemonSqueezy** (merchant of record — vergi onlarda,
+Türkiye'den kayıt olunabiliyor, `subscriptions` şeması basit kalıyor;
+karşılığında komisyon iyzico'dan yüksek ve fiyatlandırma USD).
+⚠️ LemonSqueezy Temmuz 2024'te **Stripe tarafından satın alındı** ve
+teknolojisi Stripe Managed Payments'a katlanıyor. Bugün bağımsız çalışıyor,
+yeni kayıt alıyor, kapanış tarihi yok — ama seçimin gerekçesi tam da Stripe
+hesabı açamamak olduğu için bu ileride geçersiz kalabilir. Bu yüzden
+sağlayıcıya özgü kod **tek bir adaptör dosyasında** toplanacak; starter kit
+alıcısı da zaten büyük ihtimalle Stripe kullanacak.
+⚠️ LS'nin satıcı olarak Türkiye'yi desteklediği **doğrulanmadı** (resmî docs
+sayfası dışarıdan 403 dönüyor). Mağaza aktivasyonu fazın ilk işi; reddedilirse
+sağlayıcı kararı yeniden açılır (iyzico).
+
+**Ücretsiz plan sınırı: 1 müşteri** (arşivli dahil sayılır). Kapı yalnızca
+`INSERT`'e uygulanır — `UPDATE`'e de konsaydı kapı devreye girdiğinde zaten
+birden fazla müşterisi olan kullanıcıların verisi geriye dönük salt okunur
+olurdu.
+
+**Pro kapılama hem arayüzde hem veritabanında** olacak (Postgres fonksiyonu +
+`WITH CHECK`), yalnızca UI'da gizlemek doğrudan API çağrısıyla aşılır. Webhook
+imza doğrulaması yapılmadan hiçbir olaya güvenilmez.
+
+⚠️ **Fazın en riskli parçası ödeme değil, senkron.** Uygulama local-first
+olduğu için ücretsiz kullanıcı çevrimdışıyken sınırın üstünde müşteri
+oluşturabilir; giriş yaptığında push'u `42501` ile reddedilir, satır dirty
+kalır ve **görevler dahil bütün senkron her turda aynı yerde tıkanır** —
+depoda zaten yazılı olan kural. Üstelik `pushRemoteClients` toplu `upsert`
+yapıyor, yani PostgREST hangi satırın suçlu olduğunu söylemiyor. Tuzak
+sınırın şeklinden bağımsız: `SyncOutcome.blocked` + satır satır izolasyon
+zorunlu bir görev. Desen yeni değil — Faz 1'deki `SyncOutcome.discarded`
+aynı ailenin (sessiz başarısızlık) ilk üyesiydi.
+
+Plan ve tasarım: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md` +
+`docs/superpowers/specs/2026-09-01-odeme-pro-kapilama-design.md`.
 
 **Faz 6 — Paketleme:** `supabase/seed.sql` demo veri, `docs/` (kurulum,
 mimari, özellik bayrakları, gelecek genişletmeler), README'nin İngilizce

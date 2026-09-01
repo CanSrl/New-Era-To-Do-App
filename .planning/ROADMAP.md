@@ -38,6 +38,8 @@ Ayrıntı: `CLAUDE.md` → Fazlar, `.planning/PROJECT.md` → Requirements → V
 
 ## Phases
 
+📋 Görev seviyesinde tek sayfalık döküm (yapılanlar tikli): `.planning/TODO.md`
+
 **Phase Numbering:**
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
@@ -168,13 +170,38 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Sınıra ulaşan ücretsiz kullanıcı neden engellendiğini ve nasıl yükselteceğini net görür
   5. Kullanıcı hesap sayfasında plan durumunu görür ve aboneliğini iptal edebilir
   6. Oturumsuz bir ziyaretçi faturalama sayfasına giremez; uygulamanın geri kalanı girişsiz çalışmaya devam eder
-**Plans**: TBD
+**Plans**: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md`
+(spec: `docs/superpowers/specs/2026-09-01-odeme-pro-kapilama-design.md`)
 **UI hint**: yes
 
 **Notlar:**
-- **Kilitli karar DEC-PAY-01:** Stripe kullanılamaz (kullanıcı Türkiye'de,
-  hesap açamıyor). Adaylar iyzico ya da LemonSqueezy/Paddle. Sağlayıcı seçimi bu
-  fazın ilk işidir ve `subscriptions` şemasını belirler.
+- **Kilitli karar DEC-PAY-01 — KAPANDI (1 Eylül 2026): LemonSqueezy.**
+  Stripe kullanılamaz (kullanıcı Türkiye'de, hesap açamıyor). Merchant of
+  record seçildi: vergi sağlayıcıda, Türkiye'den kayıt olunabiliyor,
+  `subscriptions` şeması basit kalıyor. Karşılığında komisyon iyzico'dan
+  yüksek ve fiyatlandırma USD.
+  ⚠️ **Açık risk:** LemonSqueezy Temmuz 2024'te Stripe tarafından satın
+  alındı ve teknolojisi Stripe Managed Payments'a katlanıyor (LS, Ocak
+  2026'da göç yolu duyurdu; ilan edilmiş kapanış tarihi yok). Seçimin
+  gerekçesi tam da Stripe hesabı açamamak olduğu için bu ileride geçersiz
+  kalabilir → sağlayıcıya özgü kod tek bir adaptör dosyasında toplanır
+  (DEC-PAY-11).
+  ⚠️ **Doğrulanmadı:** LS'nin satıcı olarak Türkiye'yi desteklediği resmî
+  listeden teyit edilemedi. Mağaza aktivasyonu fazın Görev 0'ıdır; reddedilirse
+  karar yeniden açılır (iyzico).
+- **Kilitli karar DEC-PAY-04 — ücretsiz plan sınırı: 1 müşteri.** Sınır niş
+  modülün merkezindeki varlığa konur, jenerik çekirdeğe değil (görev sayısını
+  kısıtlamak senkronun en sıcak yoluna `count(*)` maliyeti bindirirdi).
+  Arşivli müşteri de sayılır; kapı yalnızca `INSERT`'e uygulanır, `UPDATE`'e
+  değil — yoksa kapı devreye girdiğinde mevcut kullanıcıların verisi geriye
+  dönük salt okunur olurdu.
+- **Kilitli karar DEC-PAY-06 — senkron kalıcı reddi atlatabilmeli.** Uygulama
+  local-first olduğu için ücretsiz kullanıcı çevrimdışıyken sınırın üstünde
+  veri üretebilir; giriş yaptığında push'u `42501` ile reddedilir, satır dirty
+  kalır ve **görevler dahil bütün senkron her turda aynı yerde tıkanır**.
+  Üstelik `pushRemoteClients` toplu `upsert` yapıyor, yani PostgREST hangi
+  satırın suçlu olduğunu söylemiyor. Tuzak sınırın şeklinden bağımsızdır;
+  `SyncOutcome.blocked` + satır izolasyonu bu fazın zorunlu görevidir.
 - **Kilitli karar DEC-PAY-02:** Pro kapılama Postgres fonksiyonu + `WITH CHECK`
   ile veritabanında da olacak; yalnızca UI'da gizlemek doğrudan API çağrısıyla
   aşılır.

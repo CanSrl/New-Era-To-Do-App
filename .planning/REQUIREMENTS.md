@@ -58,10 +58,10 @@ Kalan sürüm kapsamı. Her gereksinim tam olarak bir faza eşlenir.
 
 ### Payment (Ödeme ve Pro kapılama)
 
-- [ ] **PAY-01**: Kullanıcı ücretli plana abone olabilir ve ödeme akışını seçilen sağlayıcı üzerinden tamamlayabilir
+- [ ] **PAY-01**: Kullanıcı ücretli plana abone olabilir ve ödeme akışını seçilen sağlayıcı üzerinden tamamlayabilir *(sağlayıcı seçildi: **LemonSqueezy**, DEC-PAY-01)*
 - [ ] **PAY-02**: Abonelik durumu webhook ile `subscriptions` tablosuna yazılır; **imzası doğrulanmamış hiçbir olaya güvenilmez**
 - [ ] **PAY-03**: Pro özellikleri veritabanı seviyesinde kapılanır (Postgres fonksiyonu + `WITH CHECK`) ve doğrudan API çağrısıyla aşılamaz
-- [ ] **PAY-04**: Ücretsiz plan sınırı tanımlıdır; sınıra ulaşan kullanıcı neden engellendiğini ve yükseltme yolunu net görür
+- [ ] **PAY-04**: Ücretsiz plan sınırı tanımlıdır; sınıra ulaşan kullanıcı neden engellendiğini ve yükseltme yolunu net görür *(sınır: **1 müşteri**, arşivli dahil; DEC-PAY-04)*
 - [ ] **PAY-05**: Kullanıcı hesap sayfasında plan durumunu görür ve aboneliğini yönetebilir (iptal / faturalama portalı)
 - [ ] **PAY-06**: Hesaba özel sayfalar (faturalama) oturum koruması arkasındadır; oturumsuz kullanıcı erişemez ve uygulamanın geri kalanı local-first kalmaya devam eder
 
