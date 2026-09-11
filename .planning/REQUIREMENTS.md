@@ -67,12 +67,12 @@ Kalan sürüm kapsamı. Her gereksinim tam olarak bir faza eşlenir.
 
 ### Packaging (Paketleme ve yayın)
 
-- [ ] **PKG-01**: `supabase/seed.sql` demo verisiyle yeni bir kurulum ilk açılışta dolu ve gezilebilir gelir
-- [ ] **PKG-02**: `docs/` kurulum, mimari, özellik bayrakları, dağıtım, niş modülü çıkarma ve gelecek genişletmeleri İngilizce olarak anlatır
-- [ ] **PKG-03**: README İngilizce olarak yeniden yazılır ve ekran görüntüleri içerir
-- [ ] **PKG-04**: Uygulama belgelenmiş adımlarla Vercel/Netlify'a dağıtılır ve çalışan bir demo adresi vardır
-- [ ] **PKG-05**: `CHANGELOG.md` + semver sürümleme kurulur; `package.json` sürümü `0.0.0` olmaktan çıkar
-- [ ] **PKG-06**: `workspace_id` (takım / çoklu kiracılık) göç yolu dokümante edilir — inşa edilmez
+- [x] **PKG-01**: `supabase/seed.sql` demo verisiyle yeni bir kurulum ilk açılışta dolu ve gezilebilir gelir *(yerel `db reset` + demo hesabı)*
+- [x] **PKG-02**: `docs/` kurulum, mimari, özellik bayrakları, dağıtım, niş modülü çıkarma ve gelecek genişletmeleri İngilizce olarak anlatır
+- [x] **PKG-03**: README İngilizce olarak yeniden yazılır ve ekran görüntüleri içerir
+- [ ] **PKG-04**: Uygulama belgelenmiş adımlarla Vercel/Netlify'a dağıtılır ve çalışan bir demo adresi vardır *(adımlar yazıldı; canlı URL sende)*
+- [x] **PKG-05**: `CHANGELOG.md` + semver sürümleme kurulur; `package.json` sürümü `0.0.0` olmaktan çıkar
+- [x] **PKG-06**: `workspace_id` (takım / çoklu kiracılık) göç yolu dokümante edilir — inşa edilmez
 
 ## v2 Requirements
 

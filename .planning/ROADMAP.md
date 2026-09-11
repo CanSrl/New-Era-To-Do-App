@@ -241,7 +241,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Niş modül — müşteriler ve projeler | 6/6 | **Tamamlandı** | 2026-08-16 |
 | 3. Niş modül — zaman kaydı ve dışa aktarım | 6/6 | **Tamamlandı** | 2026-08-19 |
 | 4. Ödeme ve Pro kapılama | 4/6 kod+test; 2 canlı LS'ye bağlı | Ajan işi bitti, Görev 0 açık | 2026-09-11 |
-| 5. Paketleme ve yayın | 0/5 | Not started | - |
+| 5. Paketleme ve yayın | 4/5 ajan; canlı demo URL sende | Docs+seed+semver | 2026-09-12 |
 
 **Not:** İlerleme plan/summary sayısıyla değil **başarı kriteriyle** ölçülüyor;
 Phase 1 ve 2 işi gsd plan→execute döngüsü dışında yürütüldüğü için

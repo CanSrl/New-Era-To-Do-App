@@ -1,269 +1,90 @@
-# Yapılacaklar Listesi
+# Yapılacaklar
 
 [![CI](https://github.com/CanSrl/New-Era-To-Do-App/actions/workflows/ci.yml/badge.svg)](https://github.com/CanSrl/New-Era-To-Do-App/actions/workflows/ci.yml)
 
-Modern, hızlı ve PWA destekli bir görev yöneticisi. React, TypeScript, Vite,
-Tailwind CSS v4, Zustand ve Supabase ile geliştirilmiştir.
+Local-first task app and a commercial SaaS starter kit (auth, sync, optional billing) with a **removable** niche module: client/project-linked work, a delivery view, and time logs for freelancers and small agencies.
 
-Uygulama **local-first** çalışır: Supabase yapılandırılmadan da her özellik
-tam olarak çalışır, veriler tarayıcıda saklanır. Giriş yapmak isteğe bağlıdır
-ve verileri cihazlar arasında eşitlemeyi mümkün kılar.
+Supabase is optional. With no cloud env, the UI never shows sign-in and data stays on the device.
 
-## Özellikler
+![Marketing page](docs/images/landing.png)
 
-- 🚀 **Modern UI:** Tailwind CSS ile tasarlanmış, glassmorphism estetiği.
-- 🌍 **İki Dil:** Türkçe ve İngilizce. Tarayıcı diline göre açılır, ayarlardan
-  değiştirilebilir.
-- 🌙 **Karanlık Mod:** Sistem tercihine uygun otomatik veya manuel Light/Dark mod.
-- 📱 **PWA ve Mobil Uyumlu:** Masaüstünde kenar çubuğu, mobilde alt gezinme menüsü.
-- 💾 **Çevrimdışı Çalışma:** Zustand persist ile LocalStorage'a kaydetme.
-- 🏷️ **Kendi Kategorileriniz:** Ad ve renk verip istediğiniz kadar kategori
-  tanımlayın. Bir kategoriyi silmek görevlerini silmez.
-- 🔐 **İsteğe Bağlı Hesap:** E-posta/parola veya GitHub ile giriş (Supabase Auth).
-- ☁️ **Cihazlar Arası Eşitleme:** Giriş yapınca görevler buluta eşitlenir;
-  çevrimdışıyken yapılan değişiklikler bağlantı gelince gönderilir.
-- ↕️ **Sürükle & Bırak:** dnd-kit ile görevlerinizi kolayca sıralayın.
-- 🎉 **Confetti:** Tüm görevler bittiğinde kutlama efekti!
-- 📤 **Dışa/İçe Aktar:** Görevlerinizi JSON olarak yedekleyin.
-- ⌨️ **Klavye Kısayolları:** Hızlıca "n" veya "Esc" tuşlarıyla kullanım.
+## Quick start
 
-## Kurulum ve Çalıştırma
+```bash
+npm install --legacy-peer-deps
+npm run dev
+```
 
-Gereksinimler: Node.js v18+
+Open http://localhost:5173 — the app is `/app`. Node 18+.
 
-1. Bağımlılıkları yükleyin:
-
-   ```bash
-   npm install --legacy-peer-deps
-   ```
-
-2. Geliştirme sunucusunu başlatın:
-
-   ```bash
-   npm run dev
-   ```
-
-   Tarayıcınızda `http://localhost:5173` adresini açın.
-
-Bu haliyle uygulama yerel modda çalışır. Hesap ve senkronizasyon özellikleri
-için aşağıdaki Supabase adımlarını izleyin.
-
-## Supabase Kurulumu
-
-Ortam değişkenleri `.env.local` dosyasından okunur; şablon için `.env.example`
-dosyasına bakın. Değişkenler tanımlı değilse giriş arayüzü hiç görünmez ve
-uygulama yerel modda çalışmaya devam eder.
-
-### Seçenek A — Yerel geliştirme (Docker gerekir)
+Local auth, sync, and demo rows (Docker):
 
 ```bash
 npx supabase start
-```
-
-Komutun çıktısındaki `API URL` ve `anon key` değerlerini `.env.local` içine
-yazın. Migration'lar otomatik uygulanır.
-
-Şemayı değiştirdikten sonra veritabanını sıfırlamak için:
-
-```bash
+# put API URL + anon key in .env.local, then:
 npx supabase db reset
 ```
 
-> `db reset` sonrası API 502 dönerse, ağ geçidi eski konteyner adresini
-> önbellekte tutuyor demektir: `docker restart supabase_kong_yapilacaklar-listesi`
+Sign in as `demo@example.com` / `demodemo1`. Full steps: [docs/setup.md](docs/setup.md).
 
-### Seçenek B — Bulut projesi
+## Product
 
-1. [supabase.com](https://supabase.com) üzerinde yeni bir proje oluşturun.
-2. **Project Settings → API** bölümünden `Project URL` ve `anon public` anahtarını
-   kopyalayıp `.env.local` dosyasına yazın.
-3. Şemayı uygulayın — ya CLI ile:
-
-   ```bash
-   npx supabase link --project-ref <proje-ref>
-   npx supabase db push
-   ```
-
-   ya da `supabase/migrations/` altındaki SQL dosyasının içeriğini panoya alıp
-   **SQL Editor** üzerinden çalıştırın.
-4. **Authentication → URL Configuration** altında `Site URL` değerini
-   uygulamanızın adresi olarak ayarlayın.
-
-> Bulut projelerinde e-posta doğrulaması varsayılan olarak açıktır: kayıt olan
-> kullanıcı, gelen kutusundaki bağlantıya tıklayana kadar oturum açmaz.
-> Uygulama bu durumu algılayıp "E-postanı kontrol et" ekranını gösterir.
-
-## GitHub ile Giriş
-
-Varsayılan olarak **kapalıdır**. Açmak için hem sunucu hem istemci tarafını
-yapılandırmak gerekir; yalnızca birini açmak işe yaramaz:
-
-| Taraf | Ayar | Kapalıyken ne olur |
-| --- | --- | --- |
-| Sunucu | Supabase'de GitHub sağlayıcısı | Buton kullanıcıyı ham bir JSON hata sayfasına düşürür |
-| İstemci | `VITE_AUTH_GITHUB=true` | Buton hiç görünmez (güvenli varsayılan) |
-
-**1. GitHub OAuth App oluşturun** —
-[Settings → Developer settings → OAuth Apps](https://github.com/settings/developers)
-→ *New OAuth App*. Authorization callback URL:
-
-- Yerel: `http://127.0.0.1:54321/auth/v1/callback`
-- Bulut: `https://<proje-ref>.supabase.co/auth/v1/callback`
-
-**2. Supabase tarafını açın.**
-
-Yerelde `supabase/config.toml` içinde `[auth.external.github]` altındaki
-`enabled = true` yapın ve kimlik bilgilerini **ortam değişkeni olarak** verin
-(git'e yazmayın), sonra yığını yeniden başlatın:
-
-```bash
-export SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID=...
-export SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=...
-npx supabase stop && npx supabase start
-```
-
-Bulut projesinde bunun karşılığı **Authentication → Sign In / Providers →
-GitHub** ekranıdır.
-
-**3. İstemci tarafını açın** — `.env.local` içine `VITE_AUTH_GITHUB=true`.
-
-## Billing (LemonSqueezy)
-
-Default **off** (`VITE_BILLING` unset). The free plan allows 1 client; the
-cap lives in Postgres (`is_pro` + `WITH CHECK` on `clients` INSERT), not
-only in the UI. Enable the billing route with `VITE_BILLING=true` after
-LemonSqueezy secrets are on the Edge Functions runtime — never as `VITE_`
-keys. See `docs/billing.md`.
-
-**4. Yönlendirme adresini izin listesine ekleyin.** Supabase, listede *tam
-eşleşme* bulamadığı adresi hata vermeden `site_url`'e düşürür. Yerelde
-`config.toml` içindeki `additional_redirect_urls` bunu kapsar; bulut
-projesinde **Authentication → URL Configuration** altına
-`https://<alan-adiniz>/auth/callback` eklenmelidir.
-
-> Aynı e-posta hem parolayla hem GitHub'la kullanılıyorsa Supabase varsayılan
-> olarak kimlikleri tek hesapta birleştirir. İki ayrı hesap istiyorsanız
-> Supabase tarafındaki hesap birleştirme ayarını değiştirin.
-
-## Hata İzleme (opsiyonel)
-
-Varsayılan olarak **kapalıdır**. `VITE_SENTRY_DSN` tanımlı değilse:
-
-- hiçbir ağ isteği yapılmaz,
-- Sentry paketi tarayıcıya **indirilmez bile** (ayrı bir parçaya bölünür ve
-  service worker precache'inin dışında tutulur),
-- hata sınırı yine çalışır; hatalar konsola düşer.
-
-Açmak için `.env.local` içine Sentry projenizin DSN'ini yazın:
-
-```
-VITE_SENTRY_DSN=https://<anahtar>@<org>.ingest.sentry.io/<proje>
-```
-
-Değeri Sentry'de **Project Settings → Client Keys (DSN)** altında bulursunuz.
-
-Gönderilenler bilinçli olarak dardır: `sendDefaultPii` kapalı, kullanıcı
-nesnesi ve çerezler `beforeSend` içinde ayrıca temizlenir, performans izleme
-ve oturum tekrarı kapalıdır. Kullanıcı kimliği göndermek isterseniz
-`src/lib/monitoring.ts` içindeki `scrub` fonksiyonunu düzenleyin.
-
-Sağlayıcıyı değiştirmek isterseniz tek dosya yeter: uygulama kodu Sentry'yi
-doğrudan import etmez, yalnızca `initMonitoring` ve `captureError` kullanır.
-
-## Komutlar
-
-| Komut | Açıklama |
+| | |
 | --- | --- |
-| `npm run dev` | Geliştirme sunucusu |
-| `npm run build` | Üretim derlemesi |
-| `npm run preview` | Derlenmiş sürümü yerelde önizleme |
-| `npm run lint` | ESLint denetimi |
-| `npm test` | Birim testleri (Vitest) |
-| `npm run test:e2e` | Uçtan uca testler (Playwright) |
-| `npm run test:rls` | Şema güvenlik testleri (yerel Supabase gerekir) |
-| `npm run db:types` | Veritabanı tiplerini yeniden üret |
+| Tasks | Categories, priorities, due dates, drag-and-drop, JSON import/export |
+| Niche (default on) | Clients, projects, delivery grouping, timer, CSV |
+| Sync | Optional account; last-write-wins; tombstones for deletes |
+| i18n | Turkish + English |
+| PWA | `start_url` is `/app` |
+| Billing | LemonSqueezy adapter, default **off** |
 
-## Eşitleme nasıl çalışır
+![Tasks](docs/images/app-tasks.png)
 
-Cihazdaki veri birincil kaynaktır. Uygulama çevrimdışıyken de tam olarak
-çalışır; eşitleme bunun üzerine eklenen bir katmandır.
+![Clients](docs/images/app-clients.png)
 
-- **Değişiklik takibi:** Her yazma işlemi görevi "gönderilmeyi bekliyor"
-  olarak işaretler, her silme bir mezar taşı bırakır. Bunlar LocalStorage'da
-  saklandığı için tarayıcı kapatılsa bile kaybolmaz.
-- **Ne zaman eşitlenir:** Girişte, bir değişiklikten 1,5 sn sonra (toplu
-  göndermek için), sekmeye geri dönüldüğünde, bağlantı geri geldiğinde ve
-  uygulama açıkken dakikada bir.
-- **Çakışma:** `updatedAt` damgası yeni olan kazanır. Eşitlikte bulut kazanır,
-  böylece bütün cihazlar aynı sonuca varır.
-- **Silme:** Bulut tam anlık görüntü olarak çekilir. Cihazda duran ama bulutta
-  olmayan ve gönderilmeyi beklemeyen bir görev, başka cihazda silinmiş
-  demektir ve cihazdan da kaldırılır.
-- **Hesap değişimi:** Cihazdaki verinin hangi hesaba ait olduğu tutulur.
-  Misafirken eklenen görevler ilk girişte hesaba aktarılır; farklı bir hesap
-  giriş yaparsa cihaz temizlenip o hesabın verisi çekilir.
+With `VITE_NICHE_MODULE=false` the Delivery / Time / Clients routes are gone (same tasks shell):
 
-Birleştirme kararı ağ çağrısı içermeyen saf bir fonksiyondadır
-(`src/lib/sync-merge.ts`), bu yüzden tüm senaryolar birim testiyle kapsanır.
+![Niche module off](docs/images/app-niche-off.png)
 
-> Ölçek notu: her turda bulutun tamamı çekilir. Birkaç bin göreve kadar
-> sorunsuz; ötesi için artımlı çekme ve sunucu tarafında mezar taşı tablosu
-> gerekir.
+## Docs
 
-## Testler
+| | |
+| --- | --- |
+| [Setup](docs/setup.md) | Local + cloud Supabase, demo user |
+| [Architecture](docs/architecture.md) | Store, sync order, RLS |
+| [Feature flags](docs/feature-flags.md) | `VITE_*` and niche stripping proof |
+| [Deploy](docs/deploy.md) | Vercel / Netlify, headers, env |
+| [Niche module](docs/niche-module.md) | How to delete it for real |
+| [Billing](docs/billing.md) | LemonSqueezy, secrets, Pro gate |
+| [Teams](docs/teams.md) | `workspace_id` path — not built |
 
-Üç katman var; her biri farklı bir soruyu yanıtlar.
+## Commands
 
-**Birim testleri — `npm test`**
-Store mantığı ve saf yardımcı fonksiyonlar (`src/**/*.test.ts`). Görev
-ekleme/silme/sıralama, içe aktarmada bozuk veri savunması, tarih
-dönüşümleri ve LocalStorage şema göçü burada doğrulanır. Saniyeler sürer;
-geliştirirken `npm run test:watch` ile açık tutulabilir.
+| Command | |
+| --- | --- |
+| `npm run dev` | http://localhost:5173 |
+| `npm run build` | Production bundle (`dist/` is cleaned first) |
+| `npm test` | Vitest |
+| `npm run test:e2e` | Playwright |
+| `npm run test:rls` | Schema security (local Supabase) |
+| `npm run verify:niche` | Off-build has no niche traces and is ≥20 KB smaller |
+| `npm run db:types` | Regenerate `src/lib/database.types.ts` |
 
-**Uçtan uca testler — `npm run test:e2e`**
-Gerçek tarayıcıda gerçek kullanıcı akışları (`e2e/`). Dev sunucusunu
-Playwright kendi başlatır. Giriş akışı testleri yalnızca Supabase
-yapılandırılmışsa çalışır, aksi halde kendilerini atlar.
+## Flags (short)
 
-**Şema güvenlik testleri — `npm run test:rls`**
-Yerel veritabanına karşı iki ayrı kullanıcı oluşturur ve Row Level Security
-politikalarının gerçekten uygulandığını doğrular: bir kullanıcının diğerinin
-görevlerini okuyamadığını, güncelleyemediğini ve silemediğini; oturumsuz
-erişimin hiç veri döndürmediğini; tetikleyicilerin ve kısıtların beklendiği
-gibi davrandığını kontrol eder. Şemaya dokunduğunuzda bu testi çalıştırın.
+| Env | Default |
+| --- | --- |
+| `VITE_NICHE_MODULE` | on (`false` to strip) |
+| `VITE_AUTH_GITHUB` | off |
+| `VITE_BILLING` | off |
+| `VITE_SENTRY_DSN` | unset (no Sentry download) |
 
-## Sürekli entegrasyon (CI)
+`SUPABASE_SERVICE_ROLE_KEY` and LemonSqueezy secrets must **never** use a `VITE_` prefix.
 
-Her push ve pull request'te `.github/workflows/ci.yml` çalışır. İki iş paralel
-ilerler:
+## Stack
 
-| İş | İçerik | Süre |
-| --- | --- | --- |
-| Lint, tip ve birim testleri | ESLint, `tsc`, Vitest, üretim derlemesi | ~1 dk |
-| Şema ve uçtan uca testler | Supabase yığını, RLS testleri, Playwright | ~4 dk |
+React 19, TypeScript, Vite 8, Tailwind v4, Zustand, Supabase, Radix, dnd-kit, framer-motion, react-i18next, PWA.
 
-İkinci iş, koşucuda gerçek bir Supabase yığını başlatır. Yalnızca testlerin
-ihtiyaç duyduğu servisler açılır (veritabanı, ağ geçidi, auth, REST); studio,
-storage, realtime gibi servisler dışarıda bırakılarak açılış süresi kısaltılır.
+## License
 
-E2E testleri başarısız olursa Playwright raporu çalıştırma sayfasında artefakt
-olarak 7 gün saklanır — hatayı yerelde tekrar üretmeye çalışmadan inceleyebilirsiniz.
-
-## Yayına Alma (Deployment)
-
-Projeyi Vercel, Netlify veya benzeri bir statik barındırma servisinde
-yayınlayabilirsiniz.
-
-1. Üretim versiyonunu derleyin:
-
-   ```bash
-   npm run build
-   ```
-
-2. Oluşan `dist` klasörünü barındırma servisine yükleyin.
-
-Barındırma servisinde `VITE_SUPABASE_URL` ve `VITE_SUPABASE_ANON_KEY` ortam
-değişkenlerini tanımlamayı unutmayın; bunlar derleme sırasında pakete gömülür.
-`anon` anahtarı istemciye açık olacak şekilde tasarlanmıştır ve RLS ile
-korunur — ancak `service_role` anahtarı **hiçbir zaman** istemci koduna
-konulmamalıdır.
+Private repository. Starter-kit licensing is the publisher’s.

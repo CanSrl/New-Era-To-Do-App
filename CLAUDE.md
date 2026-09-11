@@ -583,10 +583,9 @@ uygulandı. Desen Faz 1'deki `SyncOutcome.discarded` ailesinin ikizi.
 Plan ve tasarım: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md` +
 `docs/superpowers/specs/2026-09-01-odeme-pro-kapilama-design.md`.
 
-**Faz 6 — Paketleme:** `supabase/seed.sql` demo veri, `docs/` (kurulum,
-mimari, özellik bayrakları, gelecek genişletmeler), README'nin İngilizce
-yeniden yazımı, ekran görüntüleri (i18n'den sonra), Vercel/Netlify deploy,
-`CHANGELOG.md` + semver.
+**Faz 6 / Phase 5 — Paketleme:** seed, İngilizce `docs/`, README, semver
+`0.1.0`, CHANGELOG yazıldı. Canlı Vercel/Netlify adresi ve `curl -I` hâlâ
+yayınlayan kişiye bağlı.
 
 ---
 

@@ -8,7 +8,7 @@
 > `CLAUDE.md` kendi içinde "Faz 0 / 1 / 1.5 / 2 / 5 / 6" der; oradaki
 > "Faz 5 — Niş modül", buradaki Phase 2 + Phase 3'ün toplamıdır.
 >
-> Son güncelleme: 11 Eylül 2026.
+> Son güncelleme: 12 Eylül 2026.
 
 ---
 
@@ -163,16 +163,16 @@ giremiyor ama uygulamanın geri kalanı girişsiz çalışıyor.
 
 ---
 
-## ⏳ Phase 5 — Paketleme ve yayın *(0/5)*
+## ⏳ Phase 5 — Paketleme ve yayın *(ajan bitti; canlı yayın sende)*
 
-- [ ] `supabase/seed.sql` — demo veri
-- [ ] `docs/` — kurulum, mimari, özellik bayrakları, dağıtım, **niş modülü
+- [x] `supabase/seed.sql` — demo veri (`demo@example.com` / `demodemo1`)
+- [x] `docs/` — kurulum, mimari, özellik bayrakları, dağıtım, **niş modülü
       çıkarma yordamı**, takıma geçiş yolu
-- [ ] README'nin İngilizce yeniden yazımı + ekran görüntüleri
-- [ ] Vercel/Netlify dağıtımı, çalışan demo adresi, tekrarlanabilir adımlar
-- [ ] `CHANGELOG.md` + semver
-- [ ] ⚠️ Phase 1'in açık ipliği burada kapanır: güvenlik başlıklarının
-      canlıda `curl -I` ile doğrulanması
+- [x] README'nin İngilizce yeniden yazımı + ekran görüntüleri
+- [x] Dağıtım adımları yazılı (`docs/deploy.md`) — canlı URL ve `curl -I` sende
+- [x] `CHANGELOG.md` + semver `0.1.0`
+- [ ] ⚠️ Phase 1'in açık ipliği: güvenlik başlıklarının canlıda `curl -I`
+      ile doğrulanması *(demo adresi yok)*
 
 ---
 

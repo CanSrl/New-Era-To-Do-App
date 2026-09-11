@@ -20,17 +20,16 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 4 ajan işi bitti (11 Eyl). Görev 0 (LS mağaza)
-hâlâ açık; canlı checkout doğrulanmadı. Sıradaki: Görev 0 veya Phase 5.
+**Current focus:** Phase 5 ajan işi bitti (12 Eyl). Canlı demo URL +
+`curl -I` ve LS Görev 0 sende.
 
 ## Current Position
 
-Phase: 1–3 ✅ · Phase 4 ajan 9/10 ✅ · Görev 0 açık
-Plan: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md`
-Dal: `faz-4-odeme`
+Phase: 1–4 ajan ✅ · Phase 5 ajan ✅ · canlı yayın + LS Görev 0 açık
+Plan: yok (Phase 5 doküman/seed)
+Dal: `main`
 Status: Executing
-Last activity: 2026-09-11 — Phase 4 kod: subscriptions, kapı, blocked senkron,
-      billing UI, Edge Functions. Canlı LS yok.
+Last activity: 2026-09-12 — Phase 5: seed, İngilizce docs, README, 0.1.0.
 
 Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [██████████] 6/6 kriter ·
           Phase 3 → [██████████] 6/6 kriter
