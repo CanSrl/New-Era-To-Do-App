@@ -28,7 +28,7 @@ Depo: [CanSrl/New-Era-To-Do-App](https://github.com/CanSrl/New-Era-To-Do-App) (p
 **Yığın:** React 19 + TypeScript + Vite 8 + Tailwind v4 + Zustand + Supabase +
 Radix + dnd-kit + framer-motion + react-i18next + PWA (vite-plugin-pwa).
 
-**Veritabanı** (`supabase/migrations/`): altı tablo var.
+**Veritabanı** (`supabase/migrations/`): yedi tablo var.
 ```
 profiles    id(=auth.users.id), email, display_name, created_at, updated_at
             -- auth.users tetikleyicisiyle otomatik oluşur
@@ -37,6 +37,11 @@ categories  id, user_id, name, color('#rrggbb'), position(float),
 tasks       id, user_id, title, description, due_date(date), priority,
             category_id(null), client_id(null), project_id(null),
             completed, completed_at, position(float), created_at, updated_at
+-- faturalama (ayrı migration; kapı dosyası ayrı silinebilir):
+subscriptions  user_id PK, provider, provider_subscription_id unique,
+               status, variant_id, renews_at, ends_at, trial_ends_at,
+               test_mode, created_at, updated_at
+               -- authenticated yalnızca SELECT; yazan webhook (service role)
 -- niş modül (İKİ migration dosyası, birlikte silinebilir; sıra önemli):
 clients     id, user_id, name(<=80), archived, position(float),
             hourly_rate(numeric(10,2), >=0), currency(3 harf, 'TRY'),
@@ -55,9 +60,9 @@ RLS tam: `authenticated` rolü yalnızca kendi satırlarını görür/yazar, `an
 hiçbir yetki verilmez. **GRANT olmadan RLS politikaları hiç değerlendirilmez** —
 bu bir kez gerçek bir hataya yol açtı, `supabase/tests/rls.test.mjs` bunu korur.
 
-**Test:** 650 otomatik test — 462 birim (Vitest), 116 uçtan uca (Playwright,
+**Test:** 688 otomatik test — 483 birim (Vitest), 119 uçtan uca (Playwright,
 14'ü gerçek iki tarayıcı bağlamıyla çift cihaz senaryosu; 1'i GitHub OAuth
-bayrağı kapalı olduğu için atlanır), 72 şema güvenlik testi.
+bayrağı kapalı olduğu için atlanır), 86 şema güvenlik testi.
 CI her push ve PR'da çalışır (`.github/workflows/ci.yml`), iki paralel iş.
 
 ## Komutlar
@@ -538,9 +543,10 @@ sonucu üretecek biçimde yazıldı: bağlı projeler **mezar taşı bırakmadan
 (sunucu zaten cascade ile siliyor), bağlı görevlerin iki bağı da boşalır ve
 görevler dirty işaretlenmez.
 
-**Ödeme — sıradaki faz, planı yazıldı (1 Eylül 2026).** ⚠️ **Stripe
-kullanılamıyor: kullanıcı Türkiye'de, Stripe hesabı açamıyor.** Planın ilk
-hali tamamen Stripe'a göre yazılmıştı, o bölüm geçersiz.
+**Ödeme (Faz 4) — ajan işi bitti; canlı mağaza Görev 0'a bağlı.** Stripe
+kullanılamıyor (Türkiye). Kod LemonSqueezy adaptörü + `subscriptions` +
+`is_pro` kapısı + `SyncOutcome.blocked` olarak duruyor. `VITE_BILLING`
+varsayılan kapalı. Ayrıntı: `docs/billing.md`.
 
 **Sağlayıcı seçildi: LemonSqueezy** (merchant of record — vergi onlarda,
 Türkiye'den kayıt olunabiliyor, `subscriptions` şeması basit kalıyor;
@@ -549,8 +555,9 @@ karşılığında komisyon iyzico'dan yüksek ve fiyatlandırma USD).
 teknolojisi Stripe Managed Payments'a katlanıyor. Bugün bağımsız çalışıyor,
 yeni kayıt alıyor, kapanış tarihi yok — ama seçimin gerekçesi tam da Stripe
 hesabı açamamak olduğu için bu ileride geçersiz kalabilir. Bu yüzden
-sağlayıcıya özgü kod **tek bir adaptör dosyasında** toplanacak; starter kit
-alıcısı da zaten büyük ihtimalle Stripe kullanacak.
+sağlayıcıya özgü kod **tek bir adaptör dosyasında** toplandı
+(`supabase/functions/_shared/billing/`); starter kit alıcısı büyük ihtimalle
+Stripe kullanacak.
 ⚠️ LS'nin satıcı olarak Türkiye'yi desteklediği **doğrulanmadı** (resmî docs
 sayfası dışarıdan 403 dönüyor). Mağaza aktivasyonu fazın ilk işi; reddedilirse
 sağlayıcı kararı yeniden açılır (iyzico).
@@ -571,8 +578,7 @@ kalır ve **görevler dahil bütün senkron her turda aynı yerde tıkanır** �
 depoda zaten yazılı olan kural. Üstelik `pushRemoteClients` toplu `upsert`
 yapıyor, yani PostgREST hangi satırın suçlu olduğunu söylemiyor. Tuzak
 sınırın şeklinden bağımsız: `SyncOutcome.blocked` + satır satır izolasyon
-zorunlu bir görev. Desen yeni değil — Faz 1'deki `SyncOutcome.discarded`
-aynı ailenin (sessiz başarısızlık) ilk üyesiydi.
+uygulandı. Desen Faz 1'deki `SyncOutcome.discarded` ailesinin ikizi.
 
 Plan ve tasarım: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md` +
 `docs/superpowers/specs/2026-09-01-odeme-pro-kapilama-design.md`.
@@ -626,7 +632,7 @@ Plandan neden ayrıldığımızın kaydı — gelecekte "burada ne olmuş?" soru
 | react-query | Veri katmanı olacaktı | Bağımlılıktan kaldırıldı | Zustand birincil kaldı, hiç kullanılmadı |
 | İstemci tipleri | Faz 2'de dile bağımsız | Faz 1 sonrası, i18n ile birlikte | Tasarım kararı önce Türkçe union'dan yanaydı; i18n bunu sürdürülemez kıldı |
 | Test + CI | Faz 4 | Faz 1.5 ve hemen sonrası | Kullanıcı istedi; doğru karar çıktı |
-| Ödeme | Stripe | Belirsiz (iyzico / LemonSqueezy) | Türkiye'den Stripe açılamıyor |
+| Ödeme | Stripe | LemonSqueezy | Türkiye'den Stripe açılamıyor; LS merchant of record ve MoR ürünü Stripe'a katlanıyor, bu yüzden adaptör katmanı zorunlu tutuldu |
 
 **Ders:** Plan sohbette yaşarsa özetleme sırasında kaybolur. Faz isimleri
 kullanılmaya devam edilirken içerikleri yeniden türetildi ve bu, olmayan bir

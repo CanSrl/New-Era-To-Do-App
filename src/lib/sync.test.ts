@@ -41,7 +41,7 @@ vi.mock('../config/features', () => ({
     get NICHE_MODULE() {
         return flags.nicheModule;
     },
-    features: { githubAuth: false },
+    features: { githubAuth: false, billing: false },
     isEnabled: () => false,
     isEnabledByDefault: () => true,
 }));
@@ -102,8 +102,9 @@ vi.mock('./task-repository', () => {
         }),
         pushRemoteClients: vi.fn(async (clients: readonly Client[]) => {
             calls.push('pushClients');
-            return [...clients];
+            return { written: [...clients], blocked: [] };
         }),
+        fetchRemoteSubscription: vi.fn(async () => null),
         pushRemoteProjects: vi.fn(async (projects: readonly Project[]) => {
             calls.push('pushProjects');
             return [...projects];
@@ -235,6 +236,8 @@ function seedStore(over: Partial<ReturnType<typeof useTaskStore.getState>> = {})
         projectTombstones: [],
         lastSyncedAt: null,
         ownerId: 'user-1',
+        subscription: null,
+        blockedClientIds: [],
         ...over,
     });
 }
@@ -256,8 +259,9 @@ beforeEach(() => {
     });
     vi.mocked(repo.pushRemoteClients).mockImplementation(async (c) => {
         calls.push('pushClients');
-        return [...c];
+        return { written: [...c], blocked: [] };
     });
+    vi.mocked(repo.fetchRemoteSubscription).mockResolvedValue(null);
     vi.mocked(repo.pushRemoteProjects).mockImplementation(async (p) => {
         calls.push('pushProjects');
         return [...p];
@@ -881,5 +885,57 @@ describe('runSync — niş modül bağ onarımı', () => {
         await runSync('user-1');
 
         expect(useTaskStore.getState().projectTombstones).toEqual([]);
+    });
+});
+
+describe('runSync — kalıcı red (blocked)', () => {
+    it('kalıcı hata turu düşürmez, dirty temizler, kayıt yerelde durur', async () => {
+        const local = makeClient({ id: 'c-blocked' });
+        seedStore({ clients: [local], dirtyClientIds: ['c-blocked'] });
+        vi.mocked(repo.pushRemoteClients).mockImplementation(async (c) => {
+            calls.push('pushClients');
+            return {
+                written: [],
+                blocked: [{ id: c[0]!.id, code: '42501', messageKey: 'sync.error.blockedRls' }],
+            };
+        });
+
+        const result = await runSync('user-1');
+
+        expect(result).toMatchObject({ status: 'ok', blocked: 1 });
+        expect(useTaskStore.getState().dirtyClientIds).not.toContain('c-blocked');
+        expect(useTaskStore.getState().blockedClientIds).toContain('c-blocked');
+        expect(useTaskStore.getState().clients.some((c) => c.id === 'c-blocked')).toBe(true);
+    });
+
+    it('izolasyon yalnızca suçluyu engeller, kardeşi yazar', async () => {
+        const ok = makeClient({ id: 'c-ok' });
+        const bad = makeClient({ id: 'c-bad' });
+        seedStore({ clients: [ok, bad], dirtyClientIds: ['c-ok', 'c-bad'] });
+        vi.mocked(repo.pushRemoteClients).mockImplementation(async () => {
+            calls.push('pushClients');
+            return {
+                written: [ok],
+                blocked: [{ id: 'c-bad', code: '42501', messageKey: 'sync.error.blockedRls' }],
+            };
+        });
+
+        const result = await runSync('user-1');
+
+        expect(result).toMatchObject({ status: 'ok', blocked: 1 });
+        expect(useTaskStore.getState().dirtyClientIds).not.toContain('c-ok');
+        expect(useTaskStore.getState().dirtyClientIds).not.toContain('c-bad');
+        expect(useTaskStore.getState().blockedClientIds).toEqual(['c-bad']);
+    });
+
+    it('geçici hata dirty bırakır', async () => {
+        seedStore({ clients: [makeClient({ id: 'c1' })], dirtyClientIds: ['c1'] });
+        vi.mocked(repo.pushRemoteClients).mockRejectedValueOnce(new Error('Failed to fetch'));
+
+        const result = await runSync('user-1');
+
+        expect(result.status).toBe('error');
+        expect(useTaskStore.getState().dirtyClientIds).toEqual(['c1']);
+        expect(useTaskStore.getState().blockedClientIds).toEqual([]);
     });
 });

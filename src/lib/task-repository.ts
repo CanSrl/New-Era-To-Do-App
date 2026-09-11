@@ -9,7 +9,9 @@ import {
     rowToTimeLog,
     timeLogToRow,
 } from './niche-mapping';
-import type { Category, Client, Project, Task, TimeLog } from './types';
+import type { Category, Client, Project, Subscription, Task, TimeLog } from './types';
+import type { TranslationKey } from '../i18n';
+import { classifySyncError, toSyncError } from './sync-errors';
 
 /** Supabase yapılandırılmamışken senkron çağrıldığında atılır. */
 export class SyncUnavailableError extends Error {
@@ -190,25 +192,104 @@ export async function fetchRemoteClients(): Promise<Client[]> {
     return rows.map(rowToClient);
 }
 
+export interface BlockedPush {
+    id: string;
+    code: string;
+    messageKey: TranslationKey;
+}
+
+export interface IsolatedPush<T> {
+    written: T[];
+    blocked: BlockedPush[];
+}
+
 /**
  * Müşterileri buluta yazar ve sunucunun kaydettiği hâllerini döner.
  *
  * Yazma zincirinin EN BAŞINDA çağrılmalıdır: hem `projects.client_id` hem
  * `tasks.client_id` buraya bileşik yabancı anahtarla bağlı.
+ *
+ * Toplu upsert kalıcı bir hata alırsa satır satır yeniden denenir: PostgREST
+ * hangi satırın suçlu olduğunu söylemez. Geçici hatada tur düşer.
  */
 export async function pushRemoteClients(
     clients: readonly Client[],
     userId: string
-): Promise<Client[]> {
-    if (clients.length === 0) return [];
+): Promise<IsolatedPush<Client>> {
+    if (clients.length === 0) return { written: [], blocked: [] };
 
+    const rows = clients.map((c) => clientToRow(c, userId));
     const { data, error } = await client()
         .from('clients')
-        .upsert(clients.map((c) => clientToRow(c, userId)), { onConflict: 'id' })
+        .upsert(rows, { onConflict: 'id' })
         .select();
 
-    if (error) throw new Error(error.message);
-    return data.map(rowToClient);
+    if (!error) return { written: (data ?? []).map(rowToClient), blocked: [] };
+
+    const classified = classifySyncError(toSyncError(error));
+    if (classified.kind !== 'terminal') throw toSyncError(error);
+
+    const written: Client[] = [];
+    const blocked: BlockedPush[] = [];
+    for (const c of clients) {
+        const one = await client()
+            .from('clients')
+            .upsert(clientToRow(c, userId), { onConflict: 'id' })
+            .select()
+            .single();
+        if (!one.error && one.data) {
+            written.push(rowToClient(one.data));
+            continue;
+        }
+        const syncError = toSyncError(one.error ?? { message: 'unknown', code: '' });
+        const kind = classifySyncError(syncError);
+        if (kind.kind === 'terminal') {
+            blocked.push({ id: c.id, code: syncError.code, messageKey: kind.messageKey });
+        } else {
+            throw syncError;
+        }
+    }
+    return { written, blocked };
+}
+
+export function rowToSubscription(row: {
+    user_id: string;
+    provider: string;
+    provider_subscription_id: string;
+    provider_customer_id: string | null;
+    status: string;
+    variant_id: string | null;
+    renews_at: string | null;
+    ends_at: string | null;
+    trial_ends_at: string | null;
+    test_mode: boolean;
+    created_at: string;
+    updated_at: string;
+}): Subscription {
+    return {
+        userId: row.user_id,
+        provider: row.provider,
+        providerSubscriptionId: row.provider_subscription_id,
+        providerCustomerId: row.provider_customer_id,
+        status: row.status,
+        variantId: row.variant_id,
+        renewsAt: row.renews_at,
+        endsAt: row.ends_at,
+        trialEndsAt: row.trial_ends_at,
+        testMode: row.test_mode,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+    };
+}
+
+/** Kullanıcının abonelik satırı. Yoksa null — ücretsiz plan. */
+export async function fetchRemoteSubscription(): Promise<Subscription | null> {
+    const { data, error } = await client()
+        .from('subscriptions')
+        .select('*')
+        .maybeSingle();
+    if (error) throw toSyncError(error);
+    return data ? rowToSubscription(data) : null;
 }
 
 /**

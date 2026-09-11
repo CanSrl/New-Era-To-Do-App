@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ActiveTimer, Category, Client, Project, Task, TimeLog, FilterStatus } from '../lib/types';
+import type { ActiveTimer, Category, Client, Project, Subscription, Task, TimeLog, FilterStatus } from '../lib/types';
+import { canAddClient as clientWithinPlan, isProPlan } from '../lib/billing';
 import { createId, nextPosition, normalizeTask, toPriority } from '../lib/tasks';
 import {
     categoryKey,
@@ -74,6 +75,16 @@ interface TaskState {
     /** Buluttan silinmeyi bekleyen zaman kayıtları. */
     timeLogTombstones: Tombstone[];
     lastSyncedAt: string | null;
+    /**
+     * Senkronun doldurduğu abonelik. Salt okunur; yazan webhook.
+     * `null` = satır yok (ücretsiz) veya henüz çekilmedi.
+     */
+    subscription: Subscription | null;
+    /**
+     * Kalıcı reddedilen müşteri id'leri. Dirty değiller (sonsuz döngü yok)
+     * ama yerelde dururlar. Pro olunca yeniden dirty yapılır.
+     */
+    blockedClientIds: string[];
     /**
      * Cihazdaki görevlerin ait olduğu hesap. Misafir verisi için null.
      * Senkronun hangi durumda olduğunu ayırt etmek için şart: bu bilgi
@@ -194,6 +205,9 @@ interface TaskState {
         clearedProjectTombstoneIds?: string[];
         syncedTimeLogIds?: string[];
         clearedTimeLogTombstoneIds?: string[];
+        subscription?: Subscription | null;
+        /** Bu turda kalıcı reddedilen müşteri id'leri. dirty'den çıkarılır. */
+        blockedClientIds?: string[];
         syncedAt: string;
     }) => void;
     prepareForSync: (userId: string) => void;
@@ -284,6 +298,8 @@ export const useTaskStore = create<TaskState>()(
             dirtyTimeLogIds: [],
             timeLogTombstones: [],
             lastSyncedAt: null,
+            subscription: null,
+            blockedClientIds: [],
             ownerId: null,
 
             addTask: (taskData) => set((state) => {
@@ -478,6 +494,10 @@ export const useTaskStore = create<TaskState>()(
                 if (!trimmed) return null;
 
                 if (isClientNameTaken(state.clients, trimmed)) return null;
+
+                // Şemanın reddedeceği müşteri push kuyruğuna hiç girmemeli.
+                // Sınır yalnızca girişli kullanıcıya uygulanır (ownerId).
+                if (!clientWithinPlan(state, new Date().toISOString())) return null;
 
                 const client = createClient(trimmed, nextClientPosition(state.clients));
 
@@ -854,6 +874,7 @@ export const useTaskStore = create<TaskState>()(
                 clients,
                 projects,
                 timeLogs,
+                subscription,
                 syncedIds,
                 clearedTombstoneIds,
                 syncedCategoryIds,
@@ -864,6 +885,7 @@ export const useTaskStore = create<TaskState>()(
                 clearedProjectTombstoneIds = [],
                 syncedTimeLogIds = [],
                 clearedTimeLogTombstoneIds = [],
+                blockedClientIds = [],
                 syncedAt,
             }) => set((state) => {
                 const synced = new Set(syncedIds);
@@ -878,6 +900,14 @@ export const useTaskStore = create<TaskState>()(
                 const clearedTimeLogs = new Set(clearedTimeLogTombstoneIds);
                 const cutoff = Date.now() - TOMBSTONE_TTL_MS;
                 const alive = (t: Tombstone) => new Date(t.deletedAt).getTime() > cutoff;
+                const nextSubscription = subscription !== undefined ? subscription : state.subscription;
+                const newlyBlocked = new Set(blockedClientIds);
+                // Pro olunca daha önce engellenen müşteriler yeniden gönderilir.
+                const nowPro = isProPlan(nextSubscription, syncedAt);
+                const released = nowPro ? state.blockedClientIds : [];
+                const nextBlocked = nowPro
+                    ? []
+                    : [...new Set([...state.blockedClientIds, ...blockedClientIds])];
 
                 return {
                     tasks,
@@ -885,6 +915,8 @@ export const useTaskStore = create<TaskState>()(
                     clients: clients ?? state.clients,
                     projects: projects ?? state.projects,
                     timeLogs: timeLogs ?? state.timeLogs,
+                    subscription: nextSubscription,
+                    blockedClientIds: nextBlocked,
                     dirtyIds: state.dirtyIds.filter((id) => !synced.has(id)),
                     tombstones: state.tombstones.filter((t) => !cleared.has(t.id) && alive(t)),
                     dirtyCategoryIds: state.dirtyCategoryIds.filter(
@@ -893,9 +925,12 @@ export const useTaskStore = create<TaskState>()(
                     categoryTombstones: state.categoryTombstones.filter(
                         (t) => !clearedCategories.has(t.id) && alive(t)
                     ),
-                    dirtyClientIds: state.dirtyClientIds.filter(
-                        (id) => !syncedClients.has(id)
-                    ),
+                    dirtyClientIds: [
+                        ...state.dirtyClientIds.filter(
+                            (id) => !syncedClients.has(id) && !newlyBlocked.has(id)
+                        ),
+                        ...released,
+                    ],
                     clientTombstones: state.clientTombstones.filter(
                         (t) => !clearedClients.has(t.id) && alive(t)
                     ),
@@ -963,12 +998,14 @@ export const useTaskStore = create<TaskState>()(
                     dirtyTimeLogIds: [],
                     timeLogTombstones: [],
                     lastSyncedAt: null,
+                    subscription: null,
+                    blockedClientIds: [],
                 };
             }),
         }),
         {
             name: 'yapilacaklar-storage',
-            version: 6,
+            version: 7,
             partialize: (state) => ({
                 tasks: state.tasks,
                 categories: state.categories,
@@ -991,6 +1028,8 @@ export const useTaskStore = create<TaskState>()(
                 timeLogTombstones: state.timeLogTombstones,
                 lastSyncedAt: state.lastSyncedAt,
                 ownerId: state.ownerId,
+                subscription: state.subscription,
+                blockedClientIds: state.blockedClientIds,
             }) as unknown as TaskState,
             /**
              * v0 -> v1: tarihler Date varsayılıyordu ama JSON'a string yazılıp
@@ -1009,6 +1048,7 @@ export const useTaskStore = create<TaskState>()(
              *           projects.hourlyRate) eklendi. Eski kayıtlarda bu
              *           alanlar hiç yoktu; boş listeye/null'a ve veritabanı
              *           varsayılanlarına düşülür.
+             * v6 -> v7: faturalama — subscription ve blockedClientIds.
              */
             migrate: (persisted, version) => {
                 const state = persisted as Partial<TaskState> | undefined;
@@ -1120,6 +1160,11 @@ export const useTaskStore = create<TaskState>()(
                         ...p,
                         hourlyRate: typeof p.hourlyRate === 'number' ? p.hourlyRate : null,
                     }));
+                }
+
+                if (version < 7) {
+                    state.subscription = null;
+                    state.blockedClientIds = [];
                 }
 
                 return state as TaskState;

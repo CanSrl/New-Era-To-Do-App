@@ -58,12 +58,12 @@ Kalan sürüm kapsamı. Her gereksinim tam olarak bir faza eşlenir.
 
 ### Payment (Ödeme ve Pro kapılama)
 
-- [ ] **PAY-01**: Kullanıcı ücretli plana abone olabilir ve ödeme akışını seçilen sağlayıcı üzerinden tamamlayabilir *(sağlayıcı seçildi: **LemonSqueezy**, DEC-PAY-01)*
-- [ ] **PAY-02**: Abonelik durumu webhook ile `subscriptions` tablosuna yazılır; **imzası doğrulanmamış hiçbir olaya güvenilmez**
-- [ ] **PAY-03**: Pro özellikleri veritabanı seviyesinde kapılanır (Postgres fonksiyonu + `WITH CHECK`) ve doğrudan API çağrısıyla aşılamaz
-- [ ] **PAY-04**: Ücretsiz plan sınırı tanımlıdır; sınıra ulaşan kullanıcı neden engellendiğini ve yükseltme yolunu net görür *(sınır: **1 müşteri**, arşivli dahil; DEC-PAY-04)*
-- [ ] **PAY-05**: Kullanıcı hesap sayfasında plan durumunu görür ve aboneliğini yönetebilir (iptal / faturalama portalı)
-- [ ] **PAY-06**: Hesaba özel sayfalar (faturalama) oturum koruması arkasındadır; oturumsuz kullanıcı erişemez ve uygulamanın geri kalanı local-first kalmaya devam eder
+- [ ] **PAY-01**: Kullanıcı ücretli plana abone olabilir ve ödeme akışını seçilen sağlayıcı üzerinden tamamlayabilir *(kod hazır; canlı LS mağazası Görev 0)*
+- [x] **PAY-02**: Abonelik durumu webhook ile `subscriptions` tablosuna yazılır; **imzası doğrulanmamış hiçbir olaya güvenilmez** *(imza birim testi; canlı webhook Görev 0)*
+- [x] **PAY-03**: Pro özellikleri veritabanı seviyesinde kapılanır (Postgres fonksiyonu + `WITH CHECK`) ve doğrudan API çağrısıyla aşılamaz
+- [x] **PAY-04**: Ücretsiz plan sınırı tanımlıdır; sınıra ulaşan kullanıcı neden engellendiğini ve nasıl yükselteceğini net görür *(sınır: **1 müşteri**, arşivli dahil)*
+- [ ] **PAY-05**: Kullanıcı hesap sayfasında plan durumunu görür ve aboneliğini yönetebilir (iptal / faturalama portalı) *(sayfa + portal fonksiyonu hazır; canlı portal Görev 0)*
+- [x] **PAY-06**: Hesaba özel sayfalar (faturalama) oturum koruması arkasındadır; oturumsuz kullanıcı erişemez ve uygulamanın geri kalanı local-first kalmaya devam eder
 
 ### Packaging (Paketleme ve yayın)
 

@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { useAuth } from './AuthProvider';
 import { pendingChangeCount, useTaskStore } from '../store';
 import { runSync } from '../lib/sync';
+import { features } from '../config/features';
 // i18n doğrudan import ediliyor, `useTranslation` ile değil: `t` bir hook'tan
 // gelseydi dil değişiminde kimliği değişir, `sync` useCallback'i yenilenir ve
 // ona bağlı üç efekt yeniden çalışarak dil değiştirmeyi senkron tetikleyicisine
@@ -80,6 +81,16 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
             // ne olduğunu öğrenmesi.
             if (result.discarded > 0) {
                 toast.warning(i18n.t('sync.discarded', { count: result.discarded }));
+            }
+            if (result.blocked > 0) {
+                toast.warning(i18n.t('sync.blocked', { count: result.blocked }), {
+                    action: features.billing
+                        ? {
+                            label: i18n.t('sync.blockedAction'),
+                            onClick: () => { window.location.assign('/app/billing'); },
+                        }
+                        : undefined,
+                });
             }
         } else if (result.status === 'error') {
             setStatus('error');

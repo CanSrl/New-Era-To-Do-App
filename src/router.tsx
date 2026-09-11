@@ -12,6 +12,9 @@ import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { CrashTestPage } from './pages/CrashTestPage';
+import { BillingPage } from './pages/BillingPage';
+import { RequireAuth } from './components/RequireAuth';
+import { features } from './config/features';
 
 /**
  * Rota yolları İngilizce: uygulama Türkçe de olsa starter kit uluslararası
@@ -54,6 +57,18 @@ const devOnlyRoutes: RouteObject[] = import.meta.env.DEV
  * elenir — güvence hem davranışsal hem boyutsal. Sabitin `features` nesnesine
  * taşınması bunu sessizce bozar; `npm run verify:niche` onu yakalar.
  */
+const billingRoutes: RouteObject[] = features.billing
+    ? [{
+        path: 'billing',
+        element: (
+            <RequireAuth>
+                <BillingPage />
+            </RequireAuth>
+        ),
+        errorElement: <RouteErrorBoundary />,
+    }]
+    : [];
+
 const nicheRoutes: RouteObject[] = NICHE_MODULE
     ? [
         { path: 'clients', element: <ClientsPage /> },
@@ -86,6 +101,7 @@ export const router = createBrowserRouter([
         children: [
             { index: true, element: <TasksPage /> },
             ...nicheRoutes,
+            ...billingRoutes,
             { path: 'settings', element: <SettingsPage /> },
         ],
     },

@@ -240,7 +240,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Ürün sağlamlaştırma | 5/5 | **Tamamlandı** (kriter 2 canlı doğrulama bekliyor) | 2026-08-16 |
 | 2. Niş modül — müşteriler ve projeler | 6/6 | **Tamamlandı** | 2026-08-16 |
 | 3. Niş modül — zaman kaydı ve dışa aktarım | 6/6 | **Tamamlandı** | 2026-08-19 |
-| 4. Ödeme ve Pro kapılama | 0/6 | Not started | - |
+| 4. Ödeme ve Pro kapılama | 4/6 kod+test; 2 canlı LS'ye bağlı | Ajan işi bitti, Görev 0 açık | 2026-09-11 |
 | 5. Paketleme ve yayın | 0/5 | Not started | - |
 
 **Not:** İlerleme plan/summary sayısıyla değil **başarı kriteriyle** ölçülüyor;

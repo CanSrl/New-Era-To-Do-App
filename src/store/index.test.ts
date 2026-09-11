@@ -29,6 +29,8 @@ function resetStore() {
         timeLogTombstones: [],
         lastSyncedAt: null,
         ownerId: null,
+        subscription: null,
+        blockedClientIds: [],
     });
 }
 
@@ -438,7 +440,7 @@ describe('kalıcılık (persist)', () => {
         expect(raw).toBeTruthy();
         const parsed = JSON.parse(raw as string);
         expect(parsed.state.tasks[0].title).toBe('Kalıcı görev');
-        expect(parsed.version).toBe(6);
+        expect(parsed.version).toBe(7);
     });
 
     it('yazılan tarihler string olarak saklanır', async () => {
@@ -759,6 +761,19 @@ describe('müşteriler', () => {
         store().addClient('Acme');
         expect(store().addClient('acme')).toBeNull();
         expect(store().clients).toHaveLength(1);
+    });
+
+    it('girişli ücretsiz kullanıcıda ikinci müşteriyi oluşturmaz', () => {
+        useTaskStore.setState({ ownerId: 'user-1' });
+        expect(store().addClient('Acme')).not.toBeNull();
+        expect(store().addClient('Globex')).toBeNull();
+        expect(store().clients).toHaveLength(1);
+    });
+
+    it('girişsiz kullanıcıya müşteri sınırı uygulanmaz', () => {
+        store().addClient('Acme');
+        expect(store().addClient('Globex')).not.toBeNull();
+        expect(store().clients).toHaveLength(2);
     });
 
     it('müşteriyi yeniden adlandırır', () => {

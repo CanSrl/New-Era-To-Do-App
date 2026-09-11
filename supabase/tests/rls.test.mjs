@@ -16,6 +16,9 @@ const URL = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321';
 const ANON =
     process.env.SUPABASE_ANON_KEY ??
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+const SERVICE =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
 
 const results = [];
 function check(name, passed, detail = '') {
@@ -47,6 +50,25 @@ async function signUp(tag) {
 
 const a = await signUp('kullanici-a-');
 const b = await signUp('kullanici-b-');
+
+const admin = createClient(URL, SERVICE, {
+    auth: { persistSession: false, autoRefreshToken: false },
+});
+
+async function setSub(userId, status, extra = {}) {
+    const { error } = await admin.from('subscriptions').upsert({
+        user_id: userId,
+        provider_subscription_id: `sub-${userId}`,
+        status,
+        ...extra,
+    }, { onConflict: 'user_id' });
+    if (error) throw new Error(`subscriptions ${status}: ${error.message}`);
+}
+
+// Mevcut niş testleri birden fazla müşteri ekler; A ve B Pro olmazsa kapı
+// o testleri kırardı. Kapı ayrı kullanıcılarla (C) sınanır.
+await setSub(a.userId, 'active');
+await setSub(b.userId, 'active');
 
 // --- Profil tetikleyicisi -------------------------------------------------
 {
@@ -533,6 +555,97 @@ const tlLog = await (async () => {
         .select('id').eq('id', tlLog.id).maybeSingle();
     check('Müşteri silinince zaman kaydı da siliniyor', afterClient === null,
         `kayıt=${afterClient?.id}`);
+}
+
+// --- Faturalama: salt okunur subscriptions + is_pro + müşteri kapısı -----
+const c = await signUp('kullanici-c-');
+
+{
+    const { data, error } = await c.client.from('subscriptions').select('user_id');
+    check('Aboneliği olmayan kullanıcı boş liste görür', !error && data?.length === 0,
+        error?.message ?? `adet=${data?.length}`);
+}
+{
+    const { data, error } = await a.client.from('subscriptions').select('user_id, status');
+    check('Kullanıcı kendi abonelik satırını okuyabilir',
+        !error && data?.length === 1 && data[0].status === 'active',
+        error?.message ?? `adet=${data?.length}`);
+}
+{
+    const { data, error } = await c.client.from('subscriptions').select('user_id').eq('user_id', a.userId);
+    check('Başkasının aboneliği okunamaz', !error && data?.length === 0,
+        error?.message ?? `adet=${data?.length}`);
+}
+{
+    const { error } = await c.client.from('subscriptions')
+        .insert({
+            user_id: c.userId,
+            provider_subscription_id: `sahte-${c.userId}`,
+            status: 'active',
+        });
+    check('Kullanıcı kendi abonelik satırını yazamaz', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    const { data, error } = await c.client.rpc('is_pro', { uid: c.userId });
+    check('is_pro abonelik yokken false', !error && data === false,
+        error?.message ?? `is_pro=${data}`);
+}
+{
+    await setSub(c.userId, 'active');
+    const { data, error } = await c.client.rpc('is_pro', { uid: c.userId });
+    check('is_pro active iken true', !error && data === true,
+        error?.message ?? `is_pro=${data}`);
+    await admin.from('subscriptions').delete().eq('user_id', c.userId);
+}
+{
+    await setSub(c.userId, 'cancelled', { ends_at: '2020-01-01T00:00:00Z' });
+    const { data, error } = await c.client.rpc('is_pro', { uid: c.userId });
+    check('is_pro, ends_at geçmiş cancelled ile false', !error && data === false,
+        error?.message ?? `is_pro=${data}`);
+    await admin.from('subscriptions').delete().eq('user_id', c.userId);
+}
+
+const free = await signUp('kullanici-ucretsiz-');
+{
+    const { data, error } = await free.client.from('clients')
+        .insert({ user_id: free.userId, name: 'İlk', position: 0 }).select().single();
+    check('Ücretsiz kullanıcı 1. müşteriyi ekleyebilir', !error && !!data, error?.message ?? '');
+}
+{
+    const { error } = await free.client.from('clients')
+        .insert({ user_id: free.userId, name: 'İkinci', position: 1 });
+    check('Ücretsiz kullanıcı 2. müşteriyi ekleyemez', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    await free.client.from('clients').update({ archived: true }).eq('user_id', free.userId);
+    const { error } = await free.client.from('clients')
+        .insert({ user_id: free.userId, name: 'Arşivden sonra', position: 2 });
+    check('1. müşteriyi arşivlemek 2.yi eklemeye izin vermez', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+}
+{
+    const { data, error } = await free.client.from('clients')
+        .update({ name: 'İlk v2' }).eq('user_id', free.userId).select();
+    check('Ücretsiz kullanıcı mevcut müşterisini güncelleyebilir',
+        !error && data?.length === 1, error?.message ?? `adet=${data?.length}`);
+}
+{
+    await setSub(free.userId, 'active');
+    const { data, error } = await free.client.from('clients')
+        .insert({ user_id: free.userId, name: 'Pro müşteri', position: 3 }).select().single();
+    check('Aboneliği active olan kullanıcı 2. müşteriyi ekleyebilir',
+        !error && !!data, error?.message ?? '');
+}
+{
+    await setSub(free.userId, 'expired');
+    const { error } = await free.client.from('clients')
+        .insert({ user_id: free.userId, name: 'Expired sonrası', position: 4 });
+    check('Aboneliği expired olan kullanıcı yeni ekleyemez', !!error,
+        error ? `reddedildi: ${error.code}` : 'İZİN VERİLDİ!');
+    const { count } = await free.client.from('clients').select('id', { count: 'exact', head: true });
+    check('Expired kullanıcının mevcut müşterileri durur', count === 2, `adet=${count}`);
 }
 
 const failed = results.filter((r) => !r.passed);

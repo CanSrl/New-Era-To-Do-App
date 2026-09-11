@@ -127,6 +127,14 @@ GitHub** ekranıdır.
 
 **3. İstemci tarafını açın** — `.env.local` içine `VITE_AUTH_GITHUB=true`.
 
+## Billing (LemonSqueezy)
+
+Default **off** (`VITE_BILLING` unset). The free plan allows 1 client; the
+cap lives in Postgres (`is_pro` + `WITH CHECK` on `clients` INSERT), not
+only in the UI. Enable the billing route with `VITE_BILLING=true` after
+LemonSqueezy secrets are on the Edge Functions runtime — never as `VITE_`
+keys. See `docs/billing.md`.
+
 **4. Yönlendirme adresini izin listesine ekleyin.** Supabase, listede *tam
 eşleşme* bulamadığı adresi hata vermeden `site_url`'e düşürür. Yerelde
 `config.toml` içindeki `additional_redirect_urls` bunu kapsar; bulut

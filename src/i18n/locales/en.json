@@ -271,11 +271,44 @@
     "daysAgo": "{{count}}d ago",
     "discarded_one": "{{count}} change from this device was replaced by a newer version from another device.",
     "discarded_other": "{{count}} changes from this device were replaced by newer versions from another device.",
+    "blocked_one": "{{count}} record hit the free-plan limit and was not synced. It is still on this device.",
+    "blocked_other": "{{count}} records hit the free-plan limit and were not synced. They are still on this device.",
+    "blockedAction": "Upgrade plan",
     "error": {
       "network": "Could not reach the server.",
       "expiredSession": "Your session has expired. Please sign in again.",
       "tooLarge": "Your cloud data is too large to sync in one pass. Your data is safe on this device — please contact support.",
-      "unknown": "Sync failed."
+      "unknown": "Sync failed.",
+      "blockedRls": "This record hit a plan limit and could not be sent.",
+      "blockedCheck": "This record violated a constraint and could not be sent.",
+      "blockedNotNull": "This record is missing a required field and could not be sent.",
+      "blockedFk": "This record could not be sent because a related record is missing."
+    }
+  },
+  "billing": {
+    "nav": "Billing",
+    "title": "Plan and billing",
+    "status": {
+      "free": "Free",
+      "pro": "Pro",
+      "pastDue": "Payment failed"
+    },
+    "freeBody": "The free plan allows at most 1 client. Archived clients count toward the limit.",
+    "proBody": "You are on Pro. There is no client limit.",
+    "pastDueBody": "The last payment failed. Update your card or you will drop to the free plan at period end.",
+    "renewsAt": "Renews: {{date}}",
+    "endsAt": "Ends: {{date}}",
+    "upgrade": "Upgrade",
+    "manage": "Manage subscription",
+    "upgradeHint": "Upgrade plan",
+    "limitReached": "The free plan allows at most 1 client. Upgrade to Pro to add more.",
+    "checkoutError": "Could not open checkout. Please try again.",
+    "portalError": "Could not open the billing portal. Please try again.",
+    "requireAuth": {
+      "loading": "Checking session…",
+      "title": "Sign in to view billing",
+      "body": "Plan details belong to your account. The rest of the app still works without signing in.",
+      "signIn": "Sign in"
     }
   },
   "notFound": {

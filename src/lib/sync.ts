@@ -27,6 +27,7 @@ import {
     pushRemoteProjects,
     pushRemoteTasks,
     pushRemoteTimeLogs,
+    fetchRemoteSubscription,
     SyncTooLargeError,
     SyncUnavailableError,
 } from './task-repository';
@@ -37,7 +38,7 @@ export type SyncOutcome =
      * yazan kazanır kuralı gereği bunlar sessizce atılıyordu; kullanıcı ne
      * yazdığının kaybolduğunu hiç öğrenmiyordu. Arayüz bu sayıyı gösterir.
      */
-    | { status: 'ok'; pushed: number; pulled: number; deleted: number; discarded: number }
+    | { status: 'ok'; pushed: number; pulled: number; deleted: number; discarded: number; blocked: number }
     | { status: 'skipped'; reason: 'unavailable' | 'offline' | 'busy' }
     | { status: 'error'; messageKey: TranslationKey };
 
@@ -106,12 +107,14 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
             remoteProjects,
             remoteTasks,
             remoteTimeLogs,
+            remoteSubscription,
         ] = await Promise.all([
             fetchRemoteCategories(),
             niche ? fetchRemoteClients() : [],
             niche ? fetchRemoteProjects() : [],
             fetchRemoteTasks(),
             niche ? fetchRemoteTimeLogs() : [],
+            fetchRemoteSubscription(),
         ]);
 
         // Ağ beklenirken kullanıcı değişiklik yapmış olabilir; durum tam da
@@ -128,9 +131,11 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
             })
             : null;
 
-        const pushedClients = clientPlan
+        const clientPush = clientPlan
             ? await pushRemoteClients(clientPlan.toPush, userId)
-            : [];
+            : { written: [], blocked: [] };
+        const pushedClients = clientPush.written;
+        const blockedClientIds = clientPush.blocked.map((b) => b.id);
         const pushedClientById = new Map(pushedClients.map((c) => [c.id, c]));
         const clients = clientPlan
             ? clientPlan.clients.map((c) => pushedClientById.get(c.id) ?? c)
@@ -271,8 +276,13 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
                 ...categoryPlan.obsoleteTombstoneIds,
             ],
             syncedClientIds: clientPlan
-                ? [...clientPlan.toPush.map((c) => c.id), ...clientPlan.discardedIds]
+                ? [
+                    ...clientPlan.toPush.map((c) => c.id),
+                    ...clientPlan.discardedIds,
+                ]
                 : [],
+            blockedClientIds,
+            subscription: remoteSubscription,
             clearedClientTombstoneIds: clientPlan
                 ? [...clientPlan.toDelete, ...clientPlan.obsoleteTombstoneIds]
                 : [],
@@ -314,10 +324,11 @@ export async function runSync(userId: string): Promise<SyncOutcome> {
                 + (clientPlan?.discardedIds.length ?? 0)
                 + (projectPlan?.discardedIds.length ?? 0)
                 + (timeLogPlan?.discardedIds.length ?? 0),
+            blocked: blockedClientIds.length,
             pushed:
                 plan.toPush.length
                 + categoryPlan.toPush.length
-                + (clientPlan?.toPush.length ?? 0)
+                + clientPush.written.length
                 + (projectPlan?.toPush.length ?? 0)
                 + (timeLogPlan?.toPush.length ?? 0),
             pulled: remoteTasks.length,

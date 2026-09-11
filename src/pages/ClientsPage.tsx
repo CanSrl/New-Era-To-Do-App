@@ -2,8 +2,11 @@ import { useId, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useTaskStore } from '../store';
 import { CLIENT_NAME_MAX, clientsForDisplay } from '../lib/clients';
+import { canAddClient } from '../lib/billing';
+import { features } from '../config/features';
 import { projectsForDisplay } from '../lib/projects';
 import { ClientCard } from '../components/ClientCard';
 
@@ -27,6 +30,7 @@ export function ClientsPage() {
     const tasks = useTaskStore((state) => state.tasks);
     const timeLogs = useTaskStore((state) => state.timeLogs);
     const addClient = useTaskStore((state) => state.addClient);
+    const navigate = useNavigate();
 
     const [draft, setDraft] = useState('');
     const fieldId = useId();
@@ -74,6 +78,18 @@ export function ClientsPage() {
         const trimmed = draft.trim();
         if (!trimmed) {
             toast.error(t('client.nameEmpty'));
+            return;
+        }
+
+        if (!canAddClient(useTaskStore.getState(), new Date().toISOString())) {
+            toast.error(t('billing.limitReached'), {
+                action: features.billing
+                    ? {
+                        label: t('billing.upgradeHint'),
+                        onClick: () => { void navigate('/app/billing'); },
+                    }
+                    : undefined,
+            });
             return;
         }
 

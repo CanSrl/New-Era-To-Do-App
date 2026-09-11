@@ -20,21 +20,17 @@ See: .planning/PROJECT.md (updated 2026-08-14)
 
 **Core value:** Aynı kod tabanı hem jenerik starter kit hem gerçek niş ürün
 olabilmeli; kanıtı `VITE_NICHE_MODULE=false` ile modülün izsiz çıkması.
-**Current focus:** Phase 3 ✅ tamamlandı (19 Ağu). Sıradaki: Phase 4 — ödeme
-ve Pro kapılama; sağlayıcı seçimi hâlâ açık bloker (Stripe Türkiye'den
-açılamıyor).
+**Current focus:** Phase 4 ajan işi bitti (11 Eyl). Görev 0 (LS mağaza)
+hâlâ açık; canlı checkout doğrulanmadı. Sıradaki: Görev 0 veya Phase 5.
 
 ## Current Position
 
-Phase: 1 ✅ **tamamlandı** (16 Ağu) · Phase 2 ✅ **tamamlandı** (16 Ağu) ·
-       Phase 3 ✅ **tamamlandı** (19 Ağu)
-Plan: gsd planı yok; Phase 2 ve 3 işi `docs/superpowers/plans/` altındaki
-      görev listelerine göre yürütüldü.
-      Phase 3: `2026-08-16-nis-modul-zaman-kaydi.md` (9 görev, hepsi kapandı)
-      + spec `…-design.md` (`745b84d`). Dal: `faz-3-zaman-kaydi`.
+Phase: 1–3 ✅ · Phase 4 ajan 9/10 ✅ · Görev 0 açık
+Plan: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md`
+Dal: `faz-4-odeme`
 Status: Executing
-Last activity: 2026-08-19 — Phase 3 kapandı: ücret alanları, CSV dışa aktarım,
-      bayrak izleri ve doküman senkronu
+Last activity: 2026-09-11 — Phase 4 kod: subscriptions, kapı, blocked senkron,
+      billing UI, Edge Functions. Canlı LS yok.
 
 Progress: Phase 1 → [██████████] 6/6 gereksinim · Phase 2 → [██████████] 6/6 kriter ·
           Phase 3 → [██████████] 6/6 kriter

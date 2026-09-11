@@ -1,9 +1,11 @@
-import { LogIn, LogOut, User } from 'lucide-react';
+import { CreditCard, LogIn, LogOut, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useAuth } from './AuthProvider';
 import { SyncIndicator } from './SyncIndicator';
+import { features } from '../config/features';
 
 interface AccountMenuProps {
     /** 'sidebar' masaüstü kenar çubuğu için, 'compact' mobil üst bar için. */
@@ -77,6 +79,15 @@ export function AccountMenu({ variant, onSignInClick }: AccountMenuProps) {
                     <LogOut size={16} />
                 </button>
             </div>
+            {features.billing && (
+                <Link
+                    to="/app/billing"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+                >
+                    <CreditCard size={15} />
+                    {t('billing.nav')}
+                </Link>
+            )}
             <div className="px-2">
                 <SyncIndicator />
             </div>

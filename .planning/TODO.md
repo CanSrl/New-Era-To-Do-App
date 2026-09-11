@@ -8,7 +8,7 @@
 > `CLAUDE.md` kendi içinde "Faz 0 / 1 / 1.5 / 2 / 5 / 6" der; oradaki
 > "Faz 5 — Niş modül", buradaki Phase 2 + Phase 3'ün toplamıdır.
 >
-> Son güncelleme: 1 Eylül 2026.
+> Son güncelleme: 11 Eylül 2026.
 
 ---
 
@@ -131,31 +131,30 @@ olduğu için atlanır), 72 şema güvenlik testi.
 
 ---
 
-## ⏳ Phase 4 — Ödeme ve Pro kapılama *(0/10)*
+## ⏳ Phase 4 — Ödeme ve Pro kapılama *(9/10 ajan; Görev 0 açık)*
 
 Sağlayıcı: **LemonSqueezy**. Ücretsiz sınır: **1 müşteri**.
 Plan: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md`
 Spec: `docs/superpowers/specs/2026-09-01-odeme-pro-kapilama-design.md`
+Dal: `faz-4-odeme`.
 
 - [x] Sağlayıcı kararı verildi (DEC-PAY-01) ve plan + spec yazıldı
 - [ ] **0 — LemonSqueezy hesabı** *(Ahmet yapar, ajan yapamaz)*: mağaza
       aktivasyonu Türkiye adresiyle, abonelik ürünü + varyantı, webhook
       imzalama sırrı, API anahtarı.
-      ⚠️ **Tıkanırsa planın tamamı geçersiz** — LS'nin Türkiye'yi satıcı
-      olarak desteklediği doğrulanamadı, teyit ancak deneyerek alınır.
-      Reddedilirse sağlayıcı kararı yeniden açılır (iyzico).
-- [ ] 1 — `subscriptions` şeması, `is_pro`, `client_count`, RLS + şema testleri
-- [ ] 2 — Müşteri kapısı: `clients` INSERT politikasına `WITH CHECK`
+      ⚠️ Canlı checkout/portal bu görev olmadan doğrulanamaz.
+- [x] 1 — `subscriptions` şeması, `is_pro`, `client_count`, RLS + şema testleri
+- [x] 2 — Müşteri kapısı: `clients` INSERT politikasına `WITH CHECK`
       *(yalnızca INSERT, UPDATE'e dokunulmaz)*
-- [ ] 3 — **Senkron kalıcı reddi atlatır** (`SyncOutcome.blocked`, satır satır
-      izolasyon) — fazın en riskli görevi
-- [ ] 4 — İstemci tarafı plan katmanı ve ikiz kapı (`src/lib/billing.ts`,
-      store'da `canAddClient`)
-- [ ] 5 — Webhook Edge Function: imza doğrulama, idempotency, sağlayıcı adaptörü
-- [ ] 6 — Checkout ve portal Edge Function'ları
-- [ ] 7 — `/app/billing` sayfası + `RequireAuth` *(yalnızca bu rotayı sarar)*
-- [ ] 8 — E2E + sır taraması testi
-- [ ] 9 — Doküman senkronu ve kapanış
+- [x] 3 — **Senkron kalıcı reddi atlatır** (`SyncOutcome.blocked`, satır satır
+      izolasyon)
+- [x] 4 — İstemci tarafı plan katmanı ve ikiz kapı (`src/lib/billing.ts`,
+      `canAddClient`)
+- [x] 5 — Webhook Edge Function: imza doğrulama, idempotency, sağlayıcı adaptörü
+- [x] 6 — Checkout ve portal Edge Function'ları *(canlı LS turu Görev 0'a bağlı)*
+- [x] 7 — `/app/billing` sayfası + `RequireAuth` *(yalnızca bu rotayı sarar)*
+- [x] 8 — E2E + sır taraması testi
+- [x] 9 — Doküman senkronu ve kapanış
 
 **Kriterler:** abone olunabiliyor · sahte webhook reddediliyor · doğrudan API
 çağrısı sınırı aşamıyor · sınıra çarpan kullanıcı nedeni ve çıkışı görüyor ·

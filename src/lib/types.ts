@@ -155,3 +155,25 @@ export type FilterStatus = 'all' | 'active' | 'completed';
 export const PRIORITIES: readonly Priority[] = ['low', 'medium', 'high'];
 
 export const FILTERS: readonly FilterStatus[] = ['all', 'active', 'completed'];
+
+/** Faturalama planı. `is_pro` SQL fonksiyonunun istemci ikizi. */
+export type PlanStatus = 'free' | 'pro' | 'pastDue';
+
+/**
+ * `subscriptions` satırının istemci görünümü. Salt okunur — yazan webhook.
+ * Durum metni sağlayıcıdan geldiği gibi saklanır.
+ */
+export interface Subscription {
+    userId: string;
+    provider: string;
+    providerSubscriptionId: string;
+    providerCustomerId: string | null;
+    status: string;
+    variantId: string | null;
+    renewsAt: string | null;
+    endsAt: string | null;
+    trialEndsAt: string | null;
+    testMode: boolean;
+    createdAt: string;
+    updatedAt: string;
+}

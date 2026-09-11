@@ -25,6 +25,11 @@ interface ImportMetaEnv {
    * paketi tarayıcıya hiç indirilmez.
    */
   readonly VITE_SENTRY_DSN?: string;
+  /**
+   * `"true"` ise faturalama arayüzü açılır. Yalnızca LemonSqueezy sırları
+   * Edge Function secrets'ta tanımlıysa açın.
+   */
+  readonly VITE_BILLING?: string;
 }
 
 interface ImportMeta {

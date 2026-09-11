@@ -58,4 +58,12 @@ export const features = {
      * sağlayıcı yapılandırılmış olmalı (bkz. README).
      */
     githubAuth: isEnabled(import.meta.env.VITE_AUTH_GITHUB),
+    /**
+     * Faturalama arayüzü (`/app/billing`, yükseltme bağlantıları).
+     *
+     * Varsayılan kapalıdır: LS kimlik bilgileri yokken "Yükselt" göstermek
+     * kullanıcıyı hataya yollar. Kapı migration'ı ayrıdır — bayrak yalnızca
+     * arayüzü kapatır (DEC-PAY-12).
+     */
+    billing: isEnabled(import.meta.env.VITE_BILLING),
 } as const;

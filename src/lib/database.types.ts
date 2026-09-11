@@ -168,6 +168,51 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          provider: string
+          provider_customer_id: string | null
+          provider_subscription_id: string
+          renews_at: string | null
+          status: string
+          test_mode: boolean
+          trial_ends_at: string | null
+          updated_at: string
+          user_id: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          provider?: string
+          provider_customer_id?: string | null
+          provider_subscription_id: string
+          renews_at?: string | null
+          status: string
+          test_mode?: boolean
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          provider?: string
+          provider_customer_id?: string | null
+          provider_subscription_id?: string
+          renews_at?: string | null
+          status?: string
+          test_mode?: boolean
+          trial_ends_at?: string | null
+          updated_at?: string
+          user_id?: string
+          variant_id?: string | null
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           category_id: string | null
@@ -307,7 +352,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      client_count: { Args: { uid: string }; Returns: number }
+      is_pro: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       task_priority: "low" | "medium" | "high"

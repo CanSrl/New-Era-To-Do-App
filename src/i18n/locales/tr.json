@@ -271,11 +271,44 @@
     "daysAgo": "{{count}} gün önce",
     "discarded_one": "Bu cihazdaki {{count}} değişiklik, başka bir cihazdaki daha yeni sürümle değiştirildi.",
     "discarded_other": "Bu cihazdaki {{count}} değişiklik, başka bir cihazdaki daha yeni sürümle değiştirildi.",
+    "blocked_one": "{{count}} kayıt ücretsiz plan sınırına takıldı ve eşitlenmedi. Yerelde duruyor.",
+    "blocked_other": "{{count}} kayıt ücretsiz plan sınırına takıldı ve eşitlenmedi. Yerelde duruyor.",
+    "blockedAction": "Planı yükselt",
     "error": {
       "network": "Sunucuya ulaşılamadı.",
       "expiredSession": "Oturumun süresi dolmuş. Tekrar giriş yapın.",
       "tooLarge": "Bulut verisi tek seferde eşitlenemeyecek kadar büyük. Verileriniz cihazınızda güvende — destekle iletişime geçin.",
-      "unknown": "Senkronizasyon başarısız oldu."
+      "unknown": "Senkronizasyon başarısız oldu.",
+      "blockedRls": "Bu kayıt plan sınırına takıldı ve gönderilemedi.",
+      "blockedCheck": "Bu kayıt bir kısıtı ihlal ettiği için gönderilemedi.",
+      "blockedNotNull": "Bu kayıt zorunlu bir alan eksik olduğu için gönderilemedi.",
+      "blockedFk": "Bu kayıt bağlı olduğu kayıt bulunamadığı için gönderilemedi."
+    }
+  },
+  "billing": {
+    "nav": "Faturalama",
+    "title": "Plan ve faturalama",
+    "status": {
+      "free": "Ücretsiz",
+      "pro": "Pro",
+      "pastDue": "Ödeme başarısız"
+    },
+    "freeBody": "Ücretsiz planda en fazla 1 müşteri oluşturabilirsiniz. Arşivlenen müşteriler de bu sınıra dahildir.",
+    "proBody": "Pro plandasınız. Müşteri sınırı yok.",
+    "pastDueBody": "Son ödeme alınamadı. Kartınızı güncellemezseniz dönem sonunda ücretsiz plana düşersiniz.",
+    "renewsAt": "Yenileme: {{date}}",
+    "endsAt": "Bitiş: {{date}}",
+    "upgrade": "Yükselt",
+    "manage": "Aboneliği yönet",
+    "upgradeHint": "Planı yükselt",
+    "limitReached": "Ücretsiz planda en fazla 1 müşteri olabilir. Yeni müşteri eklemek için Pro'ya geçin.",
+    "checkoutError": "Ödeme sayfası açılamadı. Lütfen tekrar deneyin.",
+    "portalError": "Faturalama portalı açılamadı. Lütfen tekrar deneyin.",
+    "requireAuth": {
+      "loading": "Oturum kontrol ediliyor…",
+      "title": "Faturalama için giriş gerekli",
+      "body": "Plan bilgisi hesaba bağlıdır. Uygulamanın geri kalanı giriş olmadan çalışmaya devam eder.",
+      "signIn": "Giriş yap"
     }
   },
   "notFound": {
