@@ -8,6 +8,7 @@ import { useUiStore } from '../store/ui';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import { Trash2 } from 'lucide-react';
+import { InteractiveIcon } from '../components/ui/InteractiveIcon';
 import {
     AlertDialog,
     AlertDialogTrigger,
@@ -37,7 +38,7 @@ export function TasksPage() {
                 particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899']
+                colors: ['#10b981', '#06b6d4', '#14b8a6', '#f59e0b']
             });
             toast.success(t('tasks.allDone'), { id: 'all-done' });
         }
@@ -54,8 +55,11 @@ export function TasksPage() {
                 {completedTasks > 0 && (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <button className="px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors flex items-center gap-1.5 self-start sm:self-auto">
-                                <Trash2 size={16} /> {t('tasks.clearCompleted')}
+                            <button className="group px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-all hover:scale-105 active:scale-95 flex items-center gap-1.5 self-start sm:self-auto">
+                                <InteractiveIcon type="wiggle">
+                                    <Trash2 size={16} />
+                                </InteractiveIcon>
+                                {t('tasks.clearCompleted')}
                             </button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -90,17 +94,20 @@ export function TasksPage() {
 
             <div className="mb-6">
                 {tasks.length === 0 ? (
-                    <div className="bg-card border border-border rounded-xl p-6 md:p-12 shadow-sm flex flex-col items-center justify-center text-center">
-                        <div className="w-16 h-16 md:w-24 md:h-24 mb-3 md:mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-3xl md:text-4xl">🚀</span>
-                        </div>
+                    <div className="bg-card border border-border/50 rounded-2xl p-6 md:p-12 shadow-sm flex flex-col items-center justify-center text-center">
+                        <InteractiveIcon type="bounce">
+                            <div className="w-16 h-16 md:w-24 md:h-24 mb-3 md:mb-4 rounded-2xl bg-gradient-to-br from-primary/15 to-accent/15 border border-primary/20 flex items-center justify-center shadow-lg shadow-primary/10">
+                                <span className="text-3xl md:text-4xl">🚀</span>
+                            </div>
+                        </InteractiveIcon>
                         <h3 className="text-lg md:text-xl font-bold tracking-tight mb-2">{t('tasks.emptyTitle')}</h3>
                         <p className="text-muted-foreground mb-4 md:mb-6 text-sm md:text-base">{t('tasks.emptyBody')}</p>
                         <button
                             onClick={() => openTaskForm()}
-                            className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/30 active:scale-95 transition-all"
+                            className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 active:scale-95 transition-all"
                         >
-                            {t('tasks.emptyAction')}
+                            <span className="relative z-10">{t('tasks.emptyAction')}</span>
+                            <span className="absolute inset-0 bg-gradient-to-r from-accent via-primary to-accent bg-[length:200%_100%] opacity-0 transition-opacity group-hover:opacity-100 animate-shimmer" />
                         </button>
                     </div>
                 ) : (

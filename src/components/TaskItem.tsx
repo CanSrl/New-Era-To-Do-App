@@ -26,10 +26,10 @@ interface TaskItemProps {
     onEdit: (task: Task) => void;
 }
 
-const priorityColors = {
-    low: 'bg-green-500/10 text-green-600 dark:text-green-500',
-    medium: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500',
-    high: 'bg-red-500/10 text-red-600 dark:text-red-500',
+const priorityBorderColors = {
+    low: 'border-l-emerald-500',
+    medium: 'border-l-amber-500',
+    high: 'border-l-red-500',
 };
 
 export function TaskItem({ task, onEdit }: TaskItemProps) {
@@ -93,7 +93,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
               * gösterge değildir — satırdaki durdur butonu ve kabuktaki sayaç
               * çubuğu aynı bilgiyi metinle de taşır.
               */
-            className={`group relative flex items-start gap-3 p-4 bg-card border rounded-xl shadow-sm transition-all hover:shadow-md mb-3 ${isTimerRunning ? 'border-primary ring-1 ring-primary/40' : 'border-border'} ${task.completed ? 'opacity-70 bg-muted/40' : ''} ${isDeleting ? 'scale-95 opacity-0 pointer-events-none' : ''}`}
+            className={`group relative flex items-start gap-3 p-4 bg-card border border-l-[3px] rounded-xl shadow-sm transition-all duration-200 hover:shadow-md hover:border-primary/20 mb-3 ${priorityBorderColors[task.priority]} ${isTimerRunning ? 'border-primary ring-1 ring-primary/30 bg-primary/[0.02]' : ''} ${task.completed ? 'opacity-60 bg-muted/30' : ''} ${isDeleting ? 'scale-95 opacity-0 pointer-events-none' : ''}`}
         >
             <div
                 {...attributes}
@@ -111,12 +111,12 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         ? t('taskItem.markIncomplete', { title: task.title })
                         : t('taskItem.markComplete', { title: task.title })
                 }
-                className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all ${task.completed
-                    ? 'bg-green-500 border-green-500 text-white shadow-sm'
-                    : 'border-muted-foreground/30 hover:border-primary hover:bg-primary/5'
+                className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all hover:scale-110 active:scale-90 ${task.completed
+                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                    : 'border-muted-foreground/30 hover:border-primary hover:bg-primary/10'
                     }`}
             >
-                {task.completed && <Check size={14} strokeWidth={3} />}
+                {task.completed && <Check size={14} strokeWidth={3} className="animate-scale-in" />}
             </button>
 
             <div className="flex-1 min-w-0">
@@ -132,7 +132,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                         {/*
                           * Sayaç butonu diğer eylemlerin aksine çalışırken
                           * HER ZAMAN görünür: durdurmanın hover'a bağlı olması,
@@ -157,20 +157,20 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                                 aria-label={isTimerRunning
                                     ? t('time.stopFor', { title: task.title })
                                     : t('time.startFor', { title: task.title })}
-                                className={`p-1.5 rounded-md transition-all disabled:cursor-not-allowed disabled:opacity-30 ${isTimerRunning
-                                    ? 'text-primary bg-primary/10 opacity-100'
+                                className={`p-1.5 rounded-lg transition-all hover:scale-110 active:scale-95 disabled:cursor-not-allowed disabled:opacity-30 ${isTimerRunning
+                                    ? 'text-primary bg-primary/15 opacity-100 shadow-sm shadow-primary/20'
                                     : 'text-muted-foreground hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 disabled:group-hover:opacity-30'
                                     }`}
                             >
                                 {isTimerRunning
-                                    ? <Square size={16} fill="currentColor" />
+                                    ? <Square size={16} fill="currentColor" className="animate-pulse" />
                                     : <Play size={16} />}
                             </button>
                         )}
 
                         <button
                             onClick={() => onEdit(task)}
-                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                            className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100"
                             title={t('common.edit')}
                             aria-label={t('taskItem.edit', { title: task.title })}
                         >
@@ -179,7 +179,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
                                 <button
-                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all opacity-0 group-hover:opacity-100"
+                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all hover:scale-110 active:scale-95 opacity-0 group-hover:opacity-100"
                                     title={t('common.delete')}
                                     aria-label={t('taskItem.delete', { title: task.title })}
                                 >
@@ -205,7 +205,11 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 mt-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-md ${priorityColors[task.priority]}`}>
+                    <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-lg ${
+                        task.priority === 'high' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
+                        task.priority === 'medium' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
+                        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                    }`}>
                         {t(`priority.${task.priority}`)}
                     </span>
 

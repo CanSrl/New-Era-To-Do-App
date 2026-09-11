@@ -12,6 +12,27 @@
 
 ---
 
+## Kalan (sen yaparsın)
+
+Ajan işi bitti. Aşağıdakiler hesap / yayın; kod hazır.
+
+- [ ] **LemonSqueezy Görev 0** — mağaza, ürün/varyant, webhook sırrı, API anahtarı.
+      Kod (`/app/billing`, Edge Function’lar) duruyor; canlı checkout yok.
+      `VITE_BILLING=true` ancak sırlardan sonra. Reddedilirse sağlayıcı
+      kararı yeniden açılır (iyzico).
+- [ ] **Canlı demo** — Vercel veya Netlify’a dağıt, çalışan URL.
+      Adımlar: `docs/deploy.md`. Bulut Supabase URL + anon key (service
+      role `VITE_` olmaz). Auth yönlendirme adresleri tam eşleşmeli.
+- [ ] **`curl -I` güvenlik başlıkları** — demo URL’sinden sonra.
+      Beklenen: CSP `frame-ancestors 'none'`, `nosniff`, `DENY`,
+      `strict-origin-when-cross-origin`. Phase 1’den açık iplik.
+
+Bilinçli borç (şimdi yapılmaz): tohum kategorilerin dil çakışması;
+`senkron.spec.ts` ilk turu bilinçli beklemiyor; takım/`workspace_id` v1 dışı
+(göç yolu `docs/teams.md`); üçüncü dil; Google OAuth.
+
+---
+
 ## ✅ Tamamlanan temel (v0) — yeniden planlanmaz
 
 ### Temizlik ve altyapı
@@ -89,8 +110,7 @@
 - [x] HTTP güvenlik başlıkları yapılandırıldı (`vercel.json` +
       `public/_headers`, `security-headers.test.ts` ikisini eşit tutuyor)
 - [ ] ⚠️ **Başlıkların canlıda `curl -I` ile doğrulanması** — yapılandırma
-      hazır ama gerçek kanıt dağıtım gerektiriyor, o da Phase 5'te.
-      **Projenin açık kalan tek ipliği.**
+      hazır; kanıt çalışan bir demo URL ister (aşağıda Kalan).
 - [x] Çakışmada elenen yerel değişiklik kullanıcıya gösteriliyor
       (`SyncOutcome.discarded` → `SyncProvider` bildirimi)
 - [x] Senkron yazma/silme sırası birim testiyle korunuyor (`sync.test.ts`)
@@ -125,9 +145,9 @@
 - [x] `npm run verify:niche` iki bağımsız kanıt arıyor: 12 metin izi iki yönlü
       + kapalı derleme en az 20 KB küçük (bugün 57 KB)
 
-**Bu noktada durum:** 650 otomatik test — 462 birim, 116 E2E (14'ü gerçek iki
-tarayıcı bağlamıyla çift cihaz senaryosu, 1'i GitHub OAuth bayrağı kapalı
-olduğu için atlanır), 72 şema güvenlik testi.
+**Bu noktada durum (Faz 5 sonrası, ölçülmüş):** 688 otomatik test — 483 birim,
+119 E2E (14'ü çift cihaz; 1'i GitHub OAuth kapalı olduğu için atlanır),
+86 şema güvenlik testi.
 
 ---
 
@@ -136,7 +156,7 @@ olduğu için atlanır), 72 şema güvenlik testi.
 Sağlayıcı: **LemonSqueezy**. Ücretsiz sınır: **1 müşteri**.
 Plan: `docs/superpowers/plans/2026-09-01-odeme-pro-kapilama.md`
 Spec: `docs/superpowers/specs/2026-09-01-odeme-pro-kapilama-design.md`
-Dal: `faz-4-odeme`.
+Dal: `main` (`faz-4-odeme` birleştirildi).
 
 - [x] Sağlayıcı kararı verildi (DEC-PAY-01) ve plan + spec yazıldı
 - [ ] **0 — LemonSqueezy hesabı** *(Ahmet yapar, ajan yapamaz)*: mağaza
@@ -180,8 +200,7 @@ giremiyor ama uygulamanın geri kalanı girişsiz çalışıyor.
 
 Bunlar "yapılacak" değil, "biliniyor ve kabul edildi" listesi.
 
-- [ ] Güvenlik başlıklarının canlı doğrulaması — Phase 5'e bağlı *(tek gerçek
-      açık iş)*
+- [ ] Güvenlik başlıklarının canlı doğrulaması — demo URL bekliyor
 - [x] ~~Çakışma çözümü kaybeden değişikliği sessizce atıyor~~ — artık atmıyor,
       Phase 1'de kullanıcıya gösterilir hale geldi
 - [ ] Tohum kategori adları çevrildiği için, aynı hesabın iki cihazı ilk kez
@@ -190,7 +209,7 @@ Bunlar "yapılacak" değil, "biliniyor ve kabul edildi" listesi.
 - [ ] `senkron.spec.ts`, `signUp`/`signIn` sonrası ilk senkron turunu
       beklemiyor (bazı testleri ara durumları bilinçli sınadığı için
       dokunulmadı). Orada kararsızlık görülürse ilk bakılacak yer burasıdır.
-- [ ] Takım / çoklu kiracılık v1 kapsamında yok. `workspace_id` göç yolu
-      dokümante edilecek (Phase 5), inşa edilmeyecek.
+- [x] Takım / çoklu kiracılık v1 kapsamında yok. `workspace_id` göç yolu
+      yazıldı (`docs/teams.md`), inşa edilmedi.
 - [ ] Üçüncü dil eklemek `SUPPORTED_LANGUAGES` + yeni JSON + date-fns yerelliği
       demek; tohum kategori çakışma riskini büyütür.

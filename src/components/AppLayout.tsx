@@ -12,6 +12,8 @@ import { ActiveTimerBar } from '../features/time/ActiveTimerBar';
 import { AccountMenu } from './AccountMenu';
 import { AuthDialog } from './AuthDialog';
 import { TaskForm } from './TaskForm';
+import { InteractiveBackground } from './ui/InteractiveBackground';
+import { InteractiveIcon } from './ui/InteractiveIcon';
 
 interface NavItem {
     to: string;
@@ -109,92 +111,127 @@ export function AppLayout() {
     }, []);
 
     return (
-        <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row font-sans selection:bg-primary selection:text-primary-foreground transition-colors duration-300">
+        <div className="min-h-screen bg-background text-foreground flex flex-col md:flex-row font-sans selection:bg-primary/20 selection:text-primary transition-colors duration-300 relative overflow-hidden">
+            {/* Subtle Interactive Ambient Canvas */}
+            <InteractiveBackground variant="subtle" />
 
-            {/* Masaüstü kenar çubuğu */}
-            <aside className="hidden md:flex flex-col w-64 border-r border-border bg-card/50 backdrop-blur-xl shrink-0 h-screen sticky top-0 p-4 z-10">
+            {/* ─── Masaüstü kenar çubuğu ─── */}
+            <aside className="hidden md:flex flex-col w-64 border-r border-border/50 glass-strong shrink-0 h-screen sticky top-0 p-4 z-10 backdrop-blur-xl">
+                {/* Logo */}
                 <div className="flex items-center gap-3 mb-8 px-2">
-                    <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/20">
-                        <CheckCircle2 size={18} strokeWidth={2.5} />
-                    </div>
-                    <h1 className="font-bold text-lg tracking-tight">{t('app.name')}</h1>
+                    <InteractiveIcon type="spin" glowColor="hsl(var(--primary) / 0.5)">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/25">
+                            <CheckCircle2 size={18} strokeWidth={2.5} />
+                        </div>
+                    </InteractiveIcon>
+                    <h1 className="font-bold text-lg tracking-tight text-gradient">{t('app.name')}</h1>
                 </div>
 
-                <nav className="flex-1 space-y-2">
+                {/* Nav */}
+                <nav className="flex-1 space-y-1">
                     {NAV_ITEMS.map(({ to, labelKey, icon: Icon, end }) => (
                         <NavLink
                             key={to}
                             to={to}
                             end={end}
                             className={({ isActive }) => cn(
-                                'w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-md font-medium transition-colors',
+                                'group w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl font-medium transition-all duration-200',
                                 isActive
-                                    ? 'bg-secondary text-secondary-foreground'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/40'
+                                    ? 'bg-primary/10 text-primary shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary/60'
                             )}
                         >
-                            <span className="flex items-center gap-3">
-                                <Icon size={18} />
-                                {t(labelKey)}
-                            </span>
-                            {to === '/app' && activeCount > 0 && (
-                                <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-0.5 rounded-full inline-block">
-                                    {activeCount}
-                                </span>
+                            {({ isActive }) => (
+                                <>
+                                    <span className="flex items-center gap-3">
+                                        <span className={cn(
+                                            'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-6',
+                                            isActive
+                                                ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                                                : 'bg-secondary/60 group-hover:bg-primary/15 group-hover:text-primary'
+                                        )}>
+                                            <Icon size={16} className="transition-transform duration-300" />
+                                        </span>
+                                        {t(labelKey)}
+                                    </span>
+                                    {to === '/app' && activeCount > 0 && (
+                                        <span className={cn(
+                                            'text-xs font-bold px-2 py-0.5 rounded-full inline-block transition-transform group-hover:scale-105',
+                                            isActive
+                                                ? 'bg-primary text-white'
+                                                : 'bg-primary/10 text-primary'
+                                        )}>
+                                            {activeCount}
+                                        </span>
+                                    )}
+                                </>
                             )}
                         </NavLink>
                     ))}
                 </nav>
 
-                <div className="pt-4 border-t border-border mt-auto space-y-3">
+                {/* Bottom section */}
+                <div className="pt-4 border-t border-border/50 mt-auto space-y-3">
                     <AccountMenu variant="sidebar" onSignInClick={() => setIsAuthDialogOpen(true)} />
 
-                    <div className="flex items-center justify-between px-2 bg-secondary/50 p-1 rounded-lg">
+                    <div className="flex items-center justify-between bg-secondary/40 p-1 rounded-xl">
                         <button
                             onClick={() => setTheme('light')}
-                            className={cn('p-2 rounded-md transition-colors', theme === 'light' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
+                            className={cn('p-2 rounded-lg transition-all duration-200 group', theme === 'light' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
                             aria-label={t('theme.lightAria')}
                         >
-                            <Sun size={16} />
+                            <InteractiveIcon type="spin" interactive={theme !== 'light'}>
+                                <Sun size={16} className="transition-transform group-hover:rotate-45" />
+                            </InteractiveIcon>
                         </button>
                         <button
                             onClick={() => setTheme('system')}
-                            className={cn('p-2 rounded-md transition-colors', theme === 'system' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
+                            className={cn('p-2 rounded-lg transition-all duration-200 group', theme === 'system' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
                             aria-label={t('theme.systemAria')}
                         >
-                            <Monitor size={16} />
+                            <InteractiveIcon type="bounce" interactive={theme !== 'system'}>
+                                <Monitor size={16} className="transition-transform group-hover:scale-110" />
+                            </InteractiveIcon>
                         </button>
                         <button
                             onClick={() => setTheme('dark')}
-                            className={cn('p-2 rounded-md transition-colors', theme === 'dark' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
+                            className={cn('p-2 rounded-lg transition-all duration-200 group', theme === 'dark' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground')}
                             aria-label={t('theme.darkAria')}
                         >
-                            <Moon size={16} />
+                            <InteractiveIcon type="wiggle" interactive={theme !== 'dark'}>
+                                <Moon size={16} className="transition-transform group-hover:-rotate-12" />
+                            </InteractiveIcon>
                         </button>
                     </div>
                 </div>
             </aside>
 
-            {/* Mobil üst bar */}
-            <header className="md:hidden flex items-center justify-between p-4 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-20">
-                <div className="flex items-center gap-2">
-                    <CheckCircle2 className="text-primary" size={24} />
-                    <h1 className="font-bold text-lg">{t('app.name')}</h1>
+            {/* ─── Mobil üst bar ─── */}
+            <header className="md:hidden flex items-center justify-between p-4 border-b border-border/50 glass-strong sticky top-0 z-20">
+                <div className="flex items-center gap-2.5">
+                    <InteractiveIcon type="spin">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-sm">
+                            <CheckCircle2 size={16} strokeWidth={2.5} />
+                        </div>
+                    </InteractiveIcon>
+                    <h1 className="font-bold text-lg text-gradient">{t('app.name')}</h1>
                 </div>
                 <div className="flex items-center gap-2">
                     <AccountMenu variant="compact" onSignInClick={() => setIsAuthDialogOpen(true)} />
                     <button
                         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                        className="p-2 rounded-full bg-secondary text-secondary-foreground"
+                        className="p-2 rounded-xl bg-secondary/60 text-foreground transition-all hover:bg-secondary"
                         aria-label={theme === 'dark' ? t('theme.toggleToLight') : t('theme.toggleToDark')}
                     >
-                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        <InteractiveIcon type="spin">
+                            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                        </InteractiveIcon>
                     </button>
                 </div>
             </header>
 
-            {/* İçerik */}
-            <main className="flex-1 flex flex-col min-w-0 max-h-screen overflow-y-auto pb-32 md:pb-0 relative">
+            {/* ─── İçerik ─── */}
+            <main className="flex-1 flex flex-col min-w-0 max-h-screen overflow-y-auto pb-32 md:pb-0 relative z-10">
                 {/*
                   * Sayaç çubuğu kaydırılan alanın en üstünde yapışık durur:
                   * "unutulmuş açık sayaç" bu ürün kategorisinin klasik veri
@@ -208,8 +245,8 @@ export function AppLayout() {
                 </div>
             </main>
 
-            {/* Mobil alt gezinme */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border bg-card/80 backdrop-blur-xl z-20 pb-safe">
+            {/* ─── Mobil alt gezinme ─── */}
+            <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t border-border/50 glass-strong z-20 pb-safe">
                 <div className="flex items-center p-3">
                     <div className="flex flex-1 items-center">
                         {NAV_ITEMS.slice(0, NAV_SPLIT).map(({ to, shortLabelKey, icon: Icon, end }) => (
@@ -218,12 +255,21 @@ export function AppLayout() {
                                 to={to}
                                 end={end}
                                 className={({ isActive }) => cn(
-                                    'flex flex-1 flex-col items-center justify-center gap-1 transition-colors',
+                                    'group flex flex-1 flex-col items-center justify-center gap-1 transition-all duration-200',
                                     isActive ? 'text-primary' : 'text-muted-foreground'
                                 )}
                             >
-                                <Icon size={20} />
-                                <span className="text-[10px] font-medium">{t(shortLabelKey)}</span>
+                                {({ isActive }) => (
+                                    <>
+                                        <span className={cn(
+                                            'flex h-8 w-8 items-center justify-center rounded-lg transition-all group-hover:scale-110',
+                                            isActive && 'bg-primary/10'
+                                        )}>
+                                            <Icon size={20} />
+                                        </span>
+                                        <span className="text-[10px] font-semibold">{t(shortLabelKey)}</span>
+                                    </>
+                                )}
                             </NavLink>
                         ))}
                     </div>
@@ -231,10 +277,10 @@ export function AppLayout() {
                     <div className="flex shrink-0 justify-center px-2">
                         <button
                             onClick={() => openTaskForm()}
-                            className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform -translate-y-6"
+                            className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all -translate-y-6 group"
                             aria-label={t('tasks.addTask')}
                         >
-                            <PlusCircle size={28} />
+                            <PlusCircle size={28} className="group-hover:rotate-90 transition-transform duration-300" />
                         </button>
                     </div>
 
@@ -245,23 +291,32 @@ export function AppLayout() {
                                 to={to}
                                 end={end}
                                 className={({ isActive }) => cn(
-                                    'flex flex-1 flex-col items-center justify-center gap-1 transition-colors',
+                                    'group flex flex-1 flex-col items-center justify-center gap-1 transition-all duration-200',
                                     isActive ? 'text-primary' : 'text-muted-foreground'
                                 )}
                             >
-                                <Icon size={20} />
-                                <span className="text-[10px] font-medium">{t(shortLabelKey)}</span>
+                                {({ isActive }) => (
+                                    <>
+                                        <span className={cn(
+                                            'flex h-8 w-8 items-center justify-center rounded-lg transition-all group-hover:scale-110',
+                                            isActive && 'bg-primary/10'
+                                        )}>
+                                            <Icon size={20} />
+                                        </span>
+                                        <span className="text-[10px] font-semibold">{t(shortLabelKey)}</span>
+                                    </>
+                                )}
                             </NavLink>
                         ))}
                     </div>
                 </div>
             </nav>
 
-            {/* Masaüstü yüzen ekleme butonu */}
+            {/* ─── Masaüstü yüzen ekleme butonu ─── */}
             <div className="hidden md:block fixed bottom-8 right-8 z-20">
                 <button
                     onClick={() => openTaskForm()}
-                    className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-105 hover:bg-primary/90 active:scale-95 transition-all group"
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group animate-pulse-glow"
                     title={t('tasks.addTask')}
                 >
                     <PlusCircle size={28} className="group-hover:rotate-90 transition-transform duration-300" />
