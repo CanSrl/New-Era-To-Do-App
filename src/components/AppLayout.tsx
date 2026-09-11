@@ -194,7 +194,7 @@ export function AppLayout() {
             </header>
 
             {/* İçerik */}
-            <main className="flex-1 flex flex-col min-w-0 max-h-screen overflow-y-auto pb-24 md:pb-0 relative">
+            <main className="flex-1 flex flex-col min-w-0 max-h-screen overflow-y-auto pb-32 md:pb-0 relative">
                 {/*
                   * Sayaç çubuğu kaydırılan alanın en üstünde yapışık durur:
                   * "unutulmuş açık sayaç" bu ürün kategorisinin klasik veri

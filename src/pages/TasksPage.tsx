@@ -81,17 +81,21 @@ export function TasksPage() {
                 )}
             </div>
 
-            <StatsDashboard />
-            <FilterBar />
+            {tasks.length > 0 && (
+                <>
+                    <StatsDashboard />
+                    <FilterBar />
+                </>
+            )}
 
             <div className="mb-6">
                 {tasks.length === 0 ? (
-                    <div className="bg-card border border-border rounded-xl p-12 shadow-sm flex flex-col items-center justify-center text-center">
-                        <div className="w-24 h-24 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-4xl">🚀</span>
+                    <div className="bg-card border border-border rounded-xl p-6 md:p-12 shadow-sm flex flex-col items-center justify-center text-center">
+                        <div className="w-16 h-16 md:w-24 md:h-24 mb-3 md:mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-3xl md:text-4xl">🚀</span>
                         </div>
-                        <h3 className="text-xl font-bold tracking-tight mb-2">{t('tasks.emptyTitle')}</h3>
-                        <p className="text-muted-foreground mb-6">{t('tasks.emptyBody')}</p>
+                        <h3 className="text-lg md:text-xl font-bold tracking-tight mb-2">{t('tasks.emptyTitle')}</h3>
+                        <p className="text-muted-foreground mb-4 md:mb-6 text-sm md:text-base">{t('tasks.emptyBody')}</p>
                         <button
                             onClick={() => openTaskForm()}
                             className="bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-medium shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/30 active:scale-95 transition-all"
