@@ -4,12 +4,20 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="mask-icon" href="/masked-icon.svg" color="#0f172a" />
+    <link rel="mask-icon" href="/masked-icon.svg" color="#4f46e5" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b0f17" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <meta name="theme-color" content="#0b0b12" />
+    <!--
+      Yazı tipleri yerelden gelir (`public/fonts/`, @font-face tanımları
+      `src/index.css` içinde). Buraya bir Google Fonts <link>'i geri
+      koymayın: uygulama çevrimdışı çalışan bir PWA ve landing testi
+      localhost dışına hiç istek yapılmamasını şart koşuyor.
+      Latin alt kümeleri ilk boyamada gerektiği için önden yüklenir.
+    -->
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="/fonts/inter-latin-wght-normal.woff2" />
+    <link rel="preload" as="font" type="font/woff2" crossorigin
+      href="/fonts/plus-jakarta-sans-latin-wght-normal.woff2" />
     <title>Yapılacaklar Listesi — Modern Görev Yöneticisi</title>
     <meta name="description" content="Modern, hızlı ve çevrimdışı çalışabilen görev yöneticisi. Kategoriler, öncelikler, sürükle-bırak sıralama ve PWA desteğiyle görevlerinizi kolayca yönetin." />
     <meta property="og:type" content="website" />

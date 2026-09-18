@@ -81,7 +81,7 @@ export function SyncIndicator() {
 
     return (
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status">
-            <Check size={12} className="text-green-500" />
+            <Check size={12} className="text-success" />
             {relative ? t('sync.syncedAt', { relative }) : t('sync.synced')}
         </p>
     );

@@ -120,7 +120,7 @@ export function AppLayout() {
                 {/* Logo */}
                 <div className="flex items-center gap-3 mb-8 px-2">
                     <InteractiveIcon type="spin" glowColor="hsl(var(--primary) / 0.5)">
-                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-lg shadow-primary/25">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground shadow-lg shadow-primary/25">
                             <CheckCircle2 size={18} strokeWidth={2.5} />
                         </div>
                     </InteractiveIcon>
@@ -147,7 +147,7 @@ export function AppLayout() {
                                         <span className={cn(
                                             'flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-6',
                                             isActive
-                                                ? 'bg-primary text-white shadow-sm shadow-primary/30'
+                                                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/30'
                                                 : 'bg-secondary/60 group-hover:bg-primary/15 group-hover:text-primary'
                                         )}>
                                             <Icon size={16} className="transition-transform duration-300" />
@@ -158,7 +158,7 @@ export function AppLayout() {
                                         <span className={cn(
                                             'text-xs font-bold px-2 py-0.5 rounded-full inline-block transition-transform group-hover:scale-105',
                                             isActive
-                                                ? 'bg-primary text-white'
+                                                ? 'bg-primary text-primary-foreground'
                                                 : 'bg-primary/10 text-primary'
                                         )}>
                                             {activeCount}
@@ -210,7 +210,7 @@ export function AppLayout() {
             <header className="md:hidden flex items-center justify-between p-4 border-b border-border/50 glass-strong sticky top-0 z-20">
                 <div className="flex items-center gap-2.5">
                     <InteractiveIcon type="spin">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white shadow-sm">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground shadow-sm">
                             <CheckCircle2 size={16} strokeWidth={2.5} />
                         </div>
                     </InteractiveIcon>
@@ -277,7 +277,7 @@ export function AppLayout() {
                     <div className="flex shrink-0 justify-center px-2">
                         <button
                             onClick={() => openTaskForm()}
-                            className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all -translate-y-6 group"
+                            className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-xl shadow-primary/30 flex items-center justify-center hover:scale-110 active:scale-95 transition-all -translate-y-6 group"
                             aria-label={t('tasks.addTask')}
                         >
                             <PlusCircle size={28} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -316,7 +316,7 @@ export function AppLayout() {
             <div className="hidden md:block fixed bottom-8 right-8 z-20">
                 <button
                     onClick={() => openTaskForm()}
-                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-white shadow-xl shadow-primary/30 hover:shadow-primary/50 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group animate-pulse-glow"
+                    className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-xl shadow-primary/30 hover:shadow-primary/50 flex items-center justify-center hover:scale-110 active:scale-95 transition-all group animate-pulse-glow"
                     title={t('tasks.addTask')}
                 >
                     <PlusCircle size={28} className="group-hover:rotate-90 transition-transform duration-300" />
