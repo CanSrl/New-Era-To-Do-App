@@ -68,10 +68,13 @@ function AppPreview() {
         { key: t('landing.previewTaskThree'), done: true, badge: false, priority: 'low' },
     ];
 
+    /* Maketteki noktalar uygulamanın gerçek öncelik rozetleriyle aynı
+     * token'ları kullanır; ayrı sabit renkler olsaydı pazarlama sayfası
+     * ürünü olduğundan farklı gösterirdi. */
     const priorityColors: Record<string, string> = {
-        high: 'bg-red-500',
-        medium: 'bg-amber-500',
-        low: 'bg-emerald-500',
+        high: 'bg-destructive',
+        medium: 'bg-warning',
+        low: 'bg-success',
     };
 
     return (
@@ -84,9 +87,9 @@ function AppPreview() {
             {/* Mock toolbar */}
             <div className="mb-4 flex items-center gap-2 border-b border-border/50 pb-3">
                 <div className="flex gap-1.5">
-                    <span className="h-3 w-3 rounded-full bg-red-400/80 transition-transform hover:scale-125 cursor-pointer" />
-                    <span className="h-3 w-3 rounded-full bg-amber-400/80 transition-transform hover:scale-125 cursor-pointer" />
-                    <span className="h-3 w-3 rounded-full bg-emerald-400/80 transition-transform hover:scale-125 cursor-pointer" />
+                    <span className="h-3 w-3 rounded-full bg-destructive/70 transition-transform hover:scale-125 cursor-pointer" />
+                    <span className="h-3 w-3 rounded-full bg-highlight/80 transition-transform hover:scale-125 cursor-pointer" />
+                    <span className="h-3 w-3 rounded-full bg-success/70 transition-transform hover:scale-125 cursor-pointer" />
                 </div>
                 <div className="mx-auto flex items-center gap-2 rounded-lg bg-secondary/60 px-3 py-1">
                     <InteractiveIcon type="bounce">
@@ -170,11 +173,11 @@ function LandingNav() {
             <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
                 <Link to="/" className="group flex items-center gap-2.5 font-bold tracking-tight">
                     <InteractiveIcon type="spin" glowColor="hsl(var(--primary) / 0.5)">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-white shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-lg shadow-primary/25 group-hover:shadow-primary/40 transition-shadow">
                             <CheckCircle2 size={18} strokeWidth={2.5} />
                         </span>
                     </InteractiveIcon>
-                    <span className="text-gradient text-lg">{t('app.name')}</span>
+                    <span className="text-gradient font-display text-lg font-extrabold">{t('app.name')}</span>
                 </Link>
 
                 <div className="hidden items-center gap-8 md:flex">
@@ -192,7 +195,7 @@ function LandingNav() {
                 <div className="hidden items-center gap-3 md:flex">
                     <Link
                         to="/app"
-                        className="group relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-lg bg-gradient-to-r from-primary to-accent px-5 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 active:scale-[0.98]"
+                        className="group relative inline-flex h-10 items-center gap-2 overflow-hidden rounded-lg bg-gradient-to-r from-primary to-accent px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl hover:shadow-primary/35 active:scale-[0.98]"
                     >
                         <span className="relative z-10 flex items-center gap-2">
                             {t('landing.cta')}
@@ -233,7 +236,7 @@ function LandingNav() {
                         <div className="flex flex-col gap-3 border-t border-border/50 pt-4">
                             <Link
                                 to="/app"
-                                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition-all hover:shadow-xl active:scale-[0.98]"
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-primary to-accent px-4 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all hover:shadow-xl active:scale-[0.98]"
                             >
                                 {t('landing.cta')}
                                 <ArrowRight size={16} />
@@ -291,7 +294,7 @@ function Hero() {
             <div className="mb-4 flex items-center gap-4 animate-fade-in" style={{ animationDelay: '300ms' }}>
                 <Link
                     to="/app"
-                    className="group relative inline-flex h-13 items-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-accent px-8 text-base font-bold text-white shadow-xl shadow-primary/30 transition-all hover:shadow-2xl hover:shadow-primary/45 active:scale-[0.97]"
+                    className="group relative inline-flex h-13 items-center gap-2.5 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-accent px-8 text-base font-bold text-primary-foreground shadow-xl shadow-primary/30 transition-all hover:shadow-2xl hover:shadow-primary/45 active:scale-[0.97]"
                 >
                     <span className="relative z-10 flex items-center gap-2.5">
                         {t('landing.cta')}
@@ -325,28 +328,28 @@ function Features() {
             icon: Briefcase,
             title: t('landing.featureLinkTitle'),
             body: t('landing.featureLinkBody'),
-            gradient: 'from-emerald-500/10 to-teal-500/10',
-            iconBg: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+            gradient: 'from-primary/10 to-accent/10',
+            iconBg: 'bg-primary/10 text-primary border border-primary/20',
             interaction: 'tilt' as const,
-            glow: 'rgba(16, 185, 129, 0.4)',
+            glow: 'hsl(var(--primary) / 0.4)',
         },
         {
             icon: CalendarClock,
             title: t('landing.featureDeliveryTitle'),
             body: t('landing.featureDeliveryBody'),
-            gradient: 'from-cyan-500/10 to-blue-500/10',
-            iconBg: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20',
+            gradient: 'from-accent/10 to-primary/10',
+            iconBg: 'bg-accent/10 text-accent border border-accent/20',
             interaction: 'spin' as const,
-            glow: 'rgba(6, 182, 212, 0.4)',
+            glow: 'hsl(var(--accent) / 0.4)',
         },
         {
             icon: WifiOff,
             title: t('landing.featureOfflineTitle'),
             body: t('landing.featureOfflineBody'),
-            gradient: 'from-teal-500/10 to-emerald-500/10',
-            iconBg: 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/20',
+            gradient: 'from-highlight/10 to-primary/10',
+            iconBg: 'bg-highlight/15 text-highlight border border-highlight/25',
             interaction: 'wiggle' as const,
-            glow: 'rgba(20, 184, 166, 0.4)',
+            glow: 'hsl(var(--highlight) / 0.45)',
         },
     ];
 
@@ -403,11 +406,11 @@ function Footer() {
             <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 text-center">
                 <Link to="/" className="group flex items-center gap-2 font-bold">
                     <InteractiveIcon type="spin">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-white shadow-sm">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-sm">
                             <CheckCircle2 size={14} strokeWidth={2.5} />
                         </span>
                     </InteractiveIcon>
-                    <span className="text-gradient">{t('app.name')}</span>
+                    <span className="text-gradient font-display font-bold">{t('app.name')}</span>
                 </Link>
                 <p className="text-sm text-muted-foreground">
                     © {new Date().getFullYear()} {t('app.name')}

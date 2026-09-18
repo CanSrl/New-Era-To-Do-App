@@ -1,7 +1,65 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────
+ * Yazı tipleri — yerel olarak paketlenir, CDN'den ÇEKİLMEZ.
+ *
+ * Uygulama çevrimdışı çalışan bir PWA ve `e2e/landing.spec.ts`
+ * pazarlama sayfasının localhost dışına hiç istek yapmamasını
+ * şart koşuyor. Google Fonts `<link>`'i bu yüzden `index.html`'den
+ * kaldırıldı; dosyalar `public/fonts/` altında duruyor
+ * (@fontsource-variable paketlerinden kopyalandı, OFL lisansları
+ * aynı klasörde).
+ *
+ * Yalnızca latin + latin-ext alt kümeleri var: Türkçe'nin ğ/ş/İ
+ * harfleri latin-ext'te, ı ise latin'de. Kiril/Yunan/Vietnam alt
+ * kümeleri precache'i üç katına çıkarırdı.
+ * ───────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('/fonts/plus-jakarta-sans-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Plus Jakarta Sans Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 800;
+  src: url('/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 @theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  /* Gövde metni ve arayüz: Inter. Başlıklar ve marka: Plus Jakarta Sans. */
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Plus Jakarta Sans Variable', 'Inter Variable', ui-sans-serif,
+    system-ui, -apple-system, sans-serif;
 
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
@@ -24,6 +82,12 @@
   --color-accent: hsl(var(--accent));
   --color-accent-foreground: hsl(var(--accent-foreground));
 
+  /* Sıcak vurgu rengi (amber). Marka gradyanının parçası DEĞİL — tekil
+   * vurgular için: acil rozeti, ilerleme çubuğu, Pro işareti. Üzerine
+   * beyaz metin gelmez, `highlight-foreground` koyudur. */
+  --color-highlight: hsl(var(--highlight));
+  --color-highlight-foreground: hsl(var(--highlight-foreground));
+
   --color-popover: hsl(var(--popover));
   --color-popover-foreground: hsl(var(--popover-foreground));
 
@@ -36,9 +100,24 @@
   --color-warning: hsl(var(--warning));
   --color-warning-foreground: hsl(var(--warning-foreground));
 
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
+  /* Yarıçap ölçeği tek bir köke bağlıdır. `rounded-xl`/`rounded-2xl`
+   * Tailwind varsayılanlarıyla gelmesin diye onlar da burada tanımlı;
+   * aksi halde `--radius` değişince ölçek ortadan ikiye bölünürdü. */
   --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 10px);
+  --radius-3xl: calc(var(--radius) + 18px);
+
+  /* Yükseklik (elevation) ölçeği: gölge nötr değil, zemine göre
+   * indigo'ya çalar — düz siyah gölge açık temada kirli görünüyordu. */
+  --shadow-e1: 0 1px 2px hsl(var(--shadow-tint) / 0.06),
+    0 1px 1px hsl(var(--shadow-tint) / 0.04);
+  --shadow-e2: 0 2px 4px hsl(var(--shadow-tint) / 0.06),
+    0 4px 12px hsl(var(--shadow-tint) / 0.08);
+  --shadow-e3: 0 4px 8px hsl(var(--shadow-tint) / 0.06),
+    0 12px 32px hsl(var(--shadow-tint) / 0.12);
 
   /* Glow / shadow tokens */
   --shadow-glow-sm: 0 0 20px -5px hsl(var(--primary) / 0.3);
@@ -52,78 +131,97 @@
 }
 
 @layer base {
+  /*
+   * Palet: İndigo (birincil) + Violet (gradyan ortağı) + Amber (vurgu).
+   *
+   * Marka gradyanı `primary → accent` ikilisidir ve ikisinin de üzerine
+   * beyaz metin gelebilir. Amber gradyana KATILMAZ: amber üzerine beyaz
+   * metnin kontrastı ~2:1'dir, yani gradyanın sıcak ucundaki her etiket
+   * okunmaz olurdu. Amber yalnızca `highlight` olarak, koyu metinle
+   * kullanılır.
+   */
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 12%;
+    --background: 240 25% 99%;
+    --foreground: 235 28% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 12%;
+    --card-foreground: 235 28% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 12%;
+    --popover-foreground: 235 28% 11%;
 
-    --primary: 160 84% 39%;
+    --primary: 243 75% 59%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 94%;
-    --secondary-foreground: 215 25% 15%;
+    --secondary: 240 20% 95%;
+    --secondary-foreground: 235 25% 18%;
 
-    --muted: 210 20% 94%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 240 20% 95%;
+    --muted-foreground: 236 12% 45%;
 
-    --accent: 194 95% 42%;
+    --accent: 262 80% 62%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 51%;
+    --highlight: 38 92% 50%;
+    --highlight-foreground: 28 70% 12%;
+
+    --destructive: 352 74% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 76% 40%;
+    --success: 158 68% 34%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
+    --warning: 32 94% 42%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 160 84% 39%;
+    --border: 240 18% 90%;
+    --input: 240 18% 88%;
+    --ring: 243 75% 59%;
 
-    --radius: 0.75rem;
+    --shadow-tint: 243 45% 25%;
+
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 218 28% 6%;
-    --foreground: 210 20% 98%;
+    --background: 243 22% 6%;
+    --foreground: 240 20% 96%;
 
-    --card: 217 24% 10%;
-    --card-foreground: 210 20% 98%;
+    --card: 243 20% 10%;
+    --card-foreground: 240 20% 96%;
 
-    --popover: 217 24% 10%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 243 20% 12%;
+    --popover-foreground: 240 20% 96%;
 
-    --primary: 160 84% 45%;
-    --primary-foreground: 218 28% 6%;
+    --primary: 245 85% 70%;
+    --primary-foreground: 243 45% 9%;
 
-    --secondary: 217 20% 15%;
-    --secondary-foreground: 210 20% 90%;
+    --secondary: 243 16% 16%;
+    --secondary-foreground: 240 15% 90%;
 
-    --muted: 217 20% 15%;
-    --muted-foreground: 215 15% 58%;
+    --muted: 243 16% 16%;
+    --muted-foreground: 240 12% 64%;
 
-    --accent: 190 95% 48%;
-    --accent-foreground: 218 28% 6%;
+    --accent: 265 85% 72%;
+    --accent-foreground: 243 45% 9%;
 
-    --destructive: 0 62% 45%;
-    --destructive-foreground: 0 0% 100%;
+    --highlight: 38 96% 60%;
+    --highlight-foreground: 28 60% 10%;
 
-    --success: 152 70% 42%;
-    --success-foreground: 0 0% 100%;
+    --destructive: 352 70% 58%;
+    --destructive-foreground: 243 45% 9%;
 
-    --warning: 38 80% 48%;
-    --warning-foreground: 0 0% 100%;
+    --success: 158 62% 46%;
+    --success-foreground: 243 45% 9%;
 
-    --border: 217 20% 16%;
-    --input: 217 20% 16%;
-    --ring: 160 84% 45%;
+    --warning: 36 92% 55%;
+    --warning-foreground: 28 60% 10%;
+
+    --border: 243 15% 18%;
+    --input: 243 15% 20%;
+    --ring: 245 85% 70%;
+
+    --shadow-tint: 243 60% 2%;
   }
 }
 
@@ -133,6 +231,19 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Başlıklar display yüzüyle ve biraz sıkı harf aralığıyla dizilir;
+   * Plus Jakarta Sans varsayılan aralıkta Inter'den geniş görünüyor. */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  /* Sayılar hizalı olsun: toplamlar, süreler ve tutarlar alt alta
+   * geldiğinde orantılı rakamlar sütunu kaydırıyordu. */
+  th, td, time, output {
+    font-variant-numeric: tabular-nums;
   }
 
   /* Smooth scrolling */
@@ -146,14 +257,14 @@
     height: 8px;
   }
   .dark ::-webkit-scrollbar-track {
-    background: hsl(218 28% 6%);
+    background: hsl(var(--background));
   }
   .dark ::-webkit-scrollbar-thumb {
-    background: hsl(217 20% 18%);
+    background: hsl(var(--border));
     border-radius: 999px;
   }
   .dark ::-webkit-scrollbar-thumb:hover {
-    background: hsl(217 20% 26%);
+    background: hsl(var(--muted-foreground) / 0.5);
   }
 }
 
@@ -289,25 +400,31 @@
   .stagger-children > *:nth-child(5) { animation-delay: 320ms; }
   .stagger-children > *:nth-child(6) { animation-delay: 400ms; }
 
-  /* Glass utility */
+  /* Cam yüzey: bulanıklık eskiden 24/40px idi. İndigo zeminde bu kadar
+   * bulanıklık kenarları eritiyordu; yüzey artık kenarlığıyla okunuyor. */
   .glass {
-    background: hsl(var(--card) / 0.6);
-    backdrop-filter: blur(24px) saturate(1.5);
-    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    background: hsl(var(--card) / 0.72);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
   }
 
   .glass-strong {
-    background: hsl(var(--card) / 0.8);
-    backdrop-filter: blur(40px) saturate(1.8);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    background: hsl(var(--card) / 0.88);
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
   }
 
-  /* Gradient text - Emerald & Cyan */
+  /* Marka gradyanı: indigo → violet. Tek yerde tanımlı ki CTA, logo ve
+   * yüzen buton birbirinden ayrışmasın. */
   .text-gradient {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .bg-brand-gradient {
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
   }
 
   /* Glow border on hover */

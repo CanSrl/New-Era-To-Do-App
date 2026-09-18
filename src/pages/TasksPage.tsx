@@ -38,7 +38,15 @@ export function TasksPage() {
                 particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 },
-                colors: ['#10b981', '#06b6d4', '#14b8a6', '#f59e0b']
+                /*
+                 * Bu dört değer paletin ham karşılığıdır ve bilinçli olarak
+                 * token DEĞİLDİR: `canvas-confetti` renkleri `hexToRgb` ile
+                 * okuyor, yani hex dışındaki her biçimi (hsl dahil) sessizce
+                 * bozuk renge çeviriyor. Palet değişirse burası elle
+                 * güncellenmeli — sırasıyla primary, accent, highlight ve
+                 * açık indigo.
+                 */
+                colors: ['#4f46e5', '#9061f2', '#f59e0b', '#818cf8']
             });
             toast.success(t('tasks.allDone'), { id: 'all-done' });
         }
@@ -104,7 +112,7 @@ export function TasksPage() {
                         <p className="text-muted-foreground mb-4 md:mb-6 text-sm md:text-base">{t('tasks.emptyBody')}</p>
                         <button
                             onClick={() => openTaskForm()}
-                            className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 active:scale-95 transition-all"
+                            className="group relative overflow-hidden bg-gradient-to-r from-primary to-accent text-primary-foreground px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/35 active:scale-95 transition-all"
                         >
                             <span className="relative z-10">{t('tasks.emptyAction')}</span>
                             <span className="absolute inset-0 bg-gradient-to-r from-accent via-primary to-accent bg-[length:200%_100%] opacity-0 transition-opacity group-hover:opacity-100 animate-shimmer" />

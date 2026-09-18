@@ -35,9 +35,9 @@ function selectable<T extends { id: string; archived: boolean }>(
 }
 
 const PRIORITY_STYLES: Record<Priority, string> = {
-    low: 'bg-green-500/10 text-green-600 dark:text-green-500 border-green-500/20',
-    medium: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 border-yellow-500/20',
-    high: 'bg-red-500/10 text-red-600 dark:text-red-500 border-red-500/20',
+    low: 'bg-success/10 text-success border-success/25',
+    medium: 'bg-warning/10 text-warning border-warning/25',
+    high: 'bg-destructive/10 text-destructive border-destructive/25',
 };
 
 export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
@@ -148,7 +148,7 @@ export function TaskForm({ onClose, taskToEdit }: TaskFormProps) {
                     <div className="p-5 overflow-y-auto flex-1 space-y-5">
                         <div className="space-y-1.5">
                             <label htmlFor="title" className="text-sm font-medium">
-                                {t('taskForm.title')} <span className="text-red-500">*</span>
+                                {t('taskForm.title')} <span className="text-destructive">*</span>
                             </label>
                             <input
                                 id="title"

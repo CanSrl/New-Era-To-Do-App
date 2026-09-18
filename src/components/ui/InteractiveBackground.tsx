@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 
 interface InteractiveBackgroundProps {
     variant?: 'full' | 'subtle';
@@ -16,6 +16,79 @@ interface Particle {
     baseAlpha: number;
 }
 
+/*
+ * Hareket tercihi `useSyncExternalStore` ile okunur.
+ *
+ * Efekt gövdesinden `setState` çağırmak `react-hooks/set-state-in-effect`
+ * kuralına takılıyor (bu dosya bir süre lint'i kırık bıraktı) ve efektle
+ * kurulan state ilk karede yanlış değeri gösteriyordu. Aynı gerekçe
+ * `features/time/useElapsed.ts` için de yazılı.
+ */
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+
+function subscribeReducedMotion(onChange: () => void) {
+    const query = window.matchMedia(REDUCED_MOTION_QUERY);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+}
+
+function getReducedMotion() {
+    return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+/*
+ * Canvas paleti CSS token'larından okunur, koda gömülmez.
+ *
+ * Eskiden burada ham hex/rgba değerleri (`#10b981`, `rgba(6, 182, 212, …)`)
+ * duruyordu: tema değiştiğinde arka plan eski markanın renginde kalıyor ve
+ * kimse fark etmiyordu, çünkü hiçbir test canvas'ın rengine bakmıyor.
+ * `--primary` gibi token'lar "243 75% 59%" biçiminde üçlü tutuluyor, bu
+ * yüzden alfa eklemek düz metin birleştirmesiyle mümkün.
+ */
+function readToken(styles: CSSStyleDeclaration, name: string, fallback: string) {
+    const value = styles.getPropertyValue(name).trim();
+    return value === '' ? fallback : value;
+}
+
+interface Palette {
+    /** Parçacık renkleri; tam opak, alfa çizim sırasında veriliyor. */
+    particles: string[];
+    /** Fareye çekilen ışın. */
+    ray: (alpha: number) => string;
+    /** Parçacıklar arası takımyıldız çizgisi. */
+    link: (alpha: number) => string;
+    /** İmleç etrafındaki ışık havuzunun iki durağı. */
+    spotlight: [string, string];
+    isDark: boolean;
+}
+
+function readPalette(): Palette {
+    const root = document.documentElement;
+    const styles = getComputedStyle(root);
+    const isDark = root.classList.contains('dark');
+
+    const primary = readToken(styles, '--primary', '243 75% 59%');
+    const accent = readToken(styles, '--accent', '262 80% 62%');
+    const highlight = readToken(styles, '--highlight', '38 92% 50%');
+
+    return {
+        particles: [
+            `hsl(${primary})`,
+            `hsl(${accent})`,
+            `hsl(${primary})`,
+            `hsl(${highlight})`,
+            `hsl(${accent})`,
+        ],
+        ray: (alpha) => `hsl(${primary} / ${alpha})`,
+        link: (alpha) => `hsl(${accent} / ${alpha})`,
+        spotlight: [
+            `hsl(${primary} / ${isDark ? 0.1 : 0.07})`,
+            `hsl(${accent} / ${isDark ? 0.07 : 0.05})`,
+        ],
+        isDark,
+    };
+}
+
 export function InteractiveBackground({
     variant = 'full',
     className = '',
@@ -26,15 +99,12 @@ export function InteractiveBackground({
         y: -1000,
         active: false,
     });
-    const [isReducedMotion, setIsReducedMotion] = useState(false);
 
-    useEffect(() => {
-        const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-        setIsReducedMotion(mediaQuery.matches);
-        const handleChange = () => setIsReducedMotion(mediaQuery.matches);
-        mediaQuery.addEventListener('change', handleChange);
-        return () => mediaQuery.removeEventListener('change', handleChange);
-    }, []);
+    const isReducedMotion = useSyncExternalStore(
+        subscribeReducedMotion,
+        getReducedMotion,
+        () => false,
+    );
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -47,19 +117,7 @@ export function InteractiveBackground({
         let width = (canvas.width = window.innerWidth);
         let height = (canvas.height = window.innerHeight);
 
-        const handleResize = () => {
-            if (!canvas) return;
-            width = canvas.width = window.innerWidth;
-            height = canvas.height = window.innerHeight;
-            initParticles();
-        };
-        window.addEventListener('resize', handleResize);
-
-        // Color palettes (Emerald & Cyber Cyan)
-        const isDark = document.documentElement.classList.contains('dark');
-        const particleColors = isDark
-            ? ['#10b981', '#06b6d4', '#14b8a6', '#34d399', '#38bdf8']
-            : ['#059669', '#0891b2', '#0d9488', '#10b981', '#0284c7'];
+        let palette = readPalette();
 
         const particleCount = variant === 'full'
             ? Math.min(Math.floor((width * height) / 22000), 55)
@@ -70,7 +128,7 @@ export function InteractiveBackground({
         const initParticles = () => {
             particles = [];
             for (let i = 0; i < particleCount; i++) {
-                const color = particleColors[Math.floor(Math.random() * particleColors.length)];
+                const color = palette.particles[Math.floor(Math.random() * palette.particles.length)];
                 const baseAlpha = variant === 'full' ? 0.35 + Math.random() * 0.45 : 0.2 + Math.random() * 0.3;
                 particles.push({
                     x: Math.random() * width,
@@ -86,7 +144,31 @@ export function InteractiveBackground({
         };
         initParticles();
 
-        // Mouse listeners
+        const handleResize = () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            initParticles();
+        };
+        window.addEventListener('resize', handleResize);
+
+        /*
+         * Tema `documentElement` üzerindeki `dark` sınıfıyla değişiyor
+         * (bkz. `ThemeProvider`). Gözlemci olmasaydı palet yalnızca mount
+         * anında okunur, kullanıcı temayı değiştirince arka plan eski
+         * renklerde kalırdı.
+         */
+        const themeObserver = new MutationObserver(() => {
+            const next = readPalette();
+            const changed = next.isDark !== palette.isDark
+                || next.particles[0] !== palette.particles[0];
+            palette = next;
+            if (changed) initParticles();
+        });
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class'],
+        });
+
         const handleMouseMove = (e: MouseEvent) => {
             mouseRef.current.x = e.clientX;
             mouseRef.current.y = e.clientY;
@@ -110,28 +192,23 @@ export function InteractiveBackground({
 
             // Draw radial spotlight around cursor
             if (mouse.active && !isReducedMotion) {
+                const radius = variant === 'full' ? 260 : 180;
                 const spotlightGradient = ctx.createRadialGradient(
                     mouse.x,
                     mouse.y,
                     0,
                     mouse.x,
                     mouse.y,
-                    variant === 'full' ? 260 : 180
+                    radius
                 );
-                const spotlightColor = isDark
-                    ? 'rgba(16, 185, 129, 0.09)'
-                    : 'rgba(5, 150, 105, 0.06)';
-                const spotlightAccent = isDark
-                    ? 'rgba(6, 182, 212, 0.06)'
-                    : 'rgba(8, 145, 178, 0.04)';
 
-                spotlightGradient.addColorStop(0, spotlightColor);
-                spotlightGradient.addColorStop(0.5, spotlightAccent);
+                spotlightGradient.addColorStop(0, palette.spotlight[0]);
+                spotlightGradient.addColorStop(0.5, palette.spotlight[1]);
                 spotlightGradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
                 ctx.fillStyle = spotlightGradient;
                 ctx.beginPath();
-                ctx.arc(mouse.x, mouse.y, variant === 'full' ? 260 : 180, 0, Math.PI * 2);
+                ctx.arc(mouse.x, mouse.y, radius, 0, Math.PI * 2);
                 ctx.fill();
             }
 
@@ -164,8 +241,8 @@ export function InteractiveBackground({
                             ctx.beginPath();
                             ctx.moveTo(p.x, p.y);
                             ctx.lineTo(mouse.x, mouse.y);
-                            const lineAlpha = (1 - dist / mouseInteractionDistance) * (isDark ? 0.35 : 0.22);
-                            ctx.strokeStyle = `rgba(16, 185, 129, ${lineAlpha})`;
+                            const lineAlpha = (1 - dist / mouseInteractionDistance) * (palette.isDark ? 0.35 : 0.22);
+                            ctx.strokeStyle = palette.ray(lineAlpha);
                             ctx.lineWidth = 1;
                             ctx.stroke();
                         }
@@ -191,8 +268,8 @@ export function InteractiveBackground({
                         ctx.beginPath();
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(p2.x, p2.y);
-                        const alpha = (1 - dist / maxDistance) * (isDark ? 0.18 : 0.12);
-                        ctx.strokeStyle = `rgba(6, 182, 212, ${alpha})`;
+                        const alpha = (1 - dist / maxDistance) * (palette.isDark ? 0.18 : 0.12);
+                        ctx.strokeStyle = palette.link(alpha);
                         ctx.lineWidth = 0.8;
                         ctx.stroke();
                     }
@@ -208,6 +285,7 @@ export function InteractiveBackground({
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseleave', handleMouseLeave);
+            themeObserver.disconnect();
             cancelAnimationFrame(animationFrameId);
         };
     }, [variant, isReducedMotion]);

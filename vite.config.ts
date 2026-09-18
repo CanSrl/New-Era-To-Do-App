@@ -80,6 +80,16 @@ export default defineConfig(({ mode }) => {
            * parça normal ağ isteğiyle, çalışma anında alınır.
            */
           globIgnores: ['**/sentry-*.js'],
+          /*
+           * Yazı tipleri precache'e DAHİL.
+           *
+           * Workbox varsayılanı woff2'yi almaz; almasaydı çevrimdışı açılan
+           * uygulama sistem yazı tipine düşerdi. Dört dosya var çünkü iki
+           * aile (gövde + başlık) × iki alt küme (latin, Türkçe için
+           * latin-ext); toplam ~180 KB ve hepsi Türkçe arayüzde gerçekten
+           * kullanılıyor.
+           */
+          globPatterns: ['**/*.{js,wasm,css,html,woff2}'],
         },
         manifest: {
           name: 'Yapılacaklar Listesi',
@@ -94,7 +104,7 @@ export default defineConfig(({ mode }) => {
            * görevlerini değil tanıtım sayfasını görürdü.
            */
           start_url: '/app',
-          theme_color: '#0f172a',
+          theme_color: '#0b0b12',
           background_color: '#ffffff',
           display: 'standalone',
           icons: [

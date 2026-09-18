@@ -112,7 +112,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
                         : t('taskItem.markComplete', { title: task.title })
                 }
                 className={`mt-0.5 shrink-0 flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all hover:scale-110 active:scale-90 ${task.completed
-                    ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30'
+                    ? 'bg-success border-success text-success-foreground shadow-e1'
                     : 'border-muted-foreground/30 hover:border-primary hover:bg-primary/10'
                     }`}
             >
@@ -206,9 +206,9 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
 
                 <div className="flex flex-wrap items-center gap-3 mt-3">
                     <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-lg ${
-                        task.priority === 'high' ? 'bg-red-500/10 text-red-600 dark:text-red-400' :
-                        task.priority === 'medium' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' :
-                        'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        task.priority === 'high' ? 'bg-destructive/10 text-destructive' :
+                        task.priority === 'medium' ? 'bg-warning/10 text-warning' :
+                        'bg-success/10 text-success'
                     }`}>
                         {t(`priority.${task.priority}`)}
                     </span>
@@ -248,7 +248,7 @@ export function TaskItem({ task, onEdit }: TaskItemProps) {
 
                     {task.dueDate && (
                         <span className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-md ${isOverdue(task)
-                            ? 'text-red-600 bg-red-500/10'
+                            ? 'text-destructive bg-destructive/10'
                             : 'text-muted-foreground bg-muted'
                             }`}>
                             <Calendar size={12} />

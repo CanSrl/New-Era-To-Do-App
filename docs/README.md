@@ -6,6 +6,7 @@ English docs for buyers of this starter kit (and for this repo as a freemium pro
 | --- | --- |
 | [setup.md](./setup.md) | Clone, run locally, optional Supabase, demo login |
 | [architecture.md](./architecture.md) | Local-first store, sync, schema, error boundaries |
+| [theming.md](./theming.md) | Design tokens, palette swap, fonts, the no-hardcoded-colour rule |
 | [feature-flags.md](./feature-flags.md) | `VITE_*` flags and what they actually do |
 | [deploy.md](./deploy.md) | Vercel / Netlify, env vars, SPA fallback, security headers |
 | [niche-module.md](./niche-module.md) | How to strip clients / projects / time tracking |

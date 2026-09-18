@@ -264,6 +264,51 @@ için tetikleyici. `import.meta.env.DEV` derleme zamanı sabiti olduğu için
 İkon-only butonlarda görev başlığını içeren `aria-label`. `confirm()`/`alert()`
 kullanılmaz. Öncelik rozetlerinde renk + metin birlikte.
 
+**Tema tek kaynaktan gelir: `src/index.css`.** Palet İndigo (`--primary`) +
+Violet (`--accent`) + Amber (`--highlight`). Token'lar bitmiş renk değil ham
+HSL üçlüsü olarak durur (`243 75% 59%`), böylece her yerde alfa eklenebilir.
+
+- **Amber marka gradyanına GİRMEZ.** Gradyan `primary → accent`'tir ve iki
+  ucunda da beyaz metin okunur. Amber üzerine beyaz ~2:1 eder; `highlight`
+  yalnızca koyu `highlight-foreground` ile dolu zemin olarak ya da renkli
+  metnin arkasında düşük alfalı yıkama olarak kullanılır.
+- **Bileşende Tailwind palet sınıfı (`bg-emerald-500`, `text-red-600`)
+  yazılmaz**, semantik token yazılır. Bu kural bir kez sessizce kırıldı:
+  istatistik kartları, öncelik rozetleri ve landing özellik kartları eski
+  markanın renginde kaldı, çünkü hiçbir test rengi görmüyor. Tarama:
+  `grep -rnE '\b(bg|text|border|from|to|via)-(emerald|cyan|red|amber|…)' src`
+  hiçbir şey basmamalı. Ayrıntı: `docs/theming.md`.
+- **İki yer bilinçli istisnadır:** `TasksPage`'teki konfeti renkleri
+  (`canvas-confetti` renkleri `hexToRgb` ile okuyor, hex dışını sessizce
+  bozuyor) ve `lib/categories.ts` renk paleti (bu veri, tema değil —
+  veritabanına `#rrggbb` olarak yazılıyor ve satırlar arası tutarlı kalmalı).
+- **`InteractiveBackground` paleti çalışma anında token'lardan okur** ve
+  `<html>`'deki `dark` sınıfını `MutationObserver` ile izler. Eskiden ham hex
+  taşıyordu: tema değişince arka plan eski markanın renginde kalıyordu ve
+  hiçbir test canvas'a bakmadığı için bu görünmüyordu.
+- **Yarıçap ölçeğinin kökü `--radius`**; `rounded-xl` ve `rounded-2xl` de
+  `@theme` içinde yeniden tanımlı, çünkü Tailwind onlara sabit değer veriyor
+  ve tanımlanmasaydı `--radius` değişince ölçek ortadan ikiye bölünürdü.
+  Yükseklik `--shadow-e1..e3`, gölge `--shadow-tint` ile renklendirilir; düz
+  siyah gölge açık zeminde kirli gri okunuyordu.
+
+**Yazı tipleri yerelden gelir, CDN'den değil.** Gövde Inter, başlıklar
+(`h1`–`h3`, marka) Plus Jakarta Sans; dosyalar `public/fonts/` altında,
+`@font-face` tanımları `index.css` içinde. Yalnızca latin + latin-ext alt
+kümeleri var (Türkçe'de `ı` latin'de, `ğ ş İ` latin-ext'te).
+
+⚠️ `index.html`'e Google Fonts `<link>`'i geri konmaz — uygulama çevrimdışı
+çalışan bir PWA ve landing testi localhost dışına istek yasaklıyor. Yazı
+tipleri service worker precache'ine girsin diye `vite.config.ts` içindeki
+`globPatterns` woff2'yi de kapsar; Workbox varsayılanı kapsamıyor ve
+kapsamasaydı çevrimdışı açılış sistem yazı tipine düşerdi.
+
+⚠️ **`landing.spec.ts`'in "dış istek yok" testi bir dönem hiçbir şey
+ölçmüyordu.** `beforeEach` sayfayı zaten gezdirdiği için testin kendi
+`goto`'su dış kaynakları önbellekten okuyordu ve `index.html`'de duran
+Google Fonts `<link>`'i yıllarca görülmedi. Test artık kendi taze bağlamını
+açıyor.
+
 **Auth yönlendirme adresleri:** Supabase, izin listesinde **tam eşleşme**
 bulamadığı yönlendirme adresini sessizce `site_url`'e düşürür — hata vermez,
 sadece yanlış yere gider. Yerelde `supabase/config.toml` içindeki

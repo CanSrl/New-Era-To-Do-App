@@ -52,6 +52,7 @@ With `VITE_NICHE_MODULE=false` the Delivery / Time / Clients routes are gone (sa
 | --- | --- |
 | [Setup](docs/setup.md) | Local + cloud Supabase, demo user |
 | [Architecture](docs/architecture.md) | Store, sync order, RLS |
+| [Theming](docs/theming.md) | Tokens, palette swap, self-hosted fonts |
 | [Feature flags](docs/feature-flags.md) | `VITE_*` and niche stripping proof |
 | [Deploy](docs/deploy.md) | Vercel / Netlify, headers, env |
 | [Niche module](docs/niche-module.md) | How to delete it for real |

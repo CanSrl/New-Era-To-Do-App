@@ -95,6 +95,19 @@ Bilinçli borç (şimdi yapılmaz): tohum kategorilerin dil çakışması;
 - [x] Dil seçimi LocalStorage'da, tarayıcı tercihini yeniyor
 - [x] Playwright yereli `tr-TR` olarak sabitlendi
 
+### Tema, tipografi ve yüzey dili
+- [x] Palet İndigo + Violet + Amber; bütün renkler `src/index.css` token'ları
+- [x] Sabit Tailwind palet sınıfları temizlendi (istatistik kartları, öncelik
+      rozetleri, landing özellik kartları, senkron göstergesi)
+- [x] `InteractiveBackground` paleti token'lardan okuyor ve tema değişimini
+      izliyor (eskiden ham hex taşıyordu, tema değişince eski markada kalıyordu)
+- [x] Yarıçap ölçeği tek `--radius` kökünden; `--shadow-e1..e3` yükseklik ölçeği
+- [x] Inter + Plus Jakarta Sans yerelden paketlendi, Google Fonts `<link>`'i
+      kaldırıldı, woff2 precache'e alındı
+- [x] `landing.spec.ts` dış istek testi taze bağlamda koşuyor — önbellek
+      yüzünden hiçbir şey ölçmüyordu
+- [x] `docs/theming.md` (starter kit alıcısı için)
+
 ### Hata sınırları ve izleme
 - [x] İki ayrı hata sınırı (kök + her üst düzey rotada `errorElement`)
 - [x] `/app/__crash` yalnızca geliştirmede kayıtlı

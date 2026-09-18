@@ -68,10 +68,19 @@ test('sayfa uygulamanın yazı tipini bozmaz', async ({ page }) => {
     expect(landingFont).not.toContain('Poppins')
 })
 
-test('dış kaynaktan görsel veya yazı tipi istenmez', async ({ page }) => {
+test('dış kaynaktan görsel veya yazı tipi istenmez', async ({ browser }) => {
     // Uygulama çevrimdışı çalışan bir PWA; landing üçüncü taraf bir servise
     // bağlı olamaz. Şablonun özgün hâli i.postimg.cc ve fonts.googleapis.com
     // adreslerine gidiyordu.
+    //
+    // ⚠️ Test kendi bağlamını açar. `beforeEach` sayfayı zaten bir kez
+    // gezdiriyor; aynı sayfada ikinci `goto` dış kaynakları ÖNBELLEKTEN
+    // okuyor ve hiç istek görünmüyordu — yani bu test bir dönem
+    // `index.html`'deki Google Fonts <link>'ini sessizce kaçırdı. Taze
+    // bağlam boş önbellekle başlar, ölçüm gerçek olur.
+    const context = await browser.newContext()
+    const page = await context.newPage()
+
     const external: string[] = []
     page.on('request', (request) => {
         const url = request.url()
@@ -82,6 +91,7 @@ test('dış kaynaktan görsel veya yazı tipi istenmez', async ({ page }) => {
 
     await page.goto('/')
     await page.waitForLoadState('networkidle')
+    await context.close()
 
     expect(external).toEqual([])
 })
